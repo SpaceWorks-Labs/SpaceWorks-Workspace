@@ -46,14 +46,14 @@ describe("VPS installer", () => {
       expect(lib(`source_version '${dir}' ${commit}`).stdout).toBe("0.1.0-main.42.0123456789ab");
       expect(lib(`source_version '${dir}' ffffffffffff${commit.slice(12)}`).status).not.toBe(0);
       const settings = (version: string) => lib(
-        `set_image_settings '${dir}/compose.env' ${version} SpaceWorks-HQ/SpaceWorks-Workspace; cat '${dir}/compose.env'`,
+        `set_image_settings '${dir}/compose.env' ${version} SpaceWorks-Labs/SpaceWorks-Workspace; cat '${dir}/compose.env'`,
       ).stdout;
       // A 0.9.0 installation's separate migrator/ops image settings are dropped.
       writeFileSync(path.join(directory, "compose.env"), "SWW_VERSION='0.9.0-main.1.0123456789ab'\nSWW_APP_IMAGE='x'\nSWW_MIGRATOR_IMAGE='y'\nSWW_OPS_IMAGE='z'\n");
       expect(settings("0.1.0-main.42.0123456789ab")).toBe([
         "SWW_VERSION='0.9.0-main.1.0123456789ab'",
-        "SWW_BACKEND_IMAGE='ghcr.io/spaceworks-hq/spaceworks-workspace-backend'",
-        "SWW_FRONTEND_IMAGE='ghcr.io/spaceworks-hq/spaceworks-workspace-frontend'", "",
+        "SWW_BACKEND_IMAGE='ghcr.io/spaceworks-labs/spaceworks-workspace-backend'",
+        "SWW_FRONTEND_IMAGE='ghcr.io/spaceworks-labs/spaceworks-workspace-frontend'", "",
       ].join("\n"));
       expect(settings("vps-0123456789ab")).toBe("SWW_VERSION='0.9.0-main.1.0123456789ab'\nSWW_BACKEND_IMAGE=''\nSWW_FRONTEND_IMAGE=''\n");
     } finally { rmSync(directory, { recursive: true, force: true }); }

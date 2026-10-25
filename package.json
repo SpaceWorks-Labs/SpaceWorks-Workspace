@@ -82,9 +82,9 @@
     "htmlparser2": "10.1.0",
     "ioredis": "^6.0.0",
     "lucide-react": "1.49.0",
-    "next": "^16.3.5",
+    "next": "^16.4.3",
     "next-auth": "^5.0.0-beta.32",
-    "nodemailer": "10.0.10",
+    "nodemailer": "10.2.1",
     "otpauth": "^9.5.1",
     "pdf-lib": "1.17.1",
     "pg": "8.23.1",
@@ -96,7 +96,7 @@
     "tailwind-merge": "3.7.0",
     "tldts": "7.4.18",
     "undici": "7.30.1",
-    "zod": "^4.3.6"
+    "zod": "^4.6.7"
   },
   "overrides": {
     "deepmerge-ts": "^8.0.0"
@@ -112,7 +112,7 @@
     "@vitest/coverage-v8": "^4.1.12",
     "esbuild": "0.28.2",
     "eslint": "^9",
-    "eslint-config-next": "^16.4.2",
+    "eslint-config-next": "^16.4.3",
     "fontkit": "^2.0.4",
     "prisma": "6.19.3",
     "tailwindcss": "^4",

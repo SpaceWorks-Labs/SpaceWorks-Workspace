@@ -37,7 +37,7 @@ and `ALLOW_INSECURE_PRODUCTION_TESTS=1` belongs only to disposable tests.
 | --- | --- |
 | `SWW_DIR` | Install root, `/opt/spaceworks-workspace` |
 | `SWW_CONFIG_DIR` | External secrets/config directory, `/etc/spaceworks-workspace` |
-| `SWW_REPOSITORY` | GitHub owner/repository; defaults to SpaceWorks-HQ/SpaceWorks-Workspace |
+| `SWW_REPOSITORY` | GitHub owner/repository; defaults to SpaceWorks-Labs/SpaceWorks-Workspace |
 | `SWW_RELEASE_TAG`, `SWW_REF` | Published release or source reference; choose only one |
 | `SWW_LAYOUT` | `split`, `single` or `netlify`, recorded in `compose.env` |
 | `SWW_VERSION` | Immutable release version |

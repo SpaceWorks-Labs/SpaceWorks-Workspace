@@ -6,7 +6,7 @@
 SWW_DIR=${SWW_DIR:-/opt/spaceworks-workspace}
 SWW_DEFAULT_CONFIG_DIR=/etc/spaceworks-workspace
 # shellcheck disable=SC2034 # used by the scripts that source this file
-SWW_DEFAULT_REPOSITORY=SpaceWorks-HQ/SpaceWorks-Workspace
+SWW_DEFAULT_REPOSITORY=SpaceWorks-Labs/SpaceWorks-Workspace
 
 say() { printf '[Space Works Workspace] %s\n' "$*"; }
 warn() { printf '[Space Works Workspace] WARNING: %s\n' "$*" >&2; }

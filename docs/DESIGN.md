@@ -3,7 +3,7 @@
 > Read this before building or changing any Space Works Workspace UI. It describes how the brand is
 > implemented in this app.
 >
-> **Source of truth for the brand:** [SpaceWorks-HQ/SpaceWorks-Design](https://github.com/SpaceWorks-HQ/SpaceWorks-Design):
+> **Source of truth for the brand:** [SpaceWorks-Labs/SpaceWorks-Design](https://github.com/SpaceWorks-Labs/SpaceWorks-Design):
 > `tokens/tokens.css` (colour values), `docs/ui-brand-spec.md` (tokens, states, type, shape, logo, icons),
 > `logo/` (master artwork), `fonts/` (Gilroy, Unbounded and their licences). When this file and the
 > design repo disagree, the design repo wins. Update this file to match.
@@ -451,7 +451,7 @@ emoji in chrome; the orange button in the app; colour-only status.
 
 ---
 
-*Version 1.0 · 19 Oct 2026 · Space Works Workspace. Brand values from SpaceWorks-HQ/SpaceWorks-Design.*
+*Version 1.0 · 19 Oct 2026 · Space Works Workspace. Brand values from SpaceWorks-Labs/SpaceWorks-Design.*
 
 
 ## 10. Fidelity checks and source priority

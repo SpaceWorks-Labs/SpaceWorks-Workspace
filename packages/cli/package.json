@@ -1,5 +1,5 @@
 {
-  "name": "@spaceworks-hq/workspace-cli",
+  "name": "@spaceworks-labs/workspace-cli",
   "version": "0.6.6",
   "description": "Space Works Workspace secrets CLI and Node SDK",
   "license": "AGPL-3.0-or-later",
@@ -31,7 +31,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/SpaceWorks-HQ/SpaceWorks-Workspace.git",
+    "url": "https://github.com/SpaceWorks-Labs/SpaceWorks-Workspace.git",
     "directory": "packages/cli"
   },
   "dependencies": {

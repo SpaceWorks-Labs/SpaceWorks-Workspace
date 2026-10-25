@@ -169,8 +169,8 @@ describe.sequential("integrations messaging", () => {
   it("accepts a signed GitHub webhook once, isolates installations and dispatches a feed event", async () => {
     vi.stubEnv("GITHUB_WEBHOOK_SECRET", "github-test-secret");
     const github = await prisma.integrationConnection.create({ data: { workspaceId, provider: "GITHUB", externalId: "123", accountLabel: "Space Works" } });
-    const repo = await prisma.githubRepo.create({ data: { workspaceId, connectionId: github.id, installationId: "123", fullName: "SpaceWorks-HQ/Workspace" } });
-    const payload = JSON.stringify({ action: "opened", installation: { id: 123 }, repository: { full_name: repo.fullName }, pull_request: { title: "Add a build night", number: 1, html_url: "https://github.com/SpaceWorks-HQ/Workspace/pull/1" }, sender: { login: "maker" } });
+    const repo = await prisma.githubRepo.create({ data: { workspaceId, connectionId: github.id, installationId: "123", fullName: "SpaceWorks-Labs/Workspace" } });
+    const payload = JSON.stringify({ action: "opened", installation: { id: 123 }, repository: { full_name: repo.fullName }, pull_request: { title: "Add a build night", number: 1, html_url: "https://github.com/SpaceWorks-Labs/Workspace/pull/1" }, sender: { login: "maker" } });
     const send = (signature = "sha256=" + createHmac("sha256", "github-test-secret").update(payload).digest("hex")) => receiveGithub(new Request("https://workspace.example.org/github", { method: "POST", headers: { "x-hub-signature-256": signature, "x-github-delivery": `delivery-${suffix}`, "x-github-event": "pull_request" }, body: payload }));
     expect((await send("wrong")).status).toBe(401); expect((await send()).status).toBe(200); await send();
     expect(await prisma.githubEvent.count({ where: { workspaceId, repoId: repo.id } })).toBe(1); expect(await prisma.githubEvent.count({ where: { workspaceId: foreignId } })).toBe(0);

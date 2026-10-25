@@ -280,7 +280,7 @@ jobs:
           Secrets CLI and Node SDK (\`sww\`), same version:
 
           \`\`\`bash
-          npm install -g @spaceworks-hq/workspace-cli@$BASE
+          npm install -g @spaceworks-labs/workspace-cli@$BASE
           \`\`\`
 
           Built from \`$SHA\`.
@@ -323,9 +323,9 @@ jobs:
           BASE: ${{ needs.prepare.outputs.base }}
         run: |
           set -euo pipefail
-          printf '@spaceworks-hq:registry=https://npm.pkg.github.com\n//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}\n' > "$RUNNER_TEMP/.npmrc"
+          printf '@spaceworks-labs:registry=https://npm.pkg.github.com\n//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}\n' > "$RUNNER_TEMP/.npmrc"
           export NPM_CONFIG_USERCONFIG="$RUNNER_TEMP/.npmrc"
-          if npm view "@spaceworks-hq/workspace-cli@$BASE" version >/dev/null 2>&1; then echo "Already on GitHub Packages."; exit 0; fi
+          if npm view "@spaceworks-labs/workspace-cli@$BASE" version >/dev/null 2>&1; then echo "Already on GitHub Packages."; exit 0; fi
           npm publish --workspace packages/cli --ignore-scripts
       - name: Publish to npmjs.com
         env:
@@ -336,7 +336,7 @@ jobs:
           if [[ -z "$NODE_AUTH_TOKEN" ]]; then echo "No NPM_TOKEN secret; skipping npmjs.com."; exit 0; fi
           printf '//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}\n' > "$RUNNER_TEMP/.npmrc-public"
           export NPM_CONFIG_USERCONFIG="$RUNNER_TEMP/.npmrc-public"
-          if npm view "@spaceworks-hq/workspace-cli@$BASE" version --registry https://registry.npmjs.org >/dev/null 2>&1; then echo "Already on npmjs.com."; exit 0; fi
+          if npm view "@spaceworks-labs/workspace-cli@$BASE" version --registry https://registry.npmjs.org >/dev/null 2>&1; then echo "Already on npmjs.com."; exit 0; fi
           npm publish --workspace packages/cli --ignore-scripts --provenance --access public --registry https://registry.npmjs.org
 
   # Automatic deploys, for this workspace: a self-hosted runner on the VPS (see

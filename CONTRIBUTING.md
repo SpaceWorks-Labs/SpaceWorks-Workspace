@@ -2,7 +2,7 @@
 
 Space Works Workspace is the private operating tool of the Space Works maker
 community. It is built in the open at
-[github.com/SpaceWorks-HQ/SpaceWorks-Workspace](https://github.com/SpaceWorks-HQ/SpaceWorks-Workspace)
+[github.com/SpaceWorks-Labs/SpaceWorks-Workspace](https://github.com/SpaceWorks-Labs/SpaceWorks-Workspace)
 under the AGPL-3.0-or-later licence.
 
 ## Ways to help

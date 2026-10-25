@@ -11,7 +11,7 @@ export default async function seedPlatformShell(
   const entries = [
     {
       title: "Space Works on GitHub",
-      url: "https://github.com/SpaceWorks-HQ",
+      url: "https://github.com/SpaceWorks-Labs",
       description: "Code and tools made by the crew.",
       tags: ["community", "code"],
     },

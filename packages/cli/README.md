@@ -3,7 +3,7 @@
 Install Node 20 or newer, then install the package:
 
 ```sh
-npm install --global @spaceworks-hq/workspace-cli
+npm install --global @spaceworks-labs/workspace-cli
 sww login --host https://workspace.example.org
 sww init --host https://workspace.example.org --project PROJECT_ID --env dev
 sww secrets list
@@ -33,7 +33,7 @@ Avoid placing real secret values or one-time codes in saved shell history. `set`
 For CI, create an expiring service token scoped to the exact environment and folder, optionally with an IP/CIDR allowlist:
 
 ```sh
-SWW_TOKEN="$SWW_SECRETS_TOKEN" npx @spaceworks-hq/workspace-cli run \
+SWW_TOKEN="$SWW_SECRETS_TOKEN" npx @spaceworks-labs/workspace-cli run \
   --host https://workspace.example.org --project PROJECT_ID \
   --env production --path / -- node server.js
 ```
@@ -52,7 +52,7 @@ Use HTTPS; HTTP is supported only on localhost. Do not source exported `.env` fi
 ## Node SDK
 
 ```js
-import { getSecrets, clearSecretsCache } from '@spaceworks-hq/workspace-cli';
+import { getSecrets, clearSecretsCache } from '@spaceworks-labs/workspace-cli';
 
 const values = await getSecrets({
   host: 'https://workspace.example.org',
