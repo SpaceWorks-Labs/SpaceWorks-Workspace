@@ -8,14 +8,14 @@ Terminate HTTPS at a trusted proxy; publish only a private container port.
 
 ## Images and runtime
 
-Pull an immutable `ghcr.io/spaceworks-hq/spaceworks-workspace-backend:<release>`.
+Pull an immutable `ghcr.io/spaceworks-labs/spaceworks-workspace-backend:<release>`.
 It serves the whole application by default. Run `migrate` once before the web
 rollout using an administration connection. Runtime connections should have
 only data privileges. Use TLS for PostgreSQL, Redis and custom S3 endpoints.
 
 ```bash
 export SWW_VERSION=0.1.0-main.42.a1b2c3d4e5f6
-image="ghcr.io/spaceworks-hq/spaceworks-workspace-backend:$SWW_VERSION"
+image="ghcr.io/spaceworks-labs/spaceworks-workspace-backend:$SWW_VERSION"
 docker pull "$image"
 docker run --rm --env-file /secure/workspace-migration.env "$image" migrate
 docker run -d --name spaceworks-workspace --restart unless-stopped \

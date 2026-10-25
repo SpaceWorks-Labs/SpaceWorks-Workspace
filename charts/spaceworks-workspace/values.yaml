@@ -6,7 +6,7 @@
 replicaCount: 2
 
 image:
-  repository: ghcr.io/spaceworks-hq/spaceworks-workspace-backend
+  repository: ghcr.io/spaceworks-labs/spaceworks-workspace-backend
   # Use an immutable tag (sha-<commit>) or a digest; defaults to the chart appVersion.
   tag: "0.1"
   pullPolicy: IfNotPresent
@@ -79,7 +79,7 @@ podDisruptionBudget:
 migration:
   enabled: true
   image:
-    repository: ghcr.io/spaceworks-hq/spaceworks-workspace-backend
+    repository: ghcr.io/spaceworks-labs/spaceworks-workspace-backend
     tag: ""
     pullPolicy: IfNotPresent
   backoffLimit: 1

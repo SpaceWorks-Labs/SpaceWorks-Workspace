@@ -6,7 +6,7 @@ Launch an x86_64 or arm64 Linux instance with at least 30 GiB disk. Allow inboun
 
 ## ECS / Fargate
 
-Use `ghcr.io/spaceworks-hq/spaceworks-workspace-backend:<immutable-version>` for the web task on port 3000. An ALB terminates HTTPS and routes the website and all API routes to it. A separate rendering frontend uses its own deployment and the gateway settings in [Split hosting](DEPLOYMENT_SPLIT.md). Enable ALB idle timeouts long enough for SSE and avoid a proxy/CDN that buffers streams. Do not cache authenticated pages, Server Actions or private downloads.
+Use `ghcr.io/spaceworks-labs/spaceworks-workspace-backend:<immutable-version>` for the web task on port 3000. An ALB terminates HTTPS and routes the website and all API routes to it. A separate rendering frontend uses its own deployment and the gateway settings in [Split hosting](DEPLOYMENT_SPLIT.md). Enable ALB idle timeouts long enough for SSE and avoid a proxy/CDN that buffers streams. Do not cache authenticated pages, Server Actions or private downloads.
 
 Run a one-off task from the same backend image with command `["migrate"]` and the maintenance DIRECT_URL before rolling the web service. A failed task blocks rollout. Runtime web tasks use a restricted DB identity. Run separate private worker and beat ECS services from the same backend image
 with commands `["node", "dist/worker.js"]` and `["node", "dist/beat.js"]`.

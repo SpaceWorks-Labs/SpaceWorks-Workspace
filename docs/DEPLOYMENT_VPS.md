@@ -40,7 +40,7 @@ Use `compose.production.yml` through `scripts/vps-compose.sh`. Development and s
 As root or a user with `sudo`:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/SpaceWorks-HQ/SpaceWorks-Workspace/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/SpaceWorks-Labs/SpaceWorks-Workspace/main/install.sh | bash
 ```
 
 The bootstrap checks for Linux, the architecture, root or sudo and `curl`/`tar`,
@@ -209,7 +209,7 @@ public hostname. Build images locally below, or use a trusted build host and
 transfer the same versioned images to the VPS.
 
 ```bash
-git clone https://github.com/SpaceWorks-HQ/SpaceWorks-Workspace.git
+git clone https://github.com/SpaceWorks-Labs/SpaceWorks-Workspace.git
 cd SpaceWorks-Workspace
 git checkout <reviewed-commit-or-tag>
 SWW_VERSION="vps-$(git rev-parse --short HEAD)"
@@ -428,10 +428,10 @@ backup=/root/<time>
 version=$(cat "$backup/version")   # a release such as 0.1.0-main.42.<commit>, or vps-<commit>
 case "$version" in vps-*) ref=${version#vps-} ;; *) ref=v$version ;; esac
 commit=$(curl -fsSL -H 'Accept: application/vnd.github.sha' \
-  "https://api.github.com/repos/SpaceWorks-HQ/SpaceWorks-Workspace/commits/$ref")
+  "https://api.github.com/repos/SpaceWorks-Labs/SpaceWorks-Workspace/commits/$ref")
 release=/opt/spaceworks-workspace/releases/$commit
 mkdir -p "$release"
-curl -fsSL "https://codeload.github.com/SpaceWorks-HQ/SpaceWorks-Workspace/tar.gz/$commit" | tar -xz -C "$release" --strip-components=1
+curl -fsSL "https://codeload.github.com/SpaceWorks-Labs/SpaceWorks-Workspace/tar.gz/$commit" | tar -xz -C "$release" --strip-components=1
 echo "$commit" > "$release/.release"
 case "$version" in vps-*) ;; *) echo "$version" > "$release/.release-version" ;; esac
 install -d -m 0700 /etc/spaceworks-workspace
@@ -544,7 +544,7 @@ with an authenticated request, then run it with the same environment:
 ```bash
 # The header is read from stdin, keeping the token out of curl's argv.
 printf 'header = "Authorization: Bearer %s"\n' "$SWW_GITHUB_TOKEN" | \
-  curl --config - -fsSL https://raw.githubusercontent.com/SpaceWorks-HQ/SpaceWorks-Workspace/main/install.sh -o /tmp/sww-install.sh
+  curl --config - -fsSL https://raw.githubusercontent.com/SpaceWorks-Labs/SpaceWorks-Workspace/main/install.sh -o /tmp/sww-install.sh
 bash /tmp/sww-install.sh
 rm -f /tmp/sww-install.sh
 ```

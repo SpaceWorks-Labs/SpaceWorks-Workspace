@@ -28,9 +28,9 @@ It started with the Space Works maker community at TinkerSpace Kochi. Every
 record, file and secret stays on infrastructure you control, with separate
 workspaces, roles and an audit trail.
 
-Member-facing work lives in the sibling apps: [Space Works](https://github.com/SpaceWorks-HQ/SpaceWorks)
-for the makerspace itself, [Space Works Events](https://github.com/SpaceWorks-HQ/SpaceWorks-Events)
-for events and tickets, and [Space Works Organization](https://github.com/SpaceWorks-HQ/SpaceWorks-Organization)
+Member-facing work lives in the sibling apps: [Space Works](https://github.com/SpaceWorks-Labs/SpaceWorks)
+for the makerspace itself, [Space Works Events](https://github.com/SpaceWorks-Labs/SpaceWorks-Events)
+for events and tickets, and [Space Works Organization](https://github.com/SpaceWorks-Labs/SpaceWorks-Organization)
 for memberships.
 
 ## What you can do
@@ -153,7 +153,7 @@ Install the `sww` command line, link a repository and run your app with its
 secrets injected. Nothing is written to disk.
 
 ```bash
-npm install -g @spaceworks-hq/workspace-cli
+npm install -g @spaceworks-labs/workspace-cli
 sww login --host https://workspace.example.org
 sww init --project PROJECT_ID --env dev
 sww run --env dev -- npm run dev
@@ -174,7 +174,7 @@ Packages. To install from GitHub Packages, point the scope at it with a token
 that can read packages:
 
 ```bash
-npm config set @spaceworks-hq:registry https://npm.pkg.github.com
+npm config set @spaceworks-labs:registry https://npm.pkg.github.com
 npm config set //npm.pkg.github.com/:_authToken "$GITHUB_TOKEN"
 ```
 
@@ -199,10 +199,10 @@ On a 64-bit Linux server (Ubuntu/Debian, Fedora/RHEL/Alma/Rocky, Arch or openSUS
 as root or a user with `sudo`:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/SpaceWorks-HQ/SpaceWorks-Workspace/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/SpaceWorks-Labs/SpaceWorks-Workspace/main/install.sh | bash
 ```
 
-It checks the server, picks the latest [release](https://github.com/SpaceWorks-HQ/SpaceWorks-Workspace/releases)
+It checks the server, picks the latest [release](https://github.com/SpaceWorks-Labs/SpaceWorks-Workspace/releases)
 and asks every question first: the layout (by default the website and API
 containers both on this VPS, at `workspace.example.com` and `api.workspace.example.com`;
 or one app container on one hostname; or the website on Netlify), hostnames, the
@@ -299,7 +299,7 @@ flowchart LR
   worker --> mail[SMTP]
 ```
 
-[Deploy to Render](https://render.com/deploy?repo=https://github.com/SpaceWorks-HQ/SpaceWorks-Workspace).
+[Deploy to Render](https://render.com/deploy?repo=https://github.com/SpaceWorks-Labs/SpaceWorks-Workspace).
 The [cloud guide](docs/DEPLOYMENT_CLOUD.md) covers secrets, TLS, SMTP, workers,
 first-run setup and free-plan limits. [Jobs operations](docs/areas/jobs-queue.md)
 covers retries, health and recovery. Docker, AWS, DigitalOcean and Kubernetes

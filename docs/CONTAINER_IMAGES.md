@@ -14,8 +14,8 @@ with these roles:
 
 | Image | Dockerfile target | Roles (the container command) |
 | --- | --- | --- |
-| `ghcr.io/spaceworks-hq/spaceworks-workspace-backend` | `runner` | `node server.js` (default): the application and API. `migrate`: apply pending database migrations once and exit. `node dist/worker.js`: BullMQ consumers. `node dist/beat.js`: registry schedule reconciliation. `node docker/vps/<tool>.mjs`: the VPS operator tools (setup, SMTP and external-storage configuration, certificate renewal, super-admin recovery, preflight, checks, SMTP check, smoke test), run as root. |
-| `ghcr.io/spaceworks-hq/spaceworks-workspace-frontend` | `frontend` | `node frontend/server.js`: the website alone (the `frontend/` workspace). It holds no database, Redis, storage or mail credentials and calls the backend through the authenticated gateway. |
+| `ghcr.io/spaceworks-labs/spaceworks-workspace-backend` | `runner` | `node server.js` (default): the application and API. `migrate`: apply pending database migrations once and exit. `node dist/worker.js`: BullMQ consumers. `node dist/beat.js`: registry schedule reconciliation. `node docker/vps/<tool>.mjs`: the VPS operator tools (setup, SMTP and external-storage configuration, certificate renewal, super-admin recovery, preflight, checks, SMTP check, smoke test), run as root. |
+| `ghcr.io/spaceworks-labs/spaceworks-workspace-frontend` | `frontend` | `node frontend/server.js`: the website alone (the `frontend/` workspace). It holds no database, Redis, storage or mail credentials and calls the backend through the authenticated gateway. |
 
 Pull requests and forks' pull requests never publish.
 
