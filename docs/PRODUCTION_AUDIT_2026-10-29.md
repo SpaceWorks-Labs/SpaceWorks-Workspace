@@ -137,7 +137,19 @@ offsite provider. A local encrypted copy at another path does not establish
 physically separate storage. Integration/vault ciphertext recovery beyond the
 tested keys is not claimed. These checks were explicitly deferred to staging.
 
-After checked dev/main publication, remove other branches and auxiliary worktrees
-and generated resources belonging to these four repositories. Preserve older
-source/user data opaquely, retain audit evidence and leave unrelated projects
-and resources of unproved ownership untouched.
+After checked dev/main publication, remove other branches, auxiliary worktrees
+and generated resources belonging to these four repositories. The user's latest
+cleanup instruction retains only the codebases: temporary audit evidence,
+recovery archives and disposable test data are not permanent artifacts. Leave
+unrelated projects and resources of unproved ownership untouched. Previously
+blocked cleanup actions must not be retried through another mechanism.
+
+## CLI registry publication follow-up (2026-10-30)
+
+CLI 0.6.7 was published to GitHub Packages. The optional npmjs.com step was
+skipped without `NPM_TOKEN`, so the public npm registry returned 404. The root
+README, packaged CLI README and release-notes template now lead with scoped
+GitHub Packages login before installation. Credentials are entered at prompts;
+no token is placed in command arguments. Package/application versions and
+publishing logic are unchanged. This documentation correction does not claim
+a repeat of the application build, container or recovery tests.
