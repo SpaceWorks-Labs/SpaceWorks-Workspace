@@ -26,7 +26,7 @@ import {
  *   tracks attempts, so this row only mirrors the outcome.
  */
 
-type EmailPayload = { fundingReceipt?: { recordId: string; fileId: string; contactId: string }; workspaceId?: string; to: string; subject: string; html: string; text: string; calendarInvite?: { method: "REQUEST" | "CANCEL"; content: string } };
+type EmailPayload = { notificationDigestId?: string; notificationDeliveryId?: string; fundingReceipt?: { recordId: string; fileId: string; contactId: string }; workspaceId?: string; to: string; subject: string; html: string; text: string; calendarInvite?: { method: "REQUEST" | "CANCEL"; content: string } };
 type InvitePayload = { workspaceId?: string; to: string; workspaceName: string; inviterName?: string | null; role: string; inviteUrl: string; expiresAt: string };
 type ResetPayload = { to: string; resetUrl: string; expiresAt: string };
 type VerificationPayload = { to: string; verificationUrl: string; expiresAt: string };
@@ -187,6 +187,24 @@ export async function deliverOutboxBatch(limit = 20, scope: { ids?: string[] } =
     }
 
     try {
+      const notificationDigestId = record(message.payload)?.notificationDigestId;
+      if (notificationDigestId !== undefined) {
+        const { mayDeliverDigest } = await import("@/lib/notify/access");
+        if (message.kind !== "email" || typeof notificationDigestId !== "string"
+          || !await mayDeliverDigest(notificationDigestId, String(record(message.payload)?.to))) {
+          await prisma.outboxMessage.deleteMany({ where: mine });
+          continue;
+        }
+      }
+      const notificationDeliveryId = record(message.payload)?.notificationDeliveryId;
+      if (notificationDeliveryId !== undefined) {
+        const { mayDeliverNotification } = await import("@/lib/notify/access");
+        if (message.kind !== "email" || typeof notificationDeliveryId !== "string"
+          || !await mayDeliverNotification(notificationDeliveryId, String(record(message.payload)?.to))) {
+          await prisma.outboxMessage.deleteMany({ where: mine });
+          continue;
+        }
+      }
       const rendered = message.kind === "analytics.email"
         ? await (await import("@/lib/analytics/email")).renderAnalyticsEmail(message.payload)
         : message.kind === "documents.email"

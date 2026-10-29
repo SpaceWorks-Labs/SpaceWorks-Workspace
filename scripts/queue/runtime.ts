@@ -33,7 +33,7 @@ export async function runProcess(role: "worker" | "beat", start: () => Promise<{
   });
   const port = Number(process.env.JOBS_HEALTH_PORT || 3460);
   if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error("Invalid jobs health port.");
-  server.listen(port, "0.0.0.0");
+  server.listen(port, process.env.SPACEWORKS_LOCAL_STACK === "1" ? "127.0.0.1" : "0.0.0.0");
   server.on("error", () => { console.error("[queue] health server failed"); void shutdown().then(() => process.exit(1), () => process.exit(1)); });
   let shutdownPromise: Promise<void> | undefined;
   function shutdown(): Promise<void> {
@@ -51,4 +51,10 @@ export async function runProcess(role: "worker" | "beat", start: () => Promise<{
     })();
   }
   for (const signal of ["SIGTERM", "SIGINT"] as const) process.once(signal, () => { void shutdown().then(() => process.exit(0), () => process.exit(1)); });
+  // The local supervisor can drain Node workers on Windows through IPC too.
+  if (process.env.SPACEWORKS_LOCAL_STACK === "1") process.on("message", (message: unknown) => {
+    if (message && typeof message === "object" && "type" in message && message.type === "spaceworks.local.shutdown") {
+      void shutdown().then(() => process.exit(0), () => process.exit(1));
+    }
+  });
 }

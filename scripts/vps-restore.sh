@@ -37,15 +37,22 @@ umask 077
 # taken before the restore never archives, and are removed on exit.
 mkdir -p "$SWW_CONFIG_DIR/backups"
 work='' key_file=''
-stopped=0
+stopped=0 database_committed=0
 cleanup() {
   local status=$?
   set +e
   [[ -z "$work" ]] || rm -rf -- "$work"
   [[ -z "$key_file" ]] || rm -f -- "$key_file"
   if [[ $status != 0 && $stopped = 1 ]]; then
-    warn 'The restore failed; starting the services again.'
-    compose up -d >/dev/null 2>&1 || warn 'Start them with scripts/vps-compose.sh up -d.'
+    if [[ $database_committed = 1 ]]; then
+      # Objects, migrations or readiness can fail after SQL committed. A partly
+      # restarted deployment must not serve that incomplete recovered state.
+      compose stop "${serving[@]}" >/dev/null 2>&1 || warn 'Could not stop every serving process; stop them before accepting traffic.'
+      warn 'The database restore committed, but recovery did not finish. Serving processes remain stopped. Fix the failure and rerun the complete restore before starting the site.'
+    else
+      warn 'The database restore did not commit; starting the previous services again.'
+      compose up -d >/dev/null 2>&1 || warn 'Start them with scripts/vps-compose.sh up -d.'
+    fi
   fi
   exit "$status"
 }
@@ -112,12 +119,47 @@ if [[ $assume_yes = 0 ]]; then
   [[ "$answer" = RESTORE ]] || { say 'Cancelled. Nothing was changed.'; exit 2; }
 fi
 SWW_BACKUP_PROTECT=$source_backup bash "$SWW_REPO_DIR/scripts/vps-backup.sh" --no-objects
+# Materialize the complete restore before stopping services or executing any SQL.
+# A producer failure in a pg_restore | psql pipeline could otherwise commit a
+# valid but truncated prefix when psql reaches EOF. Work stays private and is
+# excluded from safety backups by living beneath backups/.
+[[ -n "$work" ]] || work=$(mktemp -d "$SWW_CONFIG_DIR/backups/.restore.XXXXXX")
+restore_sql="$work/restore.sql"
+{
+  cat <<'SQL'
+DROP SCHEMA IF EXISTS public CASCADE;
+CREATE SCHEMA public AUTHORIZATION sww;
+SQL
+  # A custom archive can define public itself. Exclude only that definition:
+  # its separate COMMENT and ACL entries still restore, and sww owns the schema.
+  # The private container scratch directory needs no extra host bind mount.
+  # shellcheck disable=SC2016 # Expanded by the container's shell.
+  compose exec postgres sh -c '
+    set -eu
+    umask 077
+    stage=$(mktemp -d)
+    trap '\''rm -rf -- "$stage"'\'' EXIT
+    cat > "$stage/archive.dump"
+    pg_restore --list "$stage/archive.dump" > "$stage/contents"
+    awk "\$4 == \"SCHEMA\" && \$5 == \"-\" && \$6 == \"public\" { print \";\" \$0; next } { print }" \
+      "$stage/contents" > "$stage/restore.list"
+    pg_restore --file=- --exit-on-error --use-list="$stage/restore.list" "$stage/archive.dump"
+  ' < "$backup/database.dump"
+  cat <<'SQL'
+REVOKE ALL ON SCHEMA public FROM PUBLIC, sww_app;
+GRANT CONNECT ON DATABASE sww TO sww_app;
+GRANT USAGE ON SCHEMA public TO sww_app;
+ALTER DEFAULT PRIVILEGES FOR ROLE sww IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO sww_app;
+ALTER DEFAULT PRIVILEGES FOR ROLE sww IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO sww_app;
+SQL
+} > "$restore_sql"
 # A failed restore must not leave the site down; the database restore is one
 # transaction, so a failure there keeps the current data.
 stopped=1
 compose stop "${serving[@]}"
-compose exec postgres pg_restore -U sww -d sww --clean --if-exists --single-transaction --exit-on-error \
-  < "$backup/database.dump"
+compose exec postgres psql -X -U sww -d sww --single-transaction --set ON_ERROR_STOP=1 --file=- \
+  < "$restore_sql"
+database_committed=1
 if [[ $has_objects = 1 ]]; then
   compose run --rm --no-deps --volume "$backup:/backup:ro" --entrypoint mc storage-init \
     mirror --overwrite --quiet /backup/objects local/spaceworks-workspace > /dev/null

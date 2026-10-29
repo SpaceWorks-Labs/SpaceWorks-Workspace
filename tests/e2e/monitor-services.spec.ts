@@ -1,7 +1,7 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './browser-fixtures';
 
 // Run against the local demo seed; no cloud credentials or API calls.
-test.use({ baseURL: 'http://localhost:3200', viewport: { width: 375, height: 812 } });
+test.use({ viewport: { width: 375, height: 812 } });
 test.skip(!process.env.DEMO_PASSWORD, 'Seed the demo workspace and set DEMO_PASSWORD first.');
 async function signIn(page: import('@playwright/test').Page, email: string) {
   await page.goto('/login');

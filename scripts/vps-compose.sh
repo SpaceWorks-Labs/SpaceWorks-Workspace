@@ -21,6 +21,8 @@ profiles=''
 [ "$(setting SWW_LAYOUT)" != split ] || profiles='split'
 [ "$tls" = proxy ] || profiles=${profiles:+$profiles,}caddy
 [ "$storage" = external ] || profiles=${profiles:+$profiles,}silo
+# Teardown includes inactive layout services left by a split-to-single change.
+[ "${1:-}" != down ] || profiles='*'
 export COMPOSE_PROFILES="$profiles"
 # Prepended in reverse: the base file first, then the overrides.
 if [ "$storage" = external ]; then set -- --file "$repo_dir/compose.external-storage.yml" "$@"; fi

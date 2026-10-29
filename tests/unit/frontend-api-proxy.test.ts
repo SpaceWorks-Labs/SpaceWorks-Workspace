@@ -46,5 +46,17 @@ describe("frontend API proxy", () => {
       expect((await proxyBackendResource(new Request("https://workspace.example.test/admin"))).status).toBe(404);
     } finally { vi.unstubAllGlobals(); }
   });
+  it.each(["files/upload", "docs/doc-1/presence"])("preserves the browser mutation header for %s", async (resource) => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response("{}", { headers: { "content-type": "application/json" } }));
+    vi.stubGlobal("fetch", fetchMock);
+    try {
+      const response = await proxyBackendResource(new Request(`https://workspace.example.test/w/makers/${resource}`, {
+        method: "POST", headers: { origin: "https://workspace.example.test", "x-sw-client": "1", "content-type": "application/json" }, body: "{}",
+      }));
+      expect(response.status).toBe(200);
+      expect((fetchMock.mock.calls[0][1].headers as Headers).get("x-sw-client")).toBe("1");
+      expect(await new Response(fetchMock.mock.calls[0][1].body).text()).toBe("{}");
+    } finally { vi.unstubAllGlobals(); }
+  });
 
 });

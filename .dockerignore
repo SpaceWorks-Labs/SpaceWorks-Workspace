@@ -8,6 +8,8 @@
 .next
 node_modules
 backups/
+tls/
+NEXT_SERVER_ACTIONS_ENCRYPTION_KEY
 coverage
 playwright-report
 test-results

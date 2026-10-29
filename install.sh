@@ -17,8 +17,9 @@ Space Works Workspace installer - the private community workspace on one Linux s
 
 What you need
   - A 64-bit (x86_64 or arm64) Linux server: Ubuntu/Debian, Fedora/RHEL/Alma/Rocky,
-    Arch or openSUSE, with 2 GB memory (swap is offered on smaller plans; a
-    source build with --ref needs 4 GB) and at least 10 GB free disk.
+    Arch or openSUSE. Plan 4 GB memory with swap for bundled Caddy/source builds
+    and at least 10 GB free disk. Published apps behind your own proxy skip the
+    local edge build. The installer offers swap when memory is short.
   - root, or a user with sudo. Docker and Docker Compose are installed if missing.
   - A hostname whose DNS A record points at this server, with ports 80 and 443 open.
   - An SMTP relay on a verified sending domain (Brevo, Amazon SES, Postmark...).

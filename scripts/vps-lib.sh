@@ -149,13 +149,20 @@ fetch_images() {
   local version=$1 layout=${2:-single} services=(app)
   [[ "$layout" != split ]] || services+=(frontend)
   if is_published_version "$version"; then
-    ghcr_login
+    ghcr_login || return
     say 'Downloading the release images from GitHub Packages.'
-    compose pull --quiet "${services[@]}"
+    compose pull --quiet "${services[@]}" || return
   else
     say 'Building images from source. This takes several minutes on a small server.'
-    compose build "${services[@]}"
+    compose build "${services[@]}" || return
   fi
+  build_web_edge
+}
+
+# Published app images still use the locally built, security-patched edge.
+# An existing reverse proxy has no bundled edge to build.
+build_web_edge() {
+  [[ "$(conf_get "$SWW_CONFIG_DIR/compose.env" SWW_CADDY_TLS)" = proxy ]] || compose build proxy
 }
 
 # One installer, updater, backup or restore at a time per installation. Child

@@ -21,6 +21,7 @@ FROM deps AS migrator
 WORKDIR /app
 COPY prisma ./prisma
 COPY scripts/prisma.mjs ./scripts/prisma.mjs
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 CMD ["node", "scripts/prisma.mjs", "migrate", "deploy"]
 
 # Prisma CLI only, pinned to the lockfile's version, so the runner can apply
@@ -29,7 +30,9 @@ CMD ["node", "scripts/prisma.mjs", "migrate", "deploy"]
 FROM node:22-alpine AS prisma-cli
 WORKDIR /opt/prisma-cli
 COPY --from=deps /app/node_modules/prisma/package.json /tmp/prisma-package.json
-RUN npm install --omit=dev --no-save --no-audit --no-fund \
+COPY --from=deps /app/package.json /tmp/root-package.json
+RUN node -e "const fs=require('fs'); const root=require('/tmp/root-package.json'); fs.writeFileSync('package.json',JSON.stringify({private:true,overrides:root.overrides||{}}))" \
+    && npm install --omit=dev --no-save --no-audit --no-fund \
       "prisma@$(node -p "require('/tmp/prisma-package.json').version")" \
     && npm cache clean --force
 
@@ -40,10 +43,14 @@ WORKDIR /opt/ops
 COPY --from=deps /app/node_modules/ioredis/package.json /tmp/ioredis-package.json
 COPY --from=deps /app/node_modules/@aws-sdk/client-s3/package.json /tmp/s3-package.json
 COPY --from=deps /app/node_modules/nodemailer/package.json /tmp/nodemailer-package.json
-RUN npm install --omit=dev --no-save --no-audit --no-fund \
+COPY --from=deps /app/node_modules/bullmq/package.json /tmp/bullmq-package.json
+COPY --from=deps /app/package.json /tmp/root-package.json
+RUN node -e "const fs=require('fs'); const root=require('/tmp/root-package.json'); fs.writeFileSync('package.json',JSON.stringify({private:true,overrides:root.overrides||{}}))" \
+    && npm install --omit=dev --no-save --no-audit --no-fund \
       "ioredis@$(node -p "require('/tmp/ioredis-package.json').version")" \
       "@aws-sdk/client-s3@$(node -p "require('/tmp/s3-package.json').version")" \
       "nodemailer@$(node -p "require('/tmp/nodemailer-package.json').version")" \
+      "bullmq@$(node -p "require('/tmp/bullmq-package.json').version")" \
     && npm cache clean --force
 
 # Stage 2: Rebuild the source code
@@ -122,6 +129,8 @@ COPY --from=frontend-builder --chown=nextjs:nodejs /app/frontend/.next/static ./
 COPY --from=frontend-builder --chown=nextjs:nodejs /app/frontend/public ./frontend/public
 COPY --chmod=755 scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN rm -f frontend/.env frontend/.env.local frontend/.env.production .env
+# Runtime roles invoke Node directly; package management stays in build stages.
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 USER nextjs
 EXPOSE 3000
 ENV PORT=3000
@@ -149,7 +158,7 @@ RUN apk add --no-cache font-dejavu fontconfig openssl && fc-cache -f
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
 RUN mkdir .next
 RUN chown nextjs:nodejs .next
@@ -163,15 +172,16 @@ COPY --from=builder --chown=nextjs:nodejs /app/dist ./dist
 # Prisma CLI for the optional MIGRATE_ON_START=1 path (root-owned, read-only).
 COPY --from=prisma-cli /opt/prisma-cli/node_modules /opt/prisma-cli/node_modules
 COPY --chmod=755 scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-# Operator tools (setup, preflight, schema checks, smoke tests), root-owned.
-COPY scripts/*.mjs ./scripts/
-COPY docker/vps ./docker/vps
+# Source modes may be private to the installer; the runtime UID must read them.
+COPY --chown=nextjs:nodejs scripts/*.mjs ./scripts/
+COPY --chown=nextjs:nodejs docker/vps ./docker/vps
 COPY --from=ops-modules /opt/ops/node_modules ./docker/vps/node_modules
 
 # Next's standalone trace may include dotenv files when a build is performed
 # from a developer checkout. Secrets belong only in the runtime environment.
 RUN rm -f .env .env.local .env.production .env.development
 
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 USER nextjs
 
 EXPOSE 3000

@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./browser-fixtures";
 test.skip(
   !process.env.PLATFORM_SHELL_E2E_PASSWORD,
   "Set PLATFORM_SHELL_E2E_PASSWORD after seeding the local demo.",
@@ -31,19 +31,19 @@ test("links, search, preferences and data settings render at 375px", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 375, height: 812 });
-  for (const [path, title] of [
-    ["links", "Links"],
-    ["search", "Search"],
-    ["activity", "Activity"],
-    ["notifications", "Notifications"],
-    ["notifications/preferences", "Notification preferences"],
-    ["settings/export", "Workspace export"],
-    ["settings/import", "CSV import"],
-    ["settings/retention", "Retention and locale"],
-  ]) {
+  for (const [path, title, level] of [
+    ["links", "Links", 1],
+    ["search", "Search", 1],
+    ["activity", "Activity", 1],
+    ["notifications", "Notifications", 1],
+    ["notifications/preferences", "Notification preferences", 1],
+    ["settings/export", "Workspace export", 2],
+    ["settings/import", "CSV import", 2],
+    ["settings/retention", "Retention and locale", 2],
+  ] as const) {
     await page.goto(`/w/tinkerspace-kochi/${path}`);
     await expect(
-      page.getByRole("heading", { name: title, exact: true, level: 1 }),
+      page.getByRole("heading", { name: title, exact: true, level }),
     ).toBeVisible();
     expect(
       await page.evaluate(
@@ -65,7 +65,7 @@ test("search finds indexed links and sidebar pins stay scoped", async ({
     .fill("Space Works");
   await page.getByRole("button", { name: "Search", exact: true }).click();
   await expect(
-    page.getByRole("link", { name: "Space Works on GitHub", exact: true }),
+    page.locator("#main-content").getByRole("link", { name: "Space Works on GitHub", exact: true }),
   ).toBeVisible();
   await page.screenshot({
     path: "screenshots/platform-shell-desktop.png",

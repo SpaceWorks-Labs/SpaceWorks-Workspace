@@ -8,6 +8,7 @@ import { fromDbSeverity } from "@/lib/notify/match";
 import { DM_CHANNEL_PROVIDER } from "@/lib/notify/preferences";
 import { renderMessage, type StoredEventForRender } from "@/lib/notify/render";
 import { describeOperationalError } from "@/lib/redactSensitiveText";
+import { mayDeliverNotification } from "./access";
 
 /**
  * Worker side of notification routing: the outbox calls
@@ -65,6 +66,7 @@ export async function processNotifyDelivery(deliveryId: string, now = new Date()
     await finish(deliveryId, { status: "CANCELLED", lastError: reason });
     return { status: "done" } as const;
   };
+  if (!await mayDeliverNotification(deliveryId)) return cancel("The recipient no longer has access.");
 
   let adapter: DestinationAdapter;
   let target: AdapterSendInput["target"];

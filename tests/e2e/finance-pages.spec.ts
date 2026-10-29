@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./browser-fixtures";
 
 // Request-only checks exercise Next's real RSC renderer without needing a
 // browser process. A streamed rendering failure can otherwise have HTTP 200.
