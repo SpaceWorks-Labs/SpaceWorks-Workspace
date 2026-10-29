@@ -38,6 +38,7 @@ prepare_public_permission_probe
 docker build --target runner --secret id=NEXT_SERVER_ACTIONS_ENCRYPTION_KEY,env=SWW_BUILD_KEY \
   --build-arg NEXT_PUBLIC_BASE_URL=https://spaceworks-workspace-origin.invalid -t sww-backend:smoke .
 check_public_permission_probe
+check_runtime_source_permissions
 docker build --target frontend --secret id=NEXT_SERVER_ACTIONS_ENCRYPTION_KEY,env=SWW_BUILD_KEY \
   --build-arg NEXT_PUBLIC_BASE_URL=https://spaceworks-workspace-origin.invalid \
   --build-arg NEXT_PUBLIC_BACKEND_ORIGIN=https://spaceworks-workspace-backend.invalid -t sww-frontend:smoke .

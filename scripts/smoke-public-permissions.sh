@@ -31,3 +31,19 @@ remove_public_permission_probe() {
   rm -f -- "$SWW_PERMISSION_PROBE/readable.txt"
   rmdir -- "$SWW_PERMISSION_PROBE"
 }
+
+check_runtime_source_permissions() {
+  [[ ${CI:-} = true ]] || return 0
+  docker run --rm --network none --entrypoint node sww-backend:smoke -e '
+    const fs = require("node:fs"), assert = require("node:assert/strict");
+    assert.notEqual(process.getuid(), 0, "use the actual non-root image user");
+    for (const directory of ["/app/scripts", "/app/docker/vps"]) {
+      for (const name of fs.readdirSync(directory).filter(name => name.endsWith(".mjs"))) {
+        const file = directory + "/" + name;
+        assert.equal(fs.statSync(file).uid, process.getuid(), file);
+        fs.readFileSync(file);
+      }
+    }
+    console.log("Non-root backend reads every direct-source operator and crypto helper.");
+  '
+}

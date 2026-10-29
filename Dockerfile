@@ -172,9 +172,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/dist ./dist
 # Prisma CLI for the optional MIGRATE_ON_START=1 path (root-owned, read-only).
 COPY --from=prisma-cli /opt/prisma-cli/node_modules /opt/prisma-cli/node_modules
 COPY --chmod=755 scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-# Operator tools (setup, preflight, schema checks, smoke tests), root-owned.
-COPY scripts/*.mjs ./scripts/
-COPY docker/vps ./docker/vps
+# Source modes may be private to the installer; the runtime UID must read them.
+COPY --chown=nextjs:nodejs scripts/*.mjs ./scripts/
+COPY --chown=nextjs:nodejs docker/vps ./docker/vps
 COPY --from=ops-modules /opt/ops/node_modules ./docker/vps/node_modules
 
 # Next's standalone trace may include dotenv files when a build is performed

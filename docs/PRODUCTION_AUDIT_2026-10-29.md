@@ -10,8 +10,10 @@ and Bookings have separate reviewers and release decisions.
 **Release decision: verification incomplete; do not treat this audit as production
 certification.** Confirm the remaining packaged deployment and recovery gates
 before accepting production traffic. No production database, deployment or main
-merge was used. Publication is through an audit feature PR into dev, with merge
-authorized only after CI and final acceptance pass. No application environment
+merge was used during the audit. Publication is through an audit feature PR into
+dev, followed by a dev-to-main PR, each gated by successful CI and final
+acceptance. The user subsequently authorized both merges and deletion of all
+other local and remote branches in these four repos. No application environment
 file was inspected or printed.
 
 The sibling `SpaceWorks-Workspace` directory is a different, legacy Loop checkout:
@@ -312,3 +314,10 @@ CI job now gates installation, high-severity audit and local bundle generation.
 Workspace remains version 0.6.7. All checks on the preceding PR head passed;
 the final follow-up head must pass CI and current-source image/recovery checks
 before merge into dev. Main and production are unchanged.
+
+An additional private-source CI failure in Machines exposed the equivalent
+operator/helper COPY boundary. Workspace now assigns its direct-source
+`scripts/*.mjs` and `docker/vps` files to the runtime UID too. The image smoke
+reads every copied JavaScript helper as that non-root UID; its disposable CI
+source copy uses private directory and file modes. Existing checkout modes are
+unchanged. Current-source image verification remains required after this fix.

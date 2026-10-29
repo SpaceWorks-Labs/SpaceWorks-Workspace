@@ -59,5 +59,7 @@ jobs:
           git archive HEAD | tar -xf - -C "$work"
           chmod 600 "$work/docker/vps/pg_hba.conf"
           chmod 700 "$work/docker/vps/init-database.sh"
+          chmod 700 "$work/docker/vps" "$work/scripts"
+          find "$work/docker/vps" "$work/scripts" -maxdepth 1 -type f -name '*.mjs' -exec chmod 600 {} +
           cd "$work"
           bash scripts/test-vps-install.sh
