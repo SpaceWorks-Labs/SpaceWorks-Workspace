@@ -282,3 +282,33 @@ visible with source/symbol/config evidence and configuration-change limits in
 switcher: all 26 high/critical advisories were mapped to official Go records and
 the exact binary function table; affected package/functions were absent. Raw
 counts and assessment limits remain in the external image-security evidence.
+
+## Final acceptance follow-ups
+
+The first native two-image run passed split and single layouts, TLS-enforced
+PostgreSQL/Redis, private object roundtrip, authenticated readiness and actual
+BullMQ worker email over authenticated STARTTLS. Its full encrypted recovery
+then exposed a GNU tar race: the encryption pipeline created its excluded
+output inside the directory while tar was reading directory metadata. The
+backup now creates that output before starting the pipeline; tar failures
+remain fatal. A deterministic real GNU tar regression reproduces the old
+failure and verifies the fix. Final full encrypted restore remains a gate.
+
+Fresh installation also handles installer-owned PostgreSQL inputs with HBA
+mode 600 and initialization script mode 700. The root startup stages these
+read-only inputs into postgres-owned private runtime files before dropping
+privileges. An actual PostgreSQL 16 acceptance probe passed initialization,
+TLS, runtime-role creation and postgres-UID file/mode checks. CI installs and
+restores from a separate source copy with private input permissions; existing
+checkout permissions are unchanged. The focused Linux suite passes all 13
+backup, public-asset and privilege tests; deployment syntax checks pass all
+110 scripts/manifests.
+
+The independent Cloudflare cron lockfile is audited separately from root npm
+workspaces. Wrangler 4.156.0 includes patched undici 7.30.1 and matching workerd
+1.20261023.1. Its complete dependency audit reports zero findings, and an actual
+credential-free isolated Wrangler dry-run passed without deployment. A separate
+CI job now gates installation, high-severity audit and local bundle generation.
+Workspace remains version 0.6.7. All checks on the preceding PR head passed;
+the final follow-up head must pass CI and current-source image/recovery checks
+before merge into dev. Main and production are unchanged.

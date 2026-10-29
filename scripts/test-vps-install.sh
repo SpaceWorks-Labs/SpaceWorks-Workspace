@@ -17,7 +17,7 @@ cleanup() {
   if [[ $status != 0 && -f "$SWW_CONFIG_DIR/compose.env" ]]; then
     # Only this disposable deployment; never dump interpolated configuration.
     as_root sh scripts/vps-compose.sh ps || true
-    as_root sh scripts/vps-compose.sh logs --tail 40 app frontend worker beat || true
+    as_root sh scripts/vps-compose.sh logs --tail 40 app frontend worker beat postgres redis storage || true
   fi
   [[ ! -f "$SWW_CONFIG_DIR/compose.env" ]] || as_root sh scripts/vps-compose.sh down --volumes --remove-orphans >/dev/null 2>&1 || true
   as_root rm -rf -- "$work"
@@ -51,9 +51,18 @@ docker run --rm --user 0:0 -v "$SWW_CONFIG_DIR:/config" \
   sww-backend:smoke node docker/vps/configure-smtp.mjs
 printf "SWW_CADDY_TLS='internal'\n" | as_root tee -a "$SWW_CONFIG_DIR/compose.env" >/dev/null
 as_root mkdir -m 755 "$SWW_CONFIG_DIR/status"
+as_root bash scripts/test-postgres-bootstrap.sh
 as_root sh scripts/vps-compose.sh config --quiet
 as_root sh scripts/vps-compose.sh build proxy
 as_root sh scripts/vps-compose.sh up -d --wait --wait-timeout 300
+# shellcheck disable=SC2016 # stat commands must run inside the PostgreSQL container.
+as_root sh scripts/vps-compose.sh exec -T --user postgres postgres sh -ec '
+test -r /var/lib/postgresql/bootstrap/pg_hba.conf
+test -x /docker-entrypoint-initdb.d/10-app-role.sh
+test "$(stat -c %a /var/lib/postgresql/tls/server.key)" = 600
+test "$(stat -c %a /var/lib/postgresql/bootstrap/pg_hba.conf)" = 600
+test "$(stat -c %a /docker-entrypoint-initdb.d/10-app-role.sh)" = 700
+printf "Non-root PostgreSQL bootstrap probe passed.\n"'
 as_root sh scripts/vps-compose.sh run --rm --no-deps -T ops node docker/vps/check.mjs
 as_root sh scripts/vps-compose.sh run --rm --no-deps -T ops node docker/vps/smoke.mjs
 # Exercise the same image with the single-hostname layout too, preserving data.

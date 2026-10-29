@@ -41,8 +41,8 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ${SWW_CONFIG_DIR}/tls/postgres:/run/server-tls:ro
       - ./docker/vps/postgres-start.sh:/bootstrap/postgres-start.sh:ro
-      - ./docker/vps/init-database.sh:/docker-entrypoint-initdb.d/10-app-role.sh:ro
-      - ./docker/vps/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+      - ./docker/vps/init-database.sh:/bootstrap/init-database.sh:ro
+      - ./docker/vps/pg_hba.conf:/bootstrap/pg_hba.conf:ro
     healthcheck:
       test: ["CMD", "pg_isready", "-h", "postgres", "-U", "sww", "-d", "sww"]
       interval: 5s
