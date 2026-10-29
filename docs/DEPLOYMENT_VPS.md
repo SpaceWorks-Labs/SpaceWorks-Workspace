@@ -16,11 +16,16 @@ Use `compose.production.yml` through `scripts/vps-compose.sh`. Development and s
 
 - A 64-bit (x86_64 or arm64) Linux VPS: Ubuntu/Debian, Fedora/RHEL/Alma/Rocky,
   Arch or openSUSE. The installer installs Docker Engine + Compose when missing.
-  Start with **2 vCPU, 2 GB RAM and 30 GB SSD** for a small installation, with
-  extra space for uploads and backups. These are starting estimates, not
-  load-tested capacity limits. Releases run published images; only a source
-  build (`--ref`) compiles on the server, which needs about 4 GB of memory. The
-  installer offers a swap file when memory is short.
+  Start with **2 vCPU, 4 GB RAM with swap available and 30 GB SSD** for the
+  bundled edge and a small installation, with extra space for uploads/backups.
+  These are starting estimates, not load-tested capacity limits. Application
+  releases use published images; the bundled Caddy edge compiles locally from
+  pinned source with patched Go/dependencies. An existing reverse proxy skips
+  that build. Source app builds (`--ref`) also need build headroom. The installer
+  offers a 4 GB swap file when combined memory/swap is short. Leave build reserve
+  during updates while the previous app/database still run. The measured edge
+  build cgroup peak was 2.21 GiB at two CPUs, including reclaimable module/file
+  cache; this is build evidence rather than a minimum isolated compiler RSS.
 - A domain, such as `workspace.example.com`, whose DNS A record points to the VPS.
   Add an AAAA record only if IPv6 reaches this host too. Start with DNS-only
   records; the supplied proxy assumes clients connect directly to Caddy.
@@ -368,6 +373,13 @@ HTTPS redirect for previously shared links. Keep `actions-key` and its matching
 runtime key stable across ordinary builds and upgrades.
 
 ## Backups and recovery
+
+Full bundled-storage backups pause the running app, worker and beat while the
+database and objects are captured, then restart those same writers before
+encryption and off-site transfer. Schedule this write interruption appropriately.
+Failures also attempt to restart paused writers and report restart errors.
+Database-only backups and external-storage backups keep services running;
+external objects require the provider's separate backup policy.
 
 Persistent volumes hold PostgreSQL, Redis and, when they run here, Silo object storage and Caddy
 certificates. Back up **both database and uploaded objects**, plus the external

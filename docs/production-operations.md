@@ -71,3 +71,5 @@ workspace legal hold and retention settings. Recheck role and source-record
 access on search/read/export paths. Treat a provider's SMTP acceptance as
 handoff; monitor bounces and delivery separately. Record incidents, restore
 drills, access reviews and credential rotation in your operating records.
+
+The database restore CLI supports the application public schema only. It refuses archives or targets containing other user schemas, stages the complete custom archive before one atomic schema replacement, and removes target tables absent from the backup. Its existing `--no-owner --no-privileges` policy remains: the restoring database user owns recovered objects. Stop application workers while using this operational CLI.

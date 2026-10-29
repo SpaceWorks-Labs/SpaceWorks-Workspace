@@ -1,10 +1,11 @@
 {
   "name": "spaceworks-workspace",
-  "version": "0.6.6",
+  "version": "0.6.7",
   "private": true,
   "license": "AGPL-3.0-or-later",
   "scripts": {
     "dev": "prisma generate && next dev",
+    "dev:stack": "node --env-file-if-exists=.env scripts/check-local-services.mjs && prisma generate && npm run build:jobs && node --env-file-if-exists=.env scripts/dev-stack.mjs",
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
@@ -99,7 +100,7 @@
     "zod": "^4.6.7"
   },
   "overrides": {
-    "deepmerge-ts": "^8.0.0"
+    "deepmerge-ts": "8.0.2"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",

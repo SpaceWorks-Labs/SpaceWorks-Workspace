@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./browser-fixtures";
 
 // HTTP request fixtures only: no browser is launched by these tests.
 const prisma = new PrismaClient(),

@@ -1,0 +1,17 @@
+# Keep Linux entrypoints and Compose mounts usable from Windows checkouts too.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+
+# Preserve downloadable CSV samples verbatim.
+public/samples/*.csv -text

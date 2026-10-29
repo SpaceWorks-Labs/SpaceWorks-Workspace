@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Back up the database, the configuration and the uploaded objects into
-# $SWW_CONFIG_DIR/backups/<UTC time>/ while the services keep running. The
-# database dump is a consistent snapshot; objects are copied one by one.
+# $SWW_CONFIG_DIR/backups/<UTC time>/. Full backups briefly pause app/worker/beat
+# writers so the database snapshot and copied objects cannot diverge. Database-
+# only backups use PostgreSQL's consistent snapshot while services keep running.
 #   --no-objects  database and configuration only (used before updates)
 # Settings live in $SWW_CONFIG_DIR/backup.env (installer menu: Backups):
 #   BACKUP_KEEP_DAYS        days a backup stays on this server (default 14); the
@@ -47,6 +48,25 @@ name=$(date -u +%Y%m%dT%H%M%SZ)
 target="$backups/$name"
 started=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 offsite=off
+paused_writers=()
+
+pause_writers() {
+  [[ $objects = 1 ]] || return 0
+  local running service
+  running=$(compose ps --services --status running) || return
+  while IFS= read -r service; do
+    case "$service" in app|worker|beat) paused_writers+=("$service") ;; esac
+  done <<< "$running"
+  ((${#paused_writers[@]} > 0)) || return 0
+  say 'Pausing application and background writers for the full backup.'
+  compose stop "${paused_writers[@]}"
+}
+
+resume_writers() {
+  ((${#paused_writers[@]} > 0)) || return 0
+  compose up -d --no-deps --wait --wait-timeout 300 "${paused_writers[@]}" || return
+  paused_writers=()
+}
 
 # status.json carries no secrets; the app reads it through a read-only mount.
 json_time() { if [[ -n "$1" ]]; then printf '"%s"' "$1"; else printf null; fi; }
@@ -72,15 +92,23 @@ write_status() {
 }
 on_exit() {
   local status=$?
-  [[ $status = 0 ]] && return 0
-  rm -rf -- "$target.partial"
-  write_status failed || true
+  set +e
+  if [[ $status != 0 ]]; then
+    rm -rf -- "$target.partial"
+    write_status failed || true
+  fi
+  if ! resume_writers; then
+    warn 'The backup stopped application writers, but they could not all restart. Run scripts/vps-compose.sh up -d --wait and check service health.'
+    write_status failed || true
+    status=1
+  fi
   exit "$status"
 }
 trap on_exit EXIT
 
 umask 077
 mkdir -p "$target.partial"
+pause_writers
 compose exec postgres pg_dump -U sww -d sww -Fc > "$target.partial/database.dump"
 compose exec postgres pg_restore --list < "$target.partial/database.dump" > /dev/null
 tar --exclude=./backups -czf "$target.partial/config.tar.gz" -C "$SWW_CONFIG_DIR" .
@@ -88,6 +116,8 @@ if [[ $objects = 1 ]]; then
   compose run --rm --no-deps --volume "$target.partial:/backup" --entrypoint mc storage-init \
     mirror --quiet local/spaceworks-workspace /backup/objects > /dev/null
 fi
+# Encryption, off-site transfer and retention do not need a write pause.
+resume_writers
 conf_get "$SWW_CONFIG_DIR/compose.env" SWW_VERSION > "$target.partial/version"
 printf '%s\n' "$kind" > "$target.partial/kind"
 # Encrypted backups keep only `version` and `kind` readable; everything else
@@ -133,7 +163,6 @@ for dir in "${full[@]:keep_min}" "${database_only[@]:keep_min}"; do
   rm -rf -- "$dir"
 done
 write_status ok "$(du -sb "$target" | cut -f1)"
-trap - EXIT
 if [[ -z "$recipient" ]]; then
   say 'It contains every secret, unencrypted. Turn on encryption and off-site copies in the installer menu (Backups).'
 elif [[ -z "$offsite_bucket" ]]; then

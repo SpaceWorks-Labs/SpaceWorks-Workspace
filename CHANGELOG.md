@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.7] - 2026-10-29
+
+### Fixed
+
+- Recheck current notification and email access after account, membership, role or destination changes.
+- Start and drain the complete local web, worker and scheduler stack with durable Redis and local service guards.
+- Preserve Sharp native companions in standalone builds and use Linux line endings for deployment scripts.
+- Keep generated frontend fingerprints stable across line endings, pin the migration CLI dependency fix, and bound container build workers.
+- Exercise encrypted database, private-file and key recovery plus queued SMTP delivery in the installer acceptance suite.
+- Restore the public schema transactionally without newer-table residue, and keep serving processes stopped when recovery fails after the database commits.
+- Exercise task, chat, document and private file-version journeys in both production browser layouts.
+- Align the Helm chart release and default application image with the current patch version.
+- Preserve upload and presence headers through split hosting, validate the authenticated frontend origin, and render SVG chart titles as single strings.
+- Remove unused global npm tooling from runtime and staging migration images while retaining Node and the isolated Prisma CLI.
+- Pin the refreshed Silo server/client and build the standard Caddy edge with patched Go, dependencies and Alpine packages in setup and upgrades.
+
 ## [0.6.6] - 2026-10-23
 
 ### Changed

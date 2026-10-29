@@ -1,3 +1,4 @@
+import { restorePublicArchive } from "./db-restore-public.mjs";
 import { createHash, randomUUID } from "node:crypto";
 import { access, chmod, lstat, mkdir, readFile, readdir, rename, rm, stat, statfs, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -281,7 +282,7 @@ export async function restoreArchive(archive) {
   const database = databaseDetails();
   const connection = await createDatabaseEnvironment(database);
   try {
-    await run("pg_restore", ["--clean", "--if-exists", "--no-owner", "--no-privileges", "--exit-on-error", "--single-transaction", `--dbname=${database.databaseName}`, archive], connection.environment);
+    await restorePublicArchive({ archive, directory: backupDirectory, environment: connection.environment, run, commandOutput, fail });
   } finally {
     await connection.dispose();
   }

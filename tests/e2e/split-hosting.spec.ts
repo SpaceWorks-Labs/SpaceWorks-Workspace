@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./browser-fixtures";
 
 test.skip(process.env.PLAYWRIGHT_SPLIT !== "1", "The split-hosting harness supplies isolated production servers.");
 const prisma = new PrismaClient();

@@ -2,7 +2,7 @@ import "server-only";
 
 import { prisma } from "@/lib/db";
 import { escapeHtml, renderNotificationEmail } from "@/lib/email/templates";
-import { parsePeopleSelector, resolveSelectorMembers } from "@/lib/notify/audience";
+import { resolveDestinationEmails } from "@/lib/notify/audience";
 import type { DestinationAdapter } from "@/lib/notify/adapters/types";
 import { enqueueEmail } from "@/lib/outbox";
 
@@ -13,26 +13,17 @@ import { enqueueEmail } from "@/lib/outbox";
  * delivery and its retries; "sent" here means queued for email.
  */
 
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-function staticRecipients(config: unknown): string[] {
-  if (!config || typeof config !== "object" || Array.isArray(config)) return [];
-  const to = (config as Record<string, unknown>).to;
-  return Array.isArray(to) ? to.filter((v): v is string => typeof v === "string" && EMAIL.test(v) && v.length <= 320) : [];
-}
-
 export const emailAdapter: DestinationAdapter = {
   kind: "EMAIL",
   personalChannel: "EMAIL",
   label: "Email",
   configured: true,
-  async send({ message, target, isTest }) {
+  async send({ deliveryId, message, target, isTest }) {
     let recipients: string[];
     if (target.type === "personal") {
       recipients = [target.user.email];
     } else {
-      const members = await resolveSelectorMembers(message.workspace.id, parsePeopleSelector(target.destination.config));
-      recipients = [...staticRecipients(target.destination.config), ...members.map((member) => member.user.email)];
+      recipients = await resolveDestinationEmails(message.workspace.id, target.destination.config);
     }
     recipients = [...new Set(recipients.map((email) => email.toLowerCase()))].slice(0, 200);
     if (recipients.length === 0) return { ok: false, retryable: false, error: "This destination has no email recipients." };
@@ -44,7 +35,8 @@ export const emailAdapter: DestinationAdapter = {
       ...(message.url ? { actionUrl: message.url, actionLabel: "Open in Space Works" } : {}),
     });
     await prisma.$transaction(async (tx) => {
-      for (const to of recipients) await enqueueEmail(tx, { workspaceId: message.workspace.id, to, ...email });
+      const source = message.eventType === "digest.ready" ? { notificationDigestId: deliveryId } : { notificationDeliveryId: deliveryId };
+      for (const to of recipients) await enqueueEmail(tx, { workspaceId: message.workspace.id, ...source, to, ...email });
     });
     return { ok: true };
   },
