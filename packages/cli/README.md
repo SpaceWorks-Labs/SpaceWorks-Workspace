@@ -1,9 +1,23 @@
 # Space Works Workspace CLI
 
-Install Node 20 or newer, then install the package:
+Install Node 20 or newer. The primary package registry is GitHub Packages.
+Authenticate before installing:
 
 ```sh
+npm login --scope=@spaceworks-labs --auth-type=legacy --registry=https://npm.pkg.github.com
 npm install --global @spaceworks-labs/workspace-cli
+```
+
+Enter your GitHub username and a personal access token (classic) with
+`read:packages` as the password at the prompts. Authorize the token for your
+organization's SSO if required. Keep it out of command arguments and committed
+files. GitHub Packages requires authentication even for public packages; see
+[GitHub's npm registry guide](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-npm-registry).
+
+Then sign in to your Workspace instance; this device login is separate from
+package-registry authentication:
+
+```sh
 sww login --host https://workspace.example.org
 sww init --host https://workspace.example.org --project PROJECT_ID --env dev
 sww secrets list
@@ -30,7 +44,7 @@ Every member export and production reveal requires a fresh authenticator code; v
 
 Avoid placing real secret values or one-time codes in saved shell history. `set` accepts one `KEY=value` argument; the part after the first equals sign is the value. Redirecting `pull` intentionally creates a plaintext file; `run` injects resolved values into a child process without writing them to disk. Child output is inherited, signals are forwarded, and the child's exit code is preserved. The `SWW_TOKEN` variable is removed from the child's environment.
 
-For CI, create an expiring service token scoped to the exact environment and folder, optionally with an IP/CIDR allowlist:
+For CI, first configure authenticated read access to the GitHub Packages registry so `npx` can resolve the package. Create an expiring Workspace service token scoped to the exact environment and folder, optionally with an IP/CIDR allowlist:
 
 ```sh
 SWW_TOKEN="$SWW_SECRETS_TOKEN" npx @spaceworks-labs/workspace-cli run \
@@ -73,7 +87,12 @@ From the repository root:
 ```sh
 npm run build --workspace packages/cli
 npm pack --workspace packages/cli
-npm publish --workspace packages/cli
 ```
 
-The package has no runtime dependencies. The tarball contains only compiled JavaScript/declarations, this README, LICENSE and npm's package metadata. Publishing needs your normal npm authentication; this repository supplies no publishing automation.
+The package has no runtime dependencies. The tarball contains only compiled JavaScript/declarations, this README, LICENSE and npm's package metadata.
+
+The repository's main-release workflow automatically publishes the CLI to
+GitHub Packages at the release's base version. Optional publication to npmjs.com
+requires the repository's `NPM_TOKEN` secret; without it, the public npm registry
+may return 404 for this package. Use the authenticated GitHub Packages install
+flow above. Existing package versions are not overwritten.
