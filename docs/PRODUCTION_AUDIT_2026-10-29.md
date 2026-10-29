@@ -2,322 +2,142 @@
 
 ## Scope and release decision
 
-Audited the modern, initially clean `SpaceWorks-Workspace-dev` checkout on `dev`,
-base revision `018c42b`; changes are on local branch
-`fix/production-audit-2026-10-29`. This report covers Workspace only. Inventory, Machines
-and Bookings have separate reviewers and release decisions.
+Space Works Workspace **0.6.7** passed the bounded source, Linux, browser and
+local clean-stack acceptance recorded below. Final application code is
+`0a59553fc15b6b07b7c0a19be647c2eb8074a90a`; the final report commit changes
+documentation only. Inventory, Machines and Bookings have separate reports.
+The user authorized a checked feature PR into dev, then a checked dev-to-main
+PR, followed by branch and repository-resource cleanup. No production database,
+credential file or live deployment was used as a test target.
 
-**Release decision: verification incomplete; do not treat this audit as production
-certification.** Confirm the remaining packaged deployment and recovery gates
-before accepting production traffic. No production database, deployment or main
-merge was used during the audit. Publication is through an audit feature PR into
-dev, followed by a dev-to-main PR, each gated by successful CI and final
-acceptance. The user subsequently authorized both merges and deletion of all
-other local and remote branches in these four repos. No application environment
-file was inspected or printed.
+The local evidence supports release through those checks; it does not certify
+the absence of other defects. New-host, public TLS and real-provider checks
+remain deployment-specific gates, explicitly deferred by the user.
 
-The sibling `SpaceWorks-Workspace` directory is a different, legacy Loop checkout:
-its README describes Python 3.12, Next.js 15 and the Hermes agent; `main` points at
-`a704eab` and has numerous pre-existing untracked files. It was inspected read-only
-and was not modified. It must not be mistaken for the audited modern application.
+The sibling primary checkout originally contained a legacy Loop README and
+pre-existing untracked source. That source is distinct from this audited modern
+application and must be preserved before replacing that checkout or removing
+the modern auxiliary worktree.
 
-## Fixed findings
+## Verified defects and remediation
 
-### High: queued personal notifications could outlive access revocation
-
-Reproduction: queue an administrator-only `it.review_due` notification, then demote
-the recipient to GUEST or disable their account before the worker routes it.
-Previously `processNotifyDelivery` checked only ACTIVE membership. Archiving the
-workspace also did not stop the external delivery. Dispatch and selector resolution
-also included disabled accounts with ACTIVE memberships.
-
-Fix: dispatch and selectors exclude disabled users and archived workspaces. A
-shared delivery guard checks current membership, account state, workspace state
-and the event catalogue's minimum role before routing. Removed, cancelled, failed
-or unknown delivery sources fail closed.
-
-### High: routing mail to the outbox lost the recipient authorization boundary
-
-Reproduction: route an allowed notification to email, then suspend/remove/demote
-the recipient, disable the account, archive the workspace or change the email
-address before SMTP delivery. The previous generic email payload retained only
-the rendered message and old address; SMTP did not recheck authorization.
-
-Fix: notification and digest email payloads retain their source identifiers. The
-outbox rechecks the current recipient and address immediately before SMTP. Disabled
-broadcast destinations and removed sources are rejected too. Ordinary transactional
-mail and explicit external broadcast addresses retain their existing semantics.
-Digest emails use their actual digest source, rather than a notification delivery
-row, preserving normal digest delivery.
-
-Independent follow-up review found that EMAIL destinations using role, team or
-user selectors still lost recipient authorization between routing and SMTP: the
-destination branch checked only whether the destination remained enabled.
-Reproduction: route mail to a `{ roles: ["ADMIN"] }` destination, then demote or
-disable the selected administrator before SMTP. The queued email still sent.
-The shared email policy now checks current destination type/configuration and
-performs one recipient-filtered membership lookup at SMTP, sharing the same
-selector rules as routing. It does not expand every selected member again for
-each queued address. Current explicit static `to` entries remain deliberate
-external recipients, including addresses that also matched a revoked member.
-Removed static addresses and destinations changed away from EMAIL fail closed.
-
-The new 24-case PostgreSQL regression suite demonstrated 12 failing cases before
-the fix and exercises allowed role/team/user recipients, membership and email
-changes, team departure, selector/config changes, destination removal/type changes,
-static overlap and external addresses. Targeted final results appear below.
-
-No schema migration is required: these identifiers are optional JSON payload fields.
-Existing queued generic email rows predate these identifiers and cannot benefit
-from the new source check. Before rollout, review/drain or deliberately discard
-stale notification emails under the existing outbox operating procedure.
-
-## Coverage and evidence
-
-| Boundary/flow | Review evidence |
+| Finding | Fix and evidence |
 | --- | --- |
-| Invite-only authentication and MFA | Reviewed `lib/auth.ts`, session-version invalidation, enabled-user lookup, verified Google linking, OIDC member checks and five-minute pending SSO MFA; pending MFA has no authenticated user. |
-| Tenant and role checks | Reviewed `lib/permissions.ts`, `lib/roles.ts`, `lib/teamAccess.ts`, direct page guards and action patterns; archived, absent and suspended workspace lookups fail closed. |
-| Last-owner invariant and concurrent counters | Reviewed transactional owner row locks in `lib/membership.ts` and concurrency cases in `tests/integration/membership.db.test.ts`. |
-| REST, MCP and assistant | Reviewed per-token authentication/scopes/rate limits, common tool authorization and record filters; MCP uses stateless bounded requests. |
-| Split frontend gateway | Reviewed shared-secret peer checks, server-side registry, body limits, origin validation, safe view field filtering and cookie forwarding. |
-| Files and private records | Reviewed tenant download lookup, disabled-member denial, document/team/channel/finance/request-specific visibility, private storage policy and image validation. Live Silo verification is recorded below. |
-| Outbound integration URLs | Reviewed URL restrictions and DNS/socket-time SSRF checks. IPv6 parsing expands mapped hexadecimal/IPv4 forms and rejects loopback/private/link-local ranges. |
-| Browser security and abuse controls | Reviewed nonce CSP, security headers, explicitly trusted IP headers and production Redis fail-closed rate limits. |
-| Email and notification lifecycle | Traced request-side SQL outbox insertion, beat reconciliation, BullMQ worker claims, adapter dispatch, retry/dead-letter handling and actual SMTP handoff. Added revocation regressions. |
-| Scheduled work and operations | Reviewed separate production worker/beat, health endpoints, bounded queue retention, graceful shutdown and redacted job errors. |
-| Product flows | Existing unit/integration suites exercise tasks, chat, docs/files, finance, people, approvals, assistant, calendar, secrets, analytics and other operating areas; exact completed gates appear below. |
+| Queued personal notifications survived revoked account, membership, role or workspace access. | Shared dispatch/routing/delivery guards recheck enabled accounts, current membership, event minimum roles and workspace state. Removed, cancelled, failed or unknown sources fail closed. |
+| Routing to generic email lost recipient authorization before SMTP. | Notification and digest source identifiers survive the outbox boundary. The worker rechecks the current recipient, email address, destination type/configuration and source immediately before SMTP. |
+| Role/team/user destination selectors were not rechecked at SMTP. | One recipient-filtered current-membership lookup shares routing selector rules. Explicit current static recipients retain their external-recipient semantics. The new 24-case PostgreSQL suite reproduced 12 pre-fix failures; 50 focused cases passed. |
+| Split uploads and document presence lost their client header. | Forward it only through the authenticated gateway's exact configured origin. Trusted-peer, origin and revocation regressions cover the boundary. |
+| Restoring an older dump left newer target-schema objects. | Stage complete SQL before stopping services, replace the public schema transactionally, retain schema comments/ACLs and reinstate restricted runtime/default grants. Conversion and SQL errors fail before committing partial recovery. |
+| Full bundled-storage backups could snapshot writers inconsistently. | Pause only running app/worker/beat writers during the DB/object snapshot; resume that captured set before encryption and on failures. Database-only/external-storage policy remains explicit. Seven behavioral cases cover ordering and failure recovery. |
+| Encrypted output creation raced with GNU tar directory metadata reads. | Precreate the excluded output before the pipeline. Actual GNU tar reproduces the old fatal error and verifies the fix without suppressing tar failures. |
+| Private 700/600 source inputs were unreadable under runtime users. | Own backend public assets, direct JavaScript helpers and VPS tools as the non-root application UID; stage private PostgreSQL bootstrap inputs into postgres-owned runtime files. Actual packaged probes exercise private files and UID/modes. |
+| sudo-rs discarded installer fixture coordinates. | Forward only nonsecret project/configuration coordinates explicitly. Credentials stay in private configuration files. Real-mode fixture and environment-discarding sudo regressions passed. |
+| Inherited global npm and an independent cron lock escaped root dependency checks. | Remove npm/npx from final runtimes; preserve Sharp and isolated Prisma tools with deepmerge-ts 8.0.2. Independently audit/bundle Wrangler 4.156.0, undici 7.30.1 and matching workerd in credential-free CI. |
 
-These are code-review and automated-test boundaries, not a claim that every
-external provider or every UI state was manually exercised.
+The review also traced invite-only authentication/MFA, tenant/page/action guards,
+last-owner and concurrent-counter locks, REST/MCP scopes and rate limits, private
+files and record visibility, DNS/socket-time SSRF controls, nonce CSP, trusted
+headers, SQL outbox/worker/beat retries, graceful shutdown and operational health.
+These are bounded review and test results; every external provider and every UI
+state was not manually exercised.
 
-## Local installer and background architecture
-
-The existing one-line Linux VPS installer is:
+## Stack and installation
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/SpaceWorks-Labs/SpaceWorks-Workspace/main/install.sh | bash
 ```
 
-It already provisions PostgreSQL 16, Redis 7, private Silo storage, Caddy HTTPS,
-migrations and separate BullMQ worker/beat services. `docker-compose.yml` supplies
-loopback-only local PostgreSQL/Redis/Silo/Mailpit; `compose.production.yml` supplies
-the production roles. Existing scripts cover guided setup, backups, restoration,
-updates and health checks. The public installer follows `main`: this audit's
-unreleased working-tree changes are not automatically included in that command.
+The installer follows main. PostgreSQL 16, Redis 7 with AOF/noeviction, private
+Silo storage, Caddy HTTPS, migrations and separate BullMQ worker/beat services
+form the standalone stack. Local Compose includes loopback-only services and
+Mailpit. Guided setup, upgrade, backup, restore and health scripts are included.
+Next.js 16/React 19/TypeScript use Prisma 6 and Auth.js with optional SSO and MFA.
 
-Per user direction, retain BullMQ and the Events-style architecture. Requests
-persist notification and email work; external notification adapters and SMTP run
-in workers. In-app persistence and realtime nudges occur after commit. No Python
-Celery migration was introduced. Network delivery has at-least-once semantics:
-SMTP acceptance followed by a crash before the SQL completion write may duplicate
-a message. The existing operational documentation explicitly records this limit.
+Per user direction, BullMQ matches the Events architecture. Requests persist
+email/notification work; SMTP and external notification delivery execute in
+workers. SMTP remains at-least-once: a crash after provider acceptance and before
+SQL completion can duplicate a message. Before rollout, review/drain pre-fix
+generic notification emails lacking source identifiers; no production queue was
+inspected or modified during this audit.
 
-## Verification
+## Completed verification
 
-The final Linux quality run used Ubuntu Noble, Node 22.23.4 and disposable
-PostgreSQL 16, Redis 7 and private Silo services. No production data or settings
-were used. Earlier Windows failures and interrupted runs remain in external
-logs; the completed Linux results below supersede their incomplete coverage.
+Ubuntu Noble, Node 22.23.4 and disposable PostgreSQL/Redis/private Silo fixtures
+were used. Current code passed all eight GitHub CI jobs, including actual
+Dockerfile installation/recovery and both production browser layouts.
 
 | Gate | Result |
 | --- | --- |
-| Clean Linux dependency install | PASS: `npm ci`, 780 packages. |
-| Full Linux units | PASS: 3,588 tests, 112 files, zero skipped, including final backup quiescence, selector guards, restore transaction, failure-phase and split-origin regressions. |
-| Full Linux integration | PASS: 717 tests, 60 files, zero skipped, using real PostgreSQL, Redis processes and Silo, including all 24 new selector/config/static-overlap cases. |
-| Lint, backend types, schema and worker/beat bundles | PASS. |
-| Frontend catalogue and types | PASS: 227 views, 333 actions, 560 DTOs and 45 UI types. Canonical generation also passes on Windows. |
-| Deployment validation | PASS: 108 script/manifest checks; Helm 4.3.1 lint and rendered ingress/autoscaling templates. |
-| Complete dependency audit | PASS: zero vulnerabilities across all dependency classes. |
-| Native production backend build | PASS with a 4 GiB Node heap; prepared Sharp loads successfully. |
-| Notification regressions | Included in the full integration gate: account, membership, role, archive, recipient-address and digest revocation plus allowed delivery. |
-| Selector follow-up PostgreSQL regressions | PASS: 50 tests across 3 files, zero skips, using a new disposable PostgreSQL database on loopback port 15446 with mocked SMTP. Includes all 24 new selector/config/static-overlap cases; pre-fix run reproduced 12 failures. External `selector-baseline.json` and `selector-final.json` retain both results. |
-| Selector follow-up bounded native units | PASS: 2,070 tests across notification routing/adapters, outbox rendering and file-size rules, zero skips; subsequently included in the complete Linux rerun above. |
-| Full-backup quiescence regressions | PASS: seven Linux and seven native Windows/Git Bash cases covering snapshot ordering, database-only uptime, deliberately stopped writers, discovery/stop/snapshot errors and restart failure. Included in the full Linux unit gate. |
-| Packaging follow-up regressions | PASS: five actual Linux cases for private public-asset fixture lifecycle and a sudo implementation that discards inherited environment. Four native Windows cases passed; the POSIX-mode-only case is intentionally not run on NTFS and passed on Linux. Changed-file ESLint and ShellCheck passed. Final actual image permission proof remains part of packaged acceptance. |
-| Full production browser modes before selector follow-up | Final monolith PASS: 15 passed, one intentional split-only skip. Final split PASS: all 16 passed. Both completed with zero retries. Both use explicit external storage and independent disposable databases. |
-| Packaged installation and encrypted recovery | PENDING actual execution. Checked-in smoke contracts cover database, private files, usable encrypted keys, worker delivery and fresh volumes. |
+| Complete-source Linux units | **3,597 passed / 115 files, zero skipped**, including real Redis. |
+| PostgreSQL integrations | **717 passed / 60 files, zero skipped**. |
+| Production browser layouts | Monolith **15 passed + one intentional split-only skip**; split **16 passed**, zero retries. |
+| Lint/types, schema, worker/beat and frontend bundles | Passed; generated catalogue contains 227 views, 333 actions, 560 DTOs and 45 UI types. |
+| Deployment validation | **110** script/manifest checks; Helm 4.3.1 lint/render passed. |
+| Dependencies | Root and independent cron audits passed with zero findings; credential-free Wrangler bundle passed without deployment. |
+| Focused backup/packaging follow-ups | **13 Linux cases passed**, including actual GNU tar and private-source/sudo probes. |
+| Real PostgreSQL restore contract | Custom archive/data/grants/ACL/comment preservation and newer-table removal passed; injected SQL error rolled back; malformed archive failed before stopping services. |
+| Final actual backend/frontend images | Complete checked-in Dockerfile builds passed. Non-root UID, npm/npx absence, isolated CLI/deepmerge, Sharp PNG and the admin backup route were verified in the actual backend image. |
+| Clean installation and encrypted fresh-volume recovery | **Passed split and single layouts, TLS/least privilege, private object access, real worker STARTTLS and bearer outbox deletion before/after age-encrypted recovery into empty database/storage volumes; restored schema, ciphertext, original keys and target-residue removal passed.** |
 
-Final evidence is retained outside the repository under
-`audit-evidence/2026-10-29/workspace/`. Diagnostic logs and generated test data
-are not release artifacts. Later changes to browser storage fixtures, the build
-worker cap and installer acceptance must be exercised by their relevant pending
-gates before release.
+Final backend: `c58c03c12ce792944a1a22785292887b7d8b3ab76289e73df6f735ba796b6779`.
+Final frontend: `14ea0c1151affe3adb23d3315a72d761cdda249fbfb60ebb94af91cd73417e39`.
+Both exact application images have **zero OS/library findings at every severity**
+in the retained unsuppressed Trivy results.
 
-## Additional fixes from verification
+External evidence is under `audit-evidence/2026-10-29/workspace/` and the shared
+`image-security/` directory. It includes raw commands/logs, test counts, source
+coverage, image identities, scans and recovery receipts. Generated test data and
+diagnostic logs are not release artifacts.
 
-- Local startup supervises web, BullMQ worker and beat together, validates local
-  database/direct, Redis, S3 and SMTP targets before startup, and drains workers
-  gracefully on Windows. Redis uses durable AOF storage and `noeviction`.
-- Full bundled-storage backups pause active app/worker/beat writers during the
-  database and object snapshot, then restart only the captured writers before
-  encryption/off-site transfer. Error handling also resumes paused writers and
-  reports failed restarts. Database-only/external-storage backups remain online;
-  external objects need a separate provider backup policy.
-- Standalone preparation retains installed Sharp companion libraries, including
-  Windows DLLs. Deployment scripts and manifests follow an LF checkout policy.
-- Backend public assets now explicitly belong to the non-root runtime user.
-  An independent Machines build reproduced a Next startup failure when private
-  source directory modes survived the Docker COPY as root-owned700. The shared
-  packaging correction is exercised by a unique CI-only700/600 public fixture
-  and direct default-user ownership/read checks before the full stack starts.
-  Existing checkout assets are never chmodded by this fixture.
-- Installer acceptance forwards only its nonsecret CI/config-directory/project
-  coordinates across sudo, rather than relying on `sudo -E`, which sudo-rs can
-  ignore. Credentials remain in the private generated configuration files.
-- Frontend source fingerprints and catalogue generation normalize CRLF input.
-  Two regressions prove equivalent LF/CRLF output while preserving sensitivity
-  to semantic changes; generated frontend content does not acquire escaped CRLF.
-- The pinned deepmerge-ts 8.0.2 override also reaches the separately installed
-  Prisma migration CLI and operations dependencies in the actual Dockerfile.
-  Private TLS and installer-answer transports are excluded from Docker contexts.
-- Shared Next configuration bounds build workers to two: container CPU quotas
-  otherwise leave Next seeing the host's full CPU count. The separate frontend
-  inherits the same setting. This change awaits the final production builds.
-- Split resource forwarding now preserves the upload/presence client header.
-  The shared route-origin guard recognizes the configured frontend only after
-  authenticating the gateway key; forged peers, absent peer origins and other
-  origins fail closed. Nineteen focused tests and an independent review passed;
-  full updated units and all 693 database integrations passed. Rebuilt browser
-  execution then passed in both modes: monolith 15 plus one expected split-only
-  skip, and split all 16, with zero retries.
-- SVG chart titles use single strings rather than unsupported React title-child
-  arrays. The final full unit run passes without those rendering warnings.
-- The Helm chart and its default backend image now follow version 0.6.7 instead
-  of retaining a fixed 0.1 image tag. Lint/rendering proves the app, worker, beat
-  and migration all resolve to 0.6.7 by default.
-- Installer acceptance now performs a real SQL outbox-to-BullMQ-to-STARTTLS Mailpit
-  handoff and an age-encrypted backup/restore into a separate empty project. The
-  recovery probe checks relational records, private objects and usable keys.
-  These contracts are checked in; execution is still required.
+## Source completeness and superseded attempts
 
-## Execution blocker and remaining production acceptance
+The coordinator's original archive helper incorrectly excluded any nested
+directory named `backups`, omitting `app/admin/backups/page.tsx` from earlier
+local Workspace assemblies. GitHub CI's complete checkout was unaffected.
+An exhaustive Git-tracked comparison found no omissions in the other three
+applications. The helper now excludes generated directories only at the root.
 
-Docker Desktop's Linux VM exhausted memory and swap while a production image was
-exporting and another app generated pages with 23 workers. The engine returned
-HTTP 500 even for ping/container inventory; direct WSL commands subsequently
-failed too. The user authorized a Docker Desktop restart, which restored engine access.
-The coordinator captured available pre-restart inventory and restarted the two
-unrelated database containers that had been running. All four apps now cap build
-workers at two, and heavy acceptance runs resume serially. This recovery does
-not itself prove browser, installation or restore acceptance.
+Final Workspace archive SHA-256 is
+`d4f7ff2ac58165d74b6ec98586e264e231bef2b96ec46c541ac44baced0e4349`:
+**2,528 / 2,528 tracked files**, no omissions, plus its release marker.
+The complete Linux unit suite and complete packaged image/install/restore run
+were repeated from that archive. The earlier partial assemblies and their scans
+remain historical evidence and are not substituted for these final images.
 
-The production browser layouts passed as recorded above. Complete the actual
-image build and installer/recovery suite from the final source revision. The
-latter is a fresh-volume Linux container
-proof; a newly provisioned public VM, public DNS/TLS, published-image pulls,
-production SMTP/domain authentication and external integration credentials still
-need deployment-specific staging acceptance. A local copy of an encrypted backup
-at a separate path does not prove storage at a physically separate provider.
+Docker Desktop previously exhausted VM memory/swap during overlapping builds.
+The user authorized recovery, and final heavy builds were serialized with two
+Next workers. Earlier failed or interrupted logs remain visible. An authorized
+stop removed the pre-existing auto-remove `silly_sammet` container; its exact
+instance could not be restarted. The two unrelated databases were restarted.
 
-For deployment staging, verify a supported Linux VM and architecture, security
-updates, reboot/service recovery, SSH access and the firewall's public edge-only
-ports. Check public A/AAAA records, certificate issuance/renewal, immutable released
-image pulls and rollback. Exercise configured OAuth/OIDC and external notification
-callbacks with their real staging credentials. Verify SMTP TLS and sender-domain
-SPF/DKIM/DMARC alignment, then monitor provider bounces and complaints with the
-provider's suppression policy. Confirm offsite backup retention and a timed restore
-from that provider. These VM/provider checks were explicitly deferred by the user;
-they are not inferred from the local clean-stack results.
+## Shared dependencies and rollout limits
 
-Before rollout, review/drain pre-fix notification emails that lack authorization
-source identifiers. Keep queue/dependency alerts and recovery objectives under
-operator review. SMTP handoff remains at-least-once: a process crash between
-acceptance and SQL completion can duplicate mail. No release, push, deployment or
-merge has been performed during this verification phase.
+The reviewed standard Caddy build uses Go 1.26.10, patched dependencies and
+upgraded Alpine packages. Its trusted HTTPS/HTTP2, proxy/private-route/header and
+module checks passed. Raw scans retain **zero critical, one high, two medium and
+one unknown** unfixed JOSE v3/OpenPGP entries, with no OS findings. The shipped
+reverse-proxy configurations expose no ACME-server/JWK endpoint; source, symbols
+and configuration support that bounded assessment. This is not an upstream fix.
+See `docker/caddy/README.md`; the exact deployed image/layer evidence is retained.
 
-## Restore transaction contract verified
+Silo's pinned October 26 server retains scanner findings. Its released CSV reader
+has a bounded 1 MiB record cap corresponding to the reported advisory; this is a
+source-backport assessment, not a live exploit claim or suppression. PostgreSQL
+image high/critical findings belong to its gosu privilege switcher; the reported
+affected package/functions were absent from the exact binary function table.
+Raw counts and limits remain in the external security evidence. Dependency
+monitoring and reassessment after upstream updates remain operator duties.
 
-Independent source review found that `pg_restore --clean` only removes objects present in its archive, so an
-older backup restored into a newer migrated database can retain newer tables or fail on their dependencies.
-[PostgreSQL 16 pg_restore documentation](https://www.postgresql.org/docs/16/app-pgrestore.html).
-The restore now replaces the application public schema in one error-stopping transaction. Custom archive
-conversion excludes only the public SCHEMA definition, retaining its separate COMMENT/ACL entries; the schema
-owner and `sww_app` usage/default table/sequence grants are reinstated explicitly. Complete SQL is staged before
-services stop, preventing a conversion failure from committing a valid partial SQL stream.
+Before live traffic, verify a supported newly provisioned Linux host, updates,
+reboot/service recovery, SSH/firewall public edge-only ports, DNS A/AAAA,
+certificate issuance/renewal, released immutable multiarchitecture image pulls
+and rollback. Exercise real OAuth/OIDC/provider callbacks, SMTP TLS and sender
+SPF/DKIM/DMARC, bounces/complaints/suppressions, and a timed restore from the actual
+offsite provider. A local encrypted copy at another path does not establish
+physically separate storage. Integration/vault ciphertext recovery beyond the
+tested keys is not claimed. These checks were explicitly deferred to staging.
 
-The two focused Bash behavioral unit tests passed natively, along with test ESLint, shell syntax and whitespace
-checks. An additional **three-case actual PostgreSQL 16.15 contract passed** using a new audit-owned container
-capped at 192 MiB, with no published ports and only synthetic data:
-
-1. A custom dump restored original data, removed a newer target table, retained schema comments and a separate
-   reader ACL, preserved runtime CRUD, and granted CRUD/sequence access to subsequently created tables.
-   Runtime schema DDL remained denied.
-2. A deliberate SQL error appended after otherwise valid restored SQL rolled back the schema replacement and
-   data changes, retaining the preexisting target table and its contents.
-3. An invalid custom archive failed before the service-stop stub or any SQL execution.
-
-The harness forwards the exact production conversion/execution block to real `docker exec -i` PostgreSQL
-commands; only application service stopping is stubbed. Evidence and command source are retained under
-`audit-evidence/2026-10-29/workspace/restore-contract/`. The exact labelled fixture and its anonymous volume
-were removed and cleanup was verified. This proves the SQL restore contract, not the still-pending full
-packaged installation, encrypted storage recovery, application restart or browser acceptance. The current
-recovery crypto fixture validates the MFA root key; integration/vault ciphertext recovery is not claimed.
-
-## Final runtime image hardening in progress
-
-An additional OS and embedded-library Trivy scan exposed inherited global npm
-packages that a root application dependency audit does not cover. Both final
-runtime stages now remove npm/npx; Node and the isolated migration/operator
-dependencies remain. Actual npm-free image builds, complete installer/recovery
-acceptance and final image scans are still required. Historical scan findings
-are retained, rather than suppressed or described as a final clean result.
-
-Production, local and CI Silo references now pin the verified October 26 release
-and immutable multiarchitecture manifest; CI uses its matching mc client. The
-new server/client have refreshed Go and OS packages. The server scanner still
-attributes one MinIO CSV advisory to this fork; the exact released source has
-bounded reads and a 1 MiB record cap, with matching binary commit. This is a
-source-backport assessment, not a scanner suppression or live exploit claim.
-[Released Silo source](https://github.com/pgsty/silo/blob/RELEASE.2026-10-26T00-00-00Z/internal/s3select/csv/reader.go).
-
-The bundled standard Caddy edge now builds locally with patched Go/dependencies
-and upgraded Alpine packages, including published-app installs and upgrades.
-The initial actual image passed trusted TLS/proxy/private-route/header/module
-smokes and removed its critical/fixable high findings. Final x/net 0.62.0 inputs
-were verified with the same Go 1.26.10 toolchain to address two HTML advisories;
-the final shared image 0956bb7459167ed6f47cc9fbb29e2d3ddb452f7ba1b7313f175a1ebd74c91293 passed trusted HTTPS HTTP/2, reverse-proxy/header/private-route and module-parity checks. Its unsuppressed scan is zero critical, one high, two medium and one unknown, all unfixed JOSE v3/OpenPGP entries; no OS or known fixable finding remains. Workspace image/installer acceptance remains an active gate.
-The retained JOSE v3 parser is not exposed by shipped reverse-proxy configs:
-they do not activate an ACME-server/JWK endpoint. The unpatched advisory remains
-visible with source/symbol/config evidence and configuration-change limits in
-`docker/caddy/README.md`; no scanner suppression is used. PostgreSQL image findings are confined to its gosu privilege
-switcher: all 26 high/critical advisories were mapped to official Go records and
-the exact binary function table; affected package/functions were absent. Raw
-counts and assessment limits remain in the external image-security evidence.
-
-## Final acceptance follow-ups
-
-The first native two-image run passed split and single layouts, TLS-enforced
-PostgreSQL/Redis, private object roundtrip, authenticated readiness and actual
-BullMQ worker email over authenticated STARTTLS. Its full encrypted recovery
-then exposed a GNU tar race: the encryption pipeline created its excluded
-output inside the directory while tar was reading directory metadata. The
-backup now creates that output before starting the pipeline; tar failures
-remain fatal. A deterministic real GNU tar regression reproduces the old
-failure and verifies the fix. Final full encrypted restore remains a gate.
-
-Fresh installation also handles installer-owned PostgreSQL inputs with HBA
-mode 600 and initialization script mode 700. The root startup stages these
-read-only inputs into postgres-owned private runtime files before dropping
-privileges. An actual PostgreSQL 16 acceptance probe passed initialization,
-TLS, runtime-role creation and postgres-UID file/mode checks. CI installs and
-restores from a separate source copy with private input permissions; existing
-checkout permissions are unchanged. The focused Linux suite passes all 13
-backup, public-asset and privilege tests; deployment syntax checks pass all
-110 scripts/manifests.
-
-The independent Cloudflare cron lockfile is audited separately from root npm
-workspaces. Wrangler 4.156.0 includes patched undici 7.30.1 and matching workerd
-1.20261023.1. Its complete dependency audit reports zero findings, and an actual
-credential-free isolated Wrangler dry-run passed without deployment. A separate
-CI job now gates installation, high-severity audit and local bundle generation.
-Workspace remains version 0.6.7. All checks on the preceding PR head passed;
-the final follow-up head must pass CI and current-source image/recovery checks
-before merge into dev. Main and production are unchanged.
-
-An additional private-source CI failure in Machines exposed the equivalent
-operator/helper COPY boundary. Workspace now assigns its direct-source
-`scripts/*.mjs` and `docker/vps` files to the runtime UID too. The image smoke
-reads every copied JavaScript helper as that non-root UID; its disposable CI
-source copy uses private directory and file modes. Existing checkout modes are
-unchanged. Current-source image verification remains required after this fix.
+After checked dev/main publication, remove other branches and auxiliary worktrees
+and generated resources belonging to these four repositories. Preserve older
+source/user data opaquely, retain audit evidence and leave unrelated projects
+and resources of unproved ownership untouched.
