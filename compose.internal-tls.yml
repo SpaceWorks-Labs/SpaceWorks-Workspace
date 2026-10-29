@@ -9,7 +9,7 @@ services:
       SWW_CADDY_OPTIONS: local_certs
   # Hands the frontend only the local CA's public certificate, never its keys.
   caddy-root:
-    image: caddy:2-alpine
+    image: spaceworks-caddy:2.11.7-security-20261029
     profiles: [split]
     restart: "no"
     network_mode: none

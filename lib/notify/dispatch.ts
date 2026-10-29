@@ -107,7 +107,7 @@ async function dispatchWith<T extends EventType>(tx: Tx, workspaceId: string, ev
   // ── Personal ──
   const recipientIds = [...new Set(event.recipients ?? [])].filter((id) => id && id !== event.actorId).slice(0, 1000);
   if (!explicit && audienceIncludesPersonal(spec.audience) && recipientIds.length > 0) {
-    const members = (await tx.membership.findMany({ where: { workspaceId, status: "ACTIVE", userId: { in: recipientIds } }, select: { userId: true, role: true } })).filter((member) =>
+    const members = (await tx.membership.findMany({ where: { workspaceId, status: "ACTIVE", user: { disabledAt: null }, workspace: { archivedAt: null }, userId: { in: recipientIds } }, select: { userId: true, role: true } })).filter((member) =>
       meetsRole(member.role),
     );
     const userIds = members.map((member) => member.userId);

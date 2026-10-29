@@ -20,6 +20,10 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   allowedDevOrigins,
   experimental: {
+    // Container CPU quotas do not reduce os.cpus(); bound build worker memory.
+    cpus: 2,
+    // Disposable image/acceptance builds never reuse their compiler cache.
+    turbopackFileSystemCacheForBuild: process.env.SWW_DISABLE_BUILD_CACHE !== "1",
     proxyClientMaxBodySize: "40mb",
     serverActions: {
       // Same-origin by default. Configure explicitly when a trusted proxy

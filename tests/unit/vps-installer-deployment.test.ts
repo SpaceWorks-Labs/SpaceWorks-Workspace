@@ -1,9 +1,30 @@
-import { readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { root } from "./vps-installer-fixtures";
 
 describe("VPS installer deployment", () => {
+  it("tears down all profiles after a layout change while normal startup follows the saved layout", () => {
+    const directory = mkdtempSync(path.join(tmpdir(), "sww-compose-profiles-"));
+    const windowsBash = "C:/Program Files/Git/bin/bash.exe";
+    const bash = process.platform === "win32" && existsSync(windowsBash) ? windowsBash : "bash";
+    const wrapper = readFileSync(path.join(root, "scripts/vps-compose.sh"), "utf8").replace(/\r\n/g, "\n");
+    // Exercise all real profile selection before replacing only process launch.
+    const script = wrapper.replace(/exec docker compose[^\n]*/, 'printf "%s\\n" "$COMPOSE_PROFILES"');
+    try {
+      writeFileSync(path.join(directory, "compose.env"), "SWW_LAYOUT='single'\nSWW_CADDY_TLS='internal'\nSWW_STORAGE='bundled'\n");
+      for (const [command, profiles] of [["up", "caddy,silo"], ["down", "*"]]) {
+        const result = spawnSync(bash, ["-c", script, "sww-compose-fixture", command], {
+          cwd: root, env: { ...process.env, SWW_CONFIG_DIR: directory.replaceAll("\\", "/"), SWW_BUILD_KEY: "disposable-fixture" }, encoding: "utf8",
+        });
+        expect(result.status, result.stderr).toBe(0);
+        expect(result.stdout.trim()).toBe(profiles);
+      }
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
+
   it("runs the split layout as website and API containers behind one Caddy", () => {
     const compose = readFileSync(path.join(root, "compose.production.yml"), "utf8");
     expect(compose).toMatch(/migrator:\n(?:.*\n)*?\s+command: \["migrate"\]/);

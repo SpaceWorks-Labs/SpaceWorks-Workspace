@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Local development helper for macOS (Homebrew) and Linux.
 #
-#   ./local.sh start     Docker services + .env + migrations + `npm run dev`
+#   ./local.sh start     Docker services + .env + migrations + web/worker/beat
 #   ./local.sh services  only start PostgreSQL, Redis, Silo and Mailpit
 #   ./local.sh stop      stop the dev server and the Docker services (data kept)
 #   ./local.sh status    what is running
@@ -58,6 +58,8 @@ start_services() {
   say 'Starting PostgreSQL, Redis, Silo and Mailpit (docker compose)...' "$yellow"
   docker compose up -d --wait
   ensure_env
+  # Refuse an existing .env that targets a live/remote installation before writes.
+  node --env-file-if-exists=.env scripts/check-local-services.mjs
   [[ -d node_modules ]] || { say 'Installing dependencies...' "$yellow"; npm install; }
   npm run storage:init
   # Applies committed migrations only; create new ones with `npm run db:migrate -- --name <area>`.
@@ -74,12 +76,21 @@ dev_pids() {
 }
 
 stop_all() {
-  local pids
+  local pids attempts
   pids=$(dev_pids)
   if [[ -n "$pids" ]]; then
-    say "Stopping the dev server ($pids)..." "$yellow"
+    say "Stopping the local web/worker/beat stack ($pids)..." "$yellow"
     # shellcheck disable=SC2086 # one pid per word
     kill $pids 2>/dev/null || true
+    # Let worker/beat finish their SQL/SMTP updates before stopping their services.
+    for ((attempts=0; attempts<20; attempts++)); do
+      [[ -z "$(dev_pids)" ]] && break
+      sleep 1
+    done
+    if [[ -n "$(dev_pids)" ]]; then
+      say 'The local stack is still stopping. Docker services were kept running; retry stop shortly.' "$yellow"
+      return 1
+    fi
   fi
   docker compose stop
   say 'Stopped. Data is kept in the Docker volumes.' "$green"
@@ -93,13 +104,14 @@ status() {
 case "${1:-start}" in
   start)
     start_services
-    say "Starting the dev server on http://localhost:$port (first run: open /setup)..." "$green"
+    say "Starting web, worker and beat on http://localhost:$port (first run: open /setup)..." "$green"
     npx prisma generate
+    npm run build:jobs
     mkdir -p .data
-    node node_modules/next/dist/bin/next dev --port "$port" &
+    PORT="$port" node --env-file-if-exists=.env scripts/dev-stack.mjs &
     child=$!
     printf '%s' "$child" > .data/dev.pid
-    trap 'kill "$child" 2>/dev/null || true; rm -f .data/dev.pid' EXIT
+    trap 'kill "$child" 2>/dev/null || true; wait "$child" 2>/dev/null || true; rm -f .data/dev.pid' EXIT
     trap 'exit 130' INT TERM
     wait "$child"
     ;;

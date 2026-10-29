@@ -13,7 +13,7 @@ docker compose up -d --wait
 npm run db:deploy
 npm run storage:init
 DEMO_PASSWORD='choose-12-or-more-characters' npm run db:seed:demo
-npm run dev -- --port 3290
+PORT=3290 npm run dev:stack
 ```
 
 Generate independent local keys with `openssl rand -base64 32`. Set both local
@@ -23,7 +23,13 @@ Without a seed, open `/setup` to create the first user and workspace. Never run
 demo seeding against production.
 
 `local.sh start` offers the same services and generates local keys when no
-configuration exists. It uses committed migrations. Add new migrations with
+configuration exists. It uses committed migrations and supervises the web app,
+BullMQ worker and beat; email and notifications run in the worker. Local startup
+checks loopback-only service targets before touching the database. Redis uses
+durable AOF storage and `noeviction`. Mailpit captures messages at
+`http://localhost:8025`; worker/beat health binds to loopback on separate ports
+3460/3461 (`SWW_DEV_WORKER_PORT`, `SWW_DEV_BEAT_PORT`). On PowerShell set
+`$env:PORT='3290'` before `npm run dev:stack`. Add new migrations with
 `npm run db:migrate -- --name <area>`; never use schema push.
 
 Run lint, typecheck, unit tests, integration tests against a disposable

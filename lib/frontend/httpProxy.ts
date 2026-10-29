@@ -5,7 +5,7 @@ import { backendHeaders, backendUrl } from "./request";
 import { backendOrigin, frontendOrigin } from "./config";
 
 const blocked = /^\/api\/(?:frontend(?:\/|$)|internal(?:\/|$)|health\/db(?:\/|$))/i;
-const forwardedRequestHeaders = ["accept", "content-type", "authorization", "user-agent", "if-none-match", "range", "if-range", "x-auth-return-redirect", "x-hub-signature-256", "x-github-delivery", "x-github-event", "x-slack-request-timestamp", "x-slack-signature", "x-signature-timestamp", "x-signature-ed25519", "x-telegram-bot-api-secret-token", "mcp-protocol-version", "mcp-session-id", "last-event-id"];
+const forwardedRequestHeaders = ["accept", "content-type", "authorization", "user-agent", "if-none-match", "range", "if-range", "x-sw-client", "x-auth-return-redirect", "x-hub-signature-256", "x-github-delivery", "x-github-event", "x-slack-request-timestamp", "x-slack-signature", "x-signature-timestamp", "x-signature-ed25519", "x-telegram-bot-api-secret-token", "mcp-protocol-version", "mcp-session-id", "last-event-id"];
 const forwardedResponseHeaders = ["content-type", "cache-control", "etag", "content-disposition", "content-range", "accept-ranges", "retry-after", "vary", "x-content-type-options", "referrer-policy", "x-accel-buffering", "content-security-policy", "permissions-policy", "www-authenticate", "allow", "mcp-session-id"];
 
 export async function proxyBackendResource(request: Request) { return proxyRequest(request, true); }

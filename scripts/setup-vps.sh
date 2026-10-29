@@ -141,11 +141,6 @@ if [[ $has_docker = 1 ]]; then
   printf '%s\n%s\n' 2.24.4 "$compose_version" | sort -V -C \
     || die "Docker Compose ${compose_version:-unknown} is too old; 2.24.4 or newer is needed (Docker's official packages provide it)."
 fi
-# Published images only need memory to run; a source build needs about 4 GB.
-offer_swap=0 needed_mb=1800
-[[ $published = 1 ]] || needed_mb=3800
-memory=$(memory_mb)
-if (( memory + $(swap_mb) < needed_mb )) && [[ ! -e /swapfile ]]; then offer_swap=1; fi
 
 cat >/dev/tty <<EOF
 
@@ -204,6 +199,13 @@ https_default=2
 ask https_mode 'HTTPS' "$https_default" is_hosting 'Enter 1, 2 or 3.'
 acme_email=''
 [[ $https_mode != 2 ]] || ask acme_email 'Certificate email (Let'"'"'s Encrypt expiry notices)' "$admin_email" is_plain_email 'Enter a plain address such as you@example.com.'
+# Reserve build headroom for the patched bundled edge, including published apps.
+# Published apps behind an existing proxy do not compile an edge locally.
+offer_swap=0 needed_mb=3800
+[[ $published != 1 || $https_mode != 3 ]] || needed_mb=1800
+memory=$(memory_mb)
+if (( memory + $(swap_mb) < needed_mb )) && [[ ! -e /swapfile ]]; then offer_swap=1; fi
+
 cat >/dev/tty <<'EOF'
 
 File storage (private documents, receipts and uploads)

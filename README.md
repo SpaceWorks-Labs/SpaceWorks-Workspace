@@ -214,9 +214,12 @@ change, and **nothing changes until you confirm it**. Then it installs Docker if
 needed, generates every secret and internal TLS certificate without printing them,
 downloads the release's ready-made images from
 [GitHub Packages](docs/CONTAINER_IMAGES.md) (amd64 and arm64), migrates and
-checks that each service is healthy. Nothing is compiled on your server.
+checks that each service is healthy. The application images are prebuilt; the
+bundled standard Caddy edge is compiled locally from pinned source with patched
+Go and dependencies. An existing reverse proxy skips that build.
 
-**Before you start:** 2 vCPU, 2 GB RAM and 30 GB SSD for a small instance, DNS A
+**Before you start:** 2 vCPU, 4 GB RAM with swap available and 30 GB SSD as a
+starting estimate for the bundled edge and a small instance, DNS A
 records pointing at the server (two for the default layout), inbound ports 80 and 443, an SMTP
 relay on a verified sending domain, and your super-admin email.
 
@@ -307,22 +310,28 @@ remain supported alternatives.
 
 ## Quick start (local)
 
-Use Node.js 22 and PostgreSQL 16. The development Compose file provides the database.
+Use Node.js 22 and Docker. The development Compose file provides PostgreSQL 16,
+persistent Redis 7, private Silo storage and Mailpit for captured local email.
 
 ```bash
 npm ci
 cp .env.example .env
-docker compose up -d
+docker compose up -d --wait
 npm run db:deploy
+npm run storage:init
 DEMO_PASSWORD='choose-12-or-more-characters' npm run db:seed:demo
-npm run dev -- --port 3290
+PORT=3290 npm run dev:stack
 ```
 
 Set `AUTH_URL` and `NEXT_PUBLIC_BASE_URL` in your local configuration to
 `http://localhost:3290`. Open that address and sign in as
 `owner@tinkerspace.test` with your demo password. The seed creates a community
-workspace and loads every module in `scripts/seed/`. Redis, SMTP and S3 have
-development fallbacks; configure real services for production. See
+workspace and loads every module in `scripts/seed/`. The local supervisor starts
+web, worker and beat together, stops siblings on failure and drains workers when
+you stop it. Worker and beat health use separate loopback ports 3460 and 3461;
+inspect email at `http://localhost:8025`. On PowerShell set `$env:PORT='3290'`
+before `npm run dev:stack`. Local service checks refuse remote database, Redis,
+storage and SMTP targets before local migrations run. See
 [Local development](docs/DEVELOPMENT.md).
 
 ## Design system

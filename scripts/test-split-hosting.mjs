@@ -21,6 +21,7 @@ if (process.argv[2] === "serve-frontend") {
   await run("npm", ["run", "start", "--workspace=frontend"], frontendEnvironment(process.env));
 } else {
   const monolith = process.argv.includes("--monolith");
+  const demo = process.argv.includes("--demo");
   // Explicit opt-in for pre-provisioned, disposable local test services.
   const externalServices = process.argv.includes("--external-services");
   if (externalServices && (!process.env.DATABASE_URL || !process.env.REDIS_URL)) {
@@ -35,6 +36,9 @@ if (process.argv[2] === "serve-frontend") {
   const pg = `sww-split-pg-${suffix}`, redis = `sww-split-redis-${suffix}`;
   const hex = () => randomBytes(32).toString("hex"), key = () => randomBytes(32).toString("base64");
   const password = hex();
+  const demoPassword = demo ? hex() : "";
+  const storageKeys = ["S3_BUCKET", "S3_REGION", "S3_ENDPOINT", "S3_ACCESS_KEY_ID", "S3_SECRET_ACCESS_KEY", "S3_FORCE_PATH_STYLE"];
+  const storage = externalServices ? Object.fromEntries(storageKeys.filter(name => process.env[name]).map(name => [name, process.env[name]])) : {};
   const env = { ...system, NODE_OPTIONS: "--max-old-space-size=4096", SWW_DISABLE_BUILD_CACHE: "1", __NEXT_PROCESSED_ENV: "true", CI: "true", ALLOW_INSECURE_PRODUCTION_TESTS: "1", NODE_ENV: "production", NEXT_TELEMETRY_DISABLED: "1",
     DATABASE_URL: externalServices ? process.env.DATABASE_URL : `postgresql://sww_split:${password}@127.0.0.1:${pgPort}/sww_split_test`,
     DIRECT_URL: externalServices ? (process.env.DIRECT_URL || process.env.DATABASE_URL) : `postgresql://sww_split:${password}@127.0.0.1:${pgPort}/sww_split_test`,
@@ -45,10 +49,9 @@ if (process.argv[2] === "serve-frontend") {
     HEALTHCHECK_SECRET: hex(), CRON_SECRET: hex(), SUPER_ADMIN_EMAIL: "admin@example.test",
     TRUSTED_PROXY_IP_HEADER: "x-real-ip", FRONTEND_TRUSTED_IP_HEADER: "x-real-ip",
     EMAIL_FROM: "Test <test@example.test>", SMTP_HOST: "127.0.0.1", SMTP_PORT: "9", SMTP_USER: "disposable", SMTP_PASSWORD: hex(),
-    S3_BUCKET: "disposable-test", S3_REGION: "us-east-1",
-    // Prisma's test client can load a local .env. These suites need a demo
-    // seed that this disposable harness deliberately does not provision.
-    DEMO_PASSWORD: "", PLATFORM_SHELL_E2E_PASSWORD: "",
+    S3_BUCKET: "disposable-test", S3_REGION: "us-east-1", ...storage,
+    // Explicitly seed only this disposable database when demo journeys are requested.
+    DEMO_PASSWORD: demoPassword, PLATFORM_SHELL_E2E_PASSWORD: demoPassword,
     PLAYWRIGHT_SPLIT: monolith ? "0" : "1", PLAYWRIGHT_PORT: "3100", PLAYWRIGHT_TRUSTED_IP_HEADER: "x-real-ip",
     PLAYWRIGHT_SERVER_COMMAND: monolith ? "PORT=3100 HOSTNAME=127.0.0.1 node .next/standalone/server.js" : "node scripts/test-split-hosting.mjs serve-frontend",
   };
@@ -71,6 +74,7 @@ if (process.argv[2] === "serve-frontend") {
       if (!ready) throw new Error("Disposable PostgreSQL did not become ready.");
     }
     await run(process.execPath, ["scripts/prisma.mjs", "migrate", "deploy"], env);
+    if (demo) await run(process.execPath, ["scripts/seed-demo.mjs"], { ...env, NODE_ENV: "development", ...(storage.S3_BUCKET ? {} : { S3_BUCKET: "", S3_REGION: "" }) });
     await run("npm", ["run", "build"], env);
     await run(process.execPath, ["scripts/prepare-standalone.mjs"], env);
     for (const name of [".env", ".env.local", ".env.production", ".env.production.local", ".env.development"]) await rm(`.next/standalone/${name}`, { force: true });

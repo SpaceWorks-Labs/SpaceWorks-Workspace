@@ -76,9 +76,9 @@ jobs:
         run: |
           docker run -d --name silo -p 127.0.0.1:9010:9000 \
             -e MINIO_ROOT_USER=swwdev -e MINIO_ROOT_PASSWORD=sww_dev_storage_pw \
-            pgsty/silo:RELEASE.2026-09-16T00-00-00Z server /data
+            pgsty/silo:RELEASE.2026-10-26T00-00-00Z@sha256:7bb2aff6b89efe1cb1303c10fc21d579447434ed06649ac9ec05a5e2dbf30ad7 server /data
           for i in $(seq 1 30); do curl -fs http://127.0.0.1:9010/minio/health/live && break; sleep 1; done
-          docker run --rm --network host --entrypoint /bin/sh pgsty/mc:RELEASE.2026-09-16T00-00-00Z -c \
+          docker run --rm --network host --entrypoint /bin/sh pgsty/mc:RELEASE.2026-10-26T00-00-00Z@sha256:ce62c9053c69ce12a527a322345b5ad9f44b5f8a7b8189f82e516f2e3f30f1d8 -c \
             'mc alias set l http://127.0.0.1:9010 swwdev sww_dev_storage_pw && mc mb --ignore-existing l/sww-docsfiles'
       # Applies committed migrations; also proves they run on an empty database.
       - run: npm run db:test:prepare
@@ -106,10 +106,42 @@ jobs:
       fail-fast: false
       matrix:
         deployment: [split, vps]
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: sww
+          POSTGRES_PASSWORD: sww_ci
+          POSTGRES_DB: sww_hosting_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U sww -d sww_hosting_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+    env:
+      DATABASE_URL: postgresql://sww:sww_ci@127.0.0.1:5432/sww_hosting_test
+      DIRECT_URL: postgresql://sww:sww_ci@127.0.0.1:5432/sww_hosting_test
+      REDIS_URL: redis://127.0.0.1:6379/0
+      S3_ENDPOINT: http://127.0.0.1:9010
+      S3_BUCKET: disposable-test
+      S3_REGION: us-east-1
+      S3_ACCESS_KEY_ID: swwdev
+      S3_SECRET_ACCESS_KEY: sww_dev_storage_pw
+      S3_FORCE_PATH_STYLE: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: {node-version: 22, cache: npm}
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - run: npm run test:e2e:${{ matrix.deployment }}
+      - name: Start private browser storage
+        run: |
+          docker run -d --name silo -p 127.0.0.1:9010:9000 \
+            -e MINIO_ROOT_USER=swwdev -e MINIO_ROOT_PASSWORD=sww_dev_storage_pw \
+            pgsty/silo:RELEASE.2026-10-26T00-00-00Z@sha256:7bb2aff6b89efe1cb1303c10fc21d579447434ed06649ac9ec05a5e2dbf30ad7 server /data
+          for i in $(seq 1 30); do curl -fs http://127.0.0.1:9010/minio/health/live && break; sleep 1; done
+          docker run --rm --network host --entrypoint /bin/sh pgsty/mc:RELEASE.2026-10-26T00-00-00Z@sha256:ce62c9053c69ce12a527a322345b5ad9f44b5f8a7b8189f82e516f2e3f30f1d8 -c \
+            'mc alias set l http://127.0.0.1:9010 swwdev sww_dev_storage_pw && mc mb --ignore-existing l/disposable-test'
+      - run: npm run test:e2e:${{ matrix.deployment }} -- --external-services --demo

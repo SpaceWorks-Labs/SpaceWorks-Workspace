@@ -85,9 +85,7 @@ export function Chart({
                     className="fill-accent-text stroke-panel"
                     strokeWidth="2"
                   >
-                    <title>
-                      {p.label}: {fmt(p.value)}
-                    </title>
+                    <title>{`${p.label}: ${fmt(p.value)}`}</title>
                   </circle>
                 </g>
               ))}
@@ -119,9 +117,7 @@ export function Chart({
                       ][i % 4]
                     }
                   >
-                    <title>
-                      {p.label}: {fmt(p.value)}
-                    </title>
+                    <title>{`${p.label}: ${fmt(p.value)}`}</title>
                   </circle>
                 </g>
               );
@@ -147,9 +143,7 @@ export function Chart({
                     rx="3"
                     className="fill-accent-text"
                   >
-                    <title>
-                      {p.label}: {fmt(p.value)}
-                    </title>
+                    <title>{`${p.label}: ${fmt(p.value)}`}</title>
                   </rect>
                 </g>
               );
@@ -171,9 +165,7 @@ export function Chart({
                         : "fill-danger-solid"
                   }
                 >
-                  <title>
-                    {p.label}: {fmt(p.value)}
-                  </title>
+                  <title>{`${p.label}: ${fmt(p.value)}`}</title>
                 </rect>
               </g>
             ))
@@ -203,9 +195,7 @@ export function Chart({
                       p.value < 0 ? "fill-danger-solid" : "fill-accent-text"
                     }
                   >
-                    <title>
-                      {p.label}: {fmt(p.value)}
-                    </title>
+                    <title>{`${p.label}: ${fmt(p.value)}`}</title>
                   </rect>
                 </g>
               );

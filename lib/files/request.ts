@@ -2,6 +2,7 @@ import "server-only";
 
 import type { Membership, Workspace } from "@prisma/client";
 import { findWorkspaceForUser, getCurrentUser, type SessionUser } from "@/lib/permissions";
+import { hasAllowedRequestOrigin } from "@/lib/requestOrigin";
 
 /**
  * Route-handler helpers for the docs and files areas (uploads with progress,
@@ -24,15 +25,7 @@ export async function routeActor(slug: string): Promise<RouteActor | null> {
 }
 
 export function isTrustedMutation(request: Request): boolean {
-  if (request.headers.get(CLIENT_HEADER) !== "1") return false;
-  const origin = request.headers.get("origin");
-  if (!origin) return true;
-  try {
-    const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
-    return Boolean(host) && new URL(origin).host === host;
-  } catch {
-    return false;
-  }
+  return request.headers.get(CLIENT_HEADER) === "1" && hasAllowedRequestOrigin(request);
 }
 
 export function jsonResponse(body: unknown, status = 200) {
