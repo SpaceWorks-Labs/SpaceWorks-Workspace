@@ -277,10 +277,14 @@ jobs:
           - \`ghcr.io/$OWNER/spaceworks-workspace-backend:$VERSION\`: application and API; also runs migrations (\`migrate\`) and the VPS tools
           - \`ghcr.io/$OWNER/spaceworks-workspace-frontend:$VERSION\`: the website, for the split layout
 
-          Secrets CLI and Node SDK (\`sww\`), same version:
+          Secrets CLI and Node SDK (\`sww\`), same version, from GitHub Packages.
+          At the login prompts, use your GitHub username and a personal access token
+          (classic) with \`read:packages\` as the password; authorize organization SSO if required.
+          Publication to npmjs.com is optional and requires the repository's \`NPM_TOKEN\` secret.
 
           \`\`\`bash
-          npm install -g @spaceworks-labs/workspace-cli@$BASE
+          npm login --scope=@spaceworks-labs --auth-type=legacy --registry=https://npm.pkg.github.com
+          npm install --global @spaceworks-labs/workspace-cli@$BASE
           \`\`\`
 
           Built from \`$SHA\`.

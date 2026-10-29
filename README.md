@@ -84,7 +84,7 @@ Simple tools with manual entry, grouped the way an operating team works.
 - Envelope encryption under a rotatable root key, version history, snapshots and point-in-time rollback.
 - Masked values with audited reveal and copy, fresh-MFA access to production and change approvals.
 - Machine identities with short-lived access tokens, one-time share links and a security overview.
-- The `sww` command line and Node SDK, installed from npm (see [Secrets CLI](#secrets-cli)).
+- The `sww` command line and Node SDK, installed with npm from GitHub Packages (see [Secrets CLI](#secrets-cli)).
 
 ### Reports and analytics
 
@@ -149,11 +149,23 @@ Taken on the seeded demo workspace with `scripts/capture-readme-screens.mjs`.
 
 ## Secrets CLI
 
-Install the `sww` command line, link a repository and run your app with its
-secrets injected. Nothing is written to disk.
+Install Node 20 or newer. GitHub Packages is the primary registry for the `sww`
+command line and Node SDK. Authenticate first, then install the package:
 
 ```bash
-npm install -g @spaceworks-labs/workspace-cli
+npm login --scope=@spaceworks-labs --auth-type=legacy --registry=https://npm.pkg.github.com
+npm install --global @spaceworks-labs/workspace-cli
+```
+
+At the prompts, enter your GitHub username and a personal access token
+(classic) with `read:packages` as the password. Authorize the token for your
+organization's SSO if required. Enter it only at the prompt, not in a command
+argument or a committed file. GitHub Packages requires authentication even for
+public packages; see [GitHub's npm registry guide](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-npm-registry).
+
+Then link a repository and run your app with its secrets injected:
+
+```bash
 sww login --host https://workspace.example.org
 sww init --project PROJECT_ID --env dev
 sww run --env dev -- npm run dev
@@ -168,15 +180,11 @@ export SWW_TOKEN="$(sww login --method=universal-auth --client-id "$CLIENT_ID" -
 sww scan --staged
 ```
 
-Every release publishes the package at the same version as the images: to
-npm when the repository has an `NPM_TOKEN` secret, and always to GitHub
-Packages. To install from GitHub Packages, point the scope at it with a token
-that can read packages:
-
-```bash
-npm config set @spaceworks-labs:registry https://npm.pkg.github.com
-npm config set //npm.pkg.github.com/:_authToken "$GITHUB_TOKEN"
-```
+Main releases automatically publish the CLI to GitHub Packages at the same
+base version as the images. Publishing to npmjs.com is optional and requires
+the repository's `NPM_TOKEN` secret. A bare install against the default public
+npm registry can return 404 when that optional publication is not configured;
+use the authenticated GitHub Packages flow above.
 
 The [CLI guide](packages/cli/README.md) covers the SDK, keychain storage and
 secret scanning.
