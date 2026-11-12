@@ -45,7 +45,7 @@ export function TitleEditor({ value, editable, onSave, as }: { value: string; ed
           }
         }}
         className={cn(
-          "block w-full resize-none overflow-hidden rounded-md border border-transparent bg-transparent px-2 py-1 -mx-2 font-display font-semibold text-ink hover:border-line focus:border-accent focus:bg-panel focus:outline-none",
+          "block w-full resize-none overflow-hidden rounded-md border border-transparent bg-transparent px-2 py-1 -mx-2 font-sans font-semibold text-ink hover:border-line focus:border-accent focus:bg-panel focus:outline-none",
           as === "h1" ? "text-h1" : "text-h3",
         )}
       />

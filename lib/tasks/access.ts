@@ -4,6 +4,7 @@ import type { Prisma, WorkspaceRole } from "@prisma/client";
 import { prisma, type DbClient } from "@/lib/db";
 import { canContribute, hasRoleAtLeast } from "@/lib/roles";
 import { hiddenTeamIds } from "@/lib/teamAccess";
+import type { TaskSource } from "@/lib/tasks/capabilities";
 
 /**
  * Who may see and change projects and tasks.
@@ -22,6 +23,8 @@ export type TaskActor = {
   user: { id: string; name: string | null };
   workspace: { id: string; slug: string; name: string; timezone: string };
   membership: { role: WorkspaceRole };
+  /** Where the change came from (history provenance); web when absent. */
+  via?: { source: TaskSource; client?: string };
 };
 
 export const canEditTasks = (actor: TaskActor) => canContribute(actor.membership);

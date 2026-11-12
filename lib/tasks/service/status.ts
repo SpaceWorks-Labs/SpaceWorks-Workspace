@@ -17,6 +17,7 @@ import {
   notify,
   runAfter,
   addHistory,
+  viaOf,
   visibleRecipients,
 } from "./helpers";
 
@@ -25,10 +26,10 @@ import {
 async function afterStatusChange(tx: Tx, after: After, actor: TaskActor, task: LoadedTask, change: { completed: boolean | null; fromColumn: { id: string; name: string } | null; toColumn: { id: string; name: string } | null }) {
   const ref = taskReference(task.project?.key, task.number);
   if (change.completed === true) {
-    await addHistory(tx, task.id, actor.user.id, "completed");
+    await addHistory(tx, task.id, actor.user.id, "completed", undefined, viaOf(actor));
     await recordActivity({ workspaceId: actor.workspace.id, actorId: actor.user.id, verb: "completed", entityType: "task", entityId: task.id, summary: `completed ${ref} ${task.title}`, projectId: task.projectId, teamId: task.project?.teamId ?? null }, tx);
   } else if (change.completed === false) {
-    await addHistory(tx, task.id, actor.user.id, "reopened");
+    await addHistory(tx, task.id, actor.user.id, "reopened", undefined, viaOf(actor));
   }
 
   const assigneeIds = (await tx.taskAssignee.findMany({ where: { taskId: task.id }, select: { userId: true } })).map((row) => row.userId);
@@ -58,7 +59,7 @@ async function afterStatusChange(tx: Tx, after: After, actor: TaskActor, task: L
   for (const { blockedTask } of blocked) {
     const open = await tx.taskDependency.count({ where: { workspaceId: actor.workspace.id, blockedTaskId: blockedTask.id, type: "BLOCKS", blockingTask: { completedAt: null, archivedAt: null } } });
     if (open > 0) continue;
-    await addHistory(tx, blockedTask.id, actor.user.id, "unblocked", { by: ref });
+    await addHistory(tx, blockedTask.id, actor.user.id, "unblocked", { by: ref }, viaOf(actor));
     const ids = blockedTask.assignees.map((row) => row.userId);
     if (ids.length === 0) continue;
     const blockedBase = eventBase(actor, blockedTask, blockedTask.project);
@@ -85,7 +86,7 @@ async function afterStatusChange(tx: Tx, after: After, actor: TaskActor, task: L
 export async function moveTask(actor: TaskActor, input: unknown): Promise<ActionResult<{ warning?: string }>> {
   const parsed = moveTaskSchema.safeParse(input);
   if (!parsed.success) return validationError(parsed.error);
-  const found = await loadEditableTask(actor, parsed.data.taskId);
+  const found = await loadEditableTask(actor, parsed.data.taskId, { action: "edit" });
   if ("error" in found) return actionError(found.error);
   const { task } = found;
   if (!task.projectId || task.parentId) return actionError("Only tasks on a board can be moved.");
@@ -117,7 +118,7 @@ export async function moveTask(actor: TaskActor, input: unknown): Promise<Action
       data: { columnId: target.id, position: placement.position, ...(completedChange === true ? { completedAt: new Date() } : completedChange === false ? { completedAt: null } : {}) },
     });
     if (source?.id !== target.id) {
-      await addHistory(tx, task.id, actor.user.id, "moved", { from: source?.name ?? null, to: target.name });
+      await addHistory(tx, task.id, actor.user.id, "moved", { from: source?.name ?? null, to: target.name }, viaOf(actor));
       await afterStatusChange(tx, after, actor, task, { completed: completedChange, fromColumn: source ? { id: source.id, name: source.name } : null, toColumn: { id: target.id, name: target.name } });
     }
     if (completedChange === true) {
@@ -135,7 +136,7 @@ export async function moveTask(actor: TaskActor, input: unknown): Promise<Action
 export async function setTaskCompleted(actor: TaskActor, input: unknown): Promise<ActionResult> {
   const parsed = completeTaskSchema.safeParse(input);
   if (!parsed.success) return validationError(parsed.error);
-  const found = await loadEditableTask(actor, parsed.data.taskId);
+  const found = await loadEditableTask(actor, parsed.data.taskId, { action: "edit" });
   if ("error" in found) return actionError(found.error);
   const { task } = found;
   const completed = parsed.data.completed;
@@ -156,7 +157,7 @@ export async function setTaskCompleted(actor: TaskActor, input: unknown): Promis
       position = completed ? (edge._min.position ?? POSITION_GAP * 2) - POSITION_GAP : (edge._max.position ?? 0) + POSITION_GAP;
     }
     await tx.task.update({ where: { id: task.id }, data: { completedAt: completed ? new Date() : null, ...(toColumn ? { columnId: toColumn.id, position } : {}) } });
-    if (toColumn) await addHistory(tx, task.id, actor.user.id, "moved", { from: fromColumn?.name ?? null, to: toColumn.name });
+    if (toColumn) await addHistory(tx, task.id, actor.user.id, "moved", { from: fromColumn?.name ?? null, to: toColumn.name }, viaOf(actor));
     await afterStatusChange(tx, after, actor, task, { completed, fromColumn: toColumn ? fromColumn : null, toColumn });
   });
   await runAfter(after);

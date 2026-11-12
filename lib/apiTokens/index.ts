@@ -47,6 +47,7 @@ export async function authenticateApiToken(authorization: string | null, now = n
     where: { prefix: parsed.prefix },
     select: {
       id: true,
+      name: true,
       secretHash: true,
       scopes: true,
       revokedAt: true,
@@ -81,6 +82,7 @@ export async function authenticateApiToken(authorization: string | null, now = n
       userName: membership.user.name,
       role: membership.role,
       tokenId: token.id,
+      tokenName: token.name,
       scopes,
     },
   };

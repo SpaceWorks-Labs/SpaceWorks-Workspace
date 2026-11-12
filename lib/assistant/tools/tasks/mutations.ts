@@ -1,59 +1,32 @@
 import "server-only";
 
-import type { ColumnCategory, Prisma, TaskPriority } from "@prisma/client";
+import type { ColumnCategory } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { taskUrl } from "@/lib/tasks/links";
-import { nextWorkspaceSequence } from "@/lib/counters";
-import { recordActivity } from "@/lib/activity";
-import { indexSearchDocument } from "@/lib/search/documents";
-import { dispatch } from "@/lib/notify";
-import { hasRoleAtLeast } from "@/lib/roles";
-import { clip, projectWhere, textToHtml } from "@/lib/assistant/tools/access";
+import { projectWhere, textToHtml } from "@/lib/assistant/tools/access";
 import { auditToolWrite } from "@/lib/assistant/tools/audit";
 import { defineTool, ToolError } from "@/lib/assistant/tools/types";
-import { taskRef, taskSelect, taskDto, findVisibleTask } from "./records";
+import { createTask as createTaskService, moveTask, setAssignees, setTaskCompleted, updateTask as updateTaskService } from "@/lib/tasks/service";
+import type { TaskActor } from "@/lib/tasks/access";
+import { assertAssignable, principalToActor, resolveUserIds, toDueDate, unwrap } from "./actor";
+import { resolveTypeId } from "./typeResolve";
+import { findTaskForWrite, readTaskDto, taskDto, taskRef } from "./records";
 
-const PRIORITIES = ["NONE", "LOW", "MEDIUM", "HIGH", "URGENT"] as const;
-const STATUS_TO_CATEGORY: Record<"todo" | "in_progress" | "done", ColumnCategory> = { todo: "TODO", in_progress: "IN_PROGRESS", done: "DONE" };
+export const PRIORITIES = ["NONE", "LOW", "MEDIUM", "HIGH", "URGENT"] as const;
+export const STATUS_TO_CATEGORY: Record<"todo" | "in_progress" | "done", ColumnCategory> = { todo: "TODO", in_progress: "IN_PROGRESS", done: "DONE" };
 
 const dateInput = z
   .string()
   .trim()
   .max(40)
   .refine((value) => !Number.isNaN(Date.parse(value)), "Use an ISO date such as 2026-11-02 or 2026-11-02T18:00:00+05:30.")
-  .describe("ISO 8601 date or date-time.");
-
-/** Active members who may be assigned a task in `project` (private teams: their members and admins). */
-async function validAssignees(workspaceId: string, ids: string[], project: { teamId: string | null } | null) {
-  if (ids.length === 0) return [];
-  const members = await prisma.membership.findMany({
-    where: { workspaceId, userId: { in: ids }, status: "ACTIVE", role: { in: ["OWNER", "ADMIN", "MEMBER"] } },
-    select: { userId: true, role: true },
-  });
-  let allowed = members;
-  if (project?.teamId) {
-    const team = await prisma.team.findUnique({ where: { id: project.teamId }, select: { visibility: true, members: { select: { userId: true } } } });
-    if (team?.visibility === "PRIVATE") {
-      const inTeam = new Set(team.members.map((m) => m.userId));
-      allowed = members.filter((m) => hasRoleAtLeast(m.role, "ADMIN") || inTeam.has(m.userId));
-    }
-  }
-  if (allowed.length !== ids.length) throw new ToolError("Assign tasks only to active members who can see the project.");
-  return allowed.map((m) => m.userId);
-}
-
-function parseDue(value: string | null | undefined): Date | null | undefined {
-  if (value === undefined) return undefined;
-  if (value === null) return null;
-  return new Date(value);
-}
+  .describe("ISO 8601 date or date-time. A date-only value is a day in the workspace time zone.");
 
 export const createTask = defineTool({
   name: "sw_create_task",
   title: "New task",
   description:
-    "Create a task. The person confirms before it runs. Optional project key, plain-text description, assignees (\"me\" or member ids from sw_list_members), priority and due date.",
+    "Create a task. The person confirms before it runs. Optional project key, plain-text description, assignees (\"me\" or member ids from sw_list_members), priority and due date. The task goes to the bottom of the project's first column.",
   input: z.object({
     title: z.string().trim().min(1).max(200),
     description: z.string().trim().max(5000).optional().describe("Plain text."),
@@ -61,159 +34,101 @@ export const createTask = defineTool({
     assignees: z.array(z.string().trim().min(1).max(64)).max(10).optional(),
     priority: z.enum(PRIORITIES).optional(),
     dueAt: dateInput.optional(),
+    type: z.string().trim().min(1).max(30).optional().describe("Task type name on the project (e.g. Bug); default type when left out. Needs a project."),
   }),
   write: true,
   scope: "write:tasks",
   minRole: "MEMBER",
   async run(ctx, input) {
     const { principal } = ctx;
-    const workspaceId = principal.workspace.id;
+    const actor = await principalToActor(ctx);
     const project = input.project
-      ? await prisma.project.findFirst({
-          where: { AND: [await projectWhere(principal), { key: input.project.toUpperCase(), status: { not: "ARCHIVED" } }] },
-          select: { id: true, key: true, name: true, teamId: true, columns: { orderBy: { position: "asc" }, select: { id: true, category: true } } },
-        })
+      ? await prisma.project.findFirst({ where: { AND: [await projectWhere(principal), { key: input.project.toUpperCase(), status: { not: "ARCHIVED" } }] }, select: { id: true } })
       : null;
     if (input.project && !project) throw new ToolError(`No open project ${input.project.toUpperCase()} that you can see.`, "not_found");
-    const assigneeIds = await validAssignees(workspaceId, [...new Set((input.assignees ?? []).map((id) => (id === "me" ? principal.userId : id)))], project);
-    const column = project ? project.columns.find((c) => c.category === "TODO") ?? project.columns[0] ?? null : null;
-    const descriptionHtml = input.description ? textToHtml(input.description) : null;
-
-    const { task, afterCommit } = await prisma.$transaction(async (tx) => {
-      const number = await nextWorkspaceSequence(tx, workspaceId, "task");
-      const created = await tx.task.create({
-        data: {
-          workspaceId,
-          projectId: project?.id ?? null,
-          columnId: column?.id ?? null,
-          number,
-          title: input.title,
-          description: descriptionHtml,
-          priority: (input.priority ?? "NONE") as TaskPriority,
-          dueAt: parseDue(input.dueAt) ?? null,
-          creatorId: principal.userId,
-          position: Date.now(),
-          assignees: assigneeIds.length ? { create: assigneeIds.map((userId) => ({ userId })) } : undefined,
-          activities: { create: { actorId: principal.userId, kind: "created", data: { via: ctx.via } } },
-        },
-        select: taskSelect,
-      });
-      const ref = project ? `${project.key}-${number}` : `#${number}`;
-      const url = taskUrl(principal.workspace.slug, created.project?.key, created.number);
-      await indexSearchDocument(
-        { workspaceId, entityType: "task", entityId: created.id, title: `${ref} ${created.title}`, body: input.description ?? "", url, projectId: project?.id ?? null, teamId: project?.teamId ?? null },
-        tx,
-      );
-      await recordActivity({ workspaceId, actorId: principal.userId, verb: "created", entityType: "task", entityId: created.id, summary: `created ${ref} ${created.title}`, projectId: project?.id ?? null, teamId: project?.teamId ?? null }, tx);
-      await auditToolWrite(ctx, { action: "assistant.task_created", targetType: "Task", targetId: created.id, metadata: { number } }, tx);
-      const recipients = assigneeIds.filter((id) => id !== principal.userId);
-      const notified = recipients.length
-        ? await dispatch(
-            workspaceId,
-            {
-              type: "task.assigned",
-              title: clip(`${principal.userName ?? "Someone"} assigned you ${ref}`, 150),
-              body: clip(created.title, 300),
-              url,
-              actorId: principal.userId,
-              recipients,
-              resource: { type: "task", id: created.id },
-              scope: { ...(project ? { projectId: project.id } : {}), taskId: created.id },
-              data: { taskId: created.id, taskNumber: number, projectId: project?.id ?? null },
-            },
-            { tx },
-          )
-        : null;
-      return { task: created, afterCommit: notified?.afterCommit };
-    });
-    await afterCommit?.();
-    const dto = taskDto(principal.workspace.slug, task);
+    if (input.type && !project) throw new ToolError("Task types belong to a project. Give a project key too.");
+    const typeId = input.type && project ? await resolveTypeId(principal.workspace.id, project.id, input.type) : undefined;
+    const created = unwrap(
+      await createTaskService(actor, {
+        title: input.title,
+        description: input.description ? textToHtml(input.description) : null,
+        projectId: project?.id ?? null,
+        typeId,
+        priority: input.priority ?? "NONE",
+        dueDate: toDueDate(input.dueAt, actor.workspace.timezone) ?? null,
+        assigneeIds: resolveUserIds(input.assignees ?? [], principal.userId),
+      }),
+    )!;
+    await auditToolWrite(ctx, { action: "assistant.task_created", targetType: "Task", targetId: created.id, metadata: { number: created.number } });
+    const dto = await readTaskDto(principal.workspace.slug, created.id);
     return { summary: `Created ${dto.ref}`, data: dto };
   },
 });
 
+/** Move a task to the first column of `category` (or reopen/complete a task without a board column). */
+async function applyStatus(actor: TaskActor, task: Awaited<ReturnType<typeof findTaskForWrite>>, status: "todo" | "in_progress" | "done") {
+  const category = STATUS_TO_CATEGORY[status];
+  const current = await prisma.task.findUniqueOrThrow({ where: { id: task.id }, select: { columnId: true, parentId: true, completedAt: true } });
+  if (current.columnId && !current.parentId && task.projectId) {
+    if (task.column?.category === category && Boolean(current.completedAt) === (category === "DONE")) return;
+    const column = await prisma.boardColumn.findFirst({ where: { projectId: task.projectId, category }, orderBy: { position: "asc" }, select: { id: true } });
+    if (column) {
+      // Done cards go to the top of Done (like the checkbox); others to the bottom.
+      const last = category === "DONE" ? null : await prisma.task.findFirst({ where: { columnId: column.id, parentId: null, archivedAt: null, id: { not: task.id } }, orderBy: [{ position: "desc" }, { number: "desc" }], select: { id: true } });
+      unwrap(await moveTask(actor, { taskId: task.id, columnId: column.id, afterTaskId: last?.id ?? null }));
+      return;
+    }
+  }
+  unwrap(await setTaskCompleted(actor, { taskId: task.id, completed: category === "DONE" }));
+}
+
 export const updateTask = defineTool({
   name: "sw_update_task",
   title: "Task update",
-  description: "Update a task's title, status (todo, in_progress, done), priority or due date (null clears it). The person confirms before it runs.",
+  description:
+    "Update a task's title, status (todo, in_progress, done), priority, due date (null clears it), type (name) or assignees (the full set; \"me\" allowed). The person confirms before it runs.",
   input: z.object({
     ref: taskRef,
     title: z.string().trim().min(1).max(200).optional(),
     status: z.enum(["todo", "in_progress", "done"]).optional(),
     priority: z.enum(PRIORITIES).optional(),
     dueAt: dateInput.nullable().optional(),
+    type: z.string().trim().min(1).max(30).optional().describe("Task type name on the task's project (e.g. Bug)."),
+    assignees: z.array(z.string().trim().min(1).max(64)).max(20).optional().describe('Replaces the assignees. "me" or member ids.'),
   }),
   write: true,
   scope: "write:tasks",
   minRole: "MEMBER",
   async run(ctx, input) {
     const { principal } = ctx;
-    const task = await findVisibleTask(ctx, input.ref);
-    const data: Prisma.TaskUncheckedUpdateInput = {};
-    const changed: string[] = [];
-    if (input.title !== undefined && input.title !== task.title) {
-      data.title = input.title;
-      changed.push("title");
+    const actor = await principalToActor(ctx);
+    const task = await findTaskForWrite(actor, input.ref);
+    const before = taskDto(principal.workspace.slug, task);
+    const dueDate = toDueDate(input.dueAt, actor.workspace.timezone);
+    if (input.type && !task.projectId) throw new ToolError("Task types belong to a project. This task has none.");
+    const typeId = input.type && task.projectId ? await resolveTypeId(principal.workspace.id, task.projectId, input.type) : undefined;
+    // Validate the parts that can be checked up front. Fields, status and assignees are still separate service
+    // calls (different locks and history rows), so a late failure (e.g. a permission change mid-call) can leave earlier parts applied.
+    const assigneeIds = input.assignees ? resolveUserIds(input.assignees, principal.userId) : null;
+    if (assigneeIds) await assertAssignable(actor, task.project, assigneeIds, task.assignees.map((a) => a.user.id));
+    const fields = { title: input.title, priority: input.priority, dueDate, typeId };
+    if (Object.values(fields).some((value) => value !== undefined)) {
+      unwrap(await updateTaskService(actor, { taskId: task.id, ...Object.fromEntries(Object.entries(fields).filter(([, value]) => value !== undefined)) }));
     }
-    if (input.priority !== undefined && input.priority !== task.priority) {
-      data.priority = input.priority;
-      changed.push("priority");
-    }
-    const due = parseDue(input.dueAt);
-    if (due !== undefined) {
-      data.dueAt = due;
-      changed.push("due date");
-    }
-    let fromColumnId: string | null = null;
-    let toColumnId: string | null = null;
-    if (input.status) {
-      const category = STATUS_TO_CATEGORY[input.status];
-      if (task.projectId) {
-        const current = await prisma.task.findUniqueOrThrow({ where: { id: task.id }, select: { columnId: true } });
-        const column = await prisma.boardColumn.findFirst({ where: { projectId: task.projectId, category }, orderBy: { position: "asc" }, select: { id: true } });
-        if (column && column.id !== current.columnId) {
-          data.columnId = column.id;
-          fromColumnId = current.columnId;
-          toColumnId = column.id;
-        }
-      }
-      data.completedAt = category === "DONE" ? task.completedAt ?? ctx.now : null;
-      changed.push("status");
-    }
-    if (changed.length === 0) return { summary: `Nothing to change on ${taskDto(principal.workspace.slug, task).ref}`, data: taskDto(principal.workspace.slug, task) };
+    if (input.status) await applyStatus(actor, task, input.status);
+    if (assigneeIds) unwrap(await setAssignees(actor, { taskId: task.id, userIds: assigneeIds }));
 
-    const { updated, afterCommit } = await prisma.$transaction(async (tx) => {
-      const row = await tx.task.update({ where: { id: task.id }, data, select: taskSelect });
-      await tx.taskActivity.create({ data: { taskId: task.id, actorId: principal.userId, kind: "updated", data: { fields: changed, via: ctx.via } } });
-      const dto = taskDto(principal.workspace.slug, row);
-      if (data.title) {
-        await indexSearchDocument(
-          { workspaceId: principal.workspace.id, entityType: "task", entityId: row.id, title: `${dto.ref} ${row.title}`, url: dto.url, projectId: row.projectId, teamId: row.project?.teamId ?? null },
-          tx,
-        );
-      }
-      await auditToolWrite(ctx, { action: "assistant.task_updated", targetType: "Task", targetId: row.id, metadata: { number: row.number, fields: changed.join(",") } }, tx);
-      const recipients = row.assignees.map((a) => a.user.id).filter((id) => id !== principal.userId);
-      const notified =
-        input.status && recipients.length
-          ? await dispatch(
-              principal.workspace.id,
-              {
-                type: "task.status_changed",
-                title: clip(`${principal.userName ?? "Someone"} moved ${dto.ref} to ${dto.status}`, 150),
-                url: dto.url,
-                actorId: principal.userId,
-                recipients,
-                resource: { type: "task", id: row.id },
-                scope: { ...(row.projectId ? { projectId: row.projectId } : {}), taskId: row.id },
-                data: { taskId: row.id, taskNumber: row.number, projectId: row.projectId, fromColumnId, toColumnId },
-              },
-              { tx },
-            )
-          : null;
-      return { updated: dto, afterCommit: notified?.afterCommit };
-    });
-    await afterCommit?.();
-    return { summary: `Updated ${updated.ref} (${changed.join(", ")})`, data: updated };
+    const after = await readTaskDto(principal.workspace.slug, task.id);
+    const changed = [
+      after.title !== before.title && "title",
+      after.priority !== before.priority && "priority",
+      after.dueAt !== before.dueAt && "due date",
+      after.status !== before.status && "status",
+      after.type !== before.type && "type",
+      after.assignees.map((a) => a.id).sort().join() !== before.assignees.map((a) => a.id).sort().join() && "assignees",
+    ].filter((name): name is string => Boolean(name));
+    if (changed.length === 0) return { summary: `Nothing to change on ${before.ref}`, data: after };
+    await auditToolWrite(ctx, { action: "assistant.task_updated", targetType: "Task", targetId: task.id, metadata: { number: task.number, fields: changed.join(",") } });
+    return { summary: `Updated ${after.ref} (${changed.join(", ")})`, data: after };
   },
 });

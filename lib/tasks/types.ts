@@ -1,3 +1,4 @@
+import type { TaskTypeRef } from "@/lib/tasks/taskTypes";
 import type { ColumnCategory, LabelTone, ProjectStatus, TaskPriority } from "@prisma/client";
 
 /** Serializable shapes passed from server code to the board, list and task detail (client-safe). */
@@ -16,9 +17,16 @@ export type BoardTask = {
   dueAt: string | null;
   completedAt: string | null;
   columnId: string | null;
+  /** Effective type id (the project's default when the task has none). FilterBar can filter on it. */
+  typeId: string | null;
   position: number;
   assigneeIds: string[];
   labelIds: string[];
+  /** Per-task rights for the viewer (lib/tasks/capabilities). */
+  canEdit: boolean;
+  canClaim: boolean;
+  canUnclaim: boolean;
+  isAssignedToMe: boolean;
   subtaskCount: number;
   subtaskDone: number;
   commentCount: number;
@@ -31,6 +39,8 @@ export type BoardTask = {
 
 export type ProjectSummary = {
   cyclesEnabled: boolean;
+  /** Only the creator, assignees, project owner and admins edit a task. */
+  restrictTaskEdits: boolean;
   id: string;
   key: string;
   name: string;
@@ -59,6 +69,7 @@ export type BoardData = {
   /** Assignable people (members and up). */
   members: PersonRef[];
   labels: LabelRef[];
+  taskTypes: TaskTypeRef[];
   permissions: ProjectPermissions;
 };
 
@@ -110,6 +121,9 @@ export type TaskDetailDTO = {
   updatedAt: string;
   creator: PersonRef | null;
   columnId: string | null;
+  /** Effective type id (default when unset); null for tasks without a project. */
+  typeId: string | null;
+  taskTypes: TaskTypeRef[];
   project: ProjectSummary | null;
   columns: ColumnDTO[];
   parent: TaskRef | null;
@@ -124,7 +138,11 @@ export type TaskDetailDTO = {
   recurrence: RecurrenceDTO | null;
   members: PersonRef[];
   labels: LabelRef[];
+  /** `canEdit` is per task here (restricted projects), not per project. */
   permissions: ProjectPermissions;
+  canClaim: boolean;
+  canUnclaim: boolean;
+  isAssignedToMe: boolean;
   /** Canonical app-relative link. */
   url: string;
   reference: string;
@@ -143,5 +161,8 @@ export type MyTaskDTO = {
   projectName: string | null;
   labelIds: string[];
   blocked: boolean;
+  canEdit: boolean;
+  canClaim: boolean;
+  isAssignedToMe: boolean;
   url: string;
 };

@@ -11,6 +11,8 @@ import {
 } from "@/lib/meetings/core";
 import { dispatch } from "@/lib/notify";
 import { fromDateInputValue } from "@/lib/tasks/localDate";
+import { RESTRICTED_EDIT_MESSAGE } from "@/lib/tasks/capabilities";
+import { canEditTaskInTx } from "@/lib/tasks/service/helpers";
 import { carryOverTaskIds } from "./progress";
 
 import { cycleWhere } from "./access";
@@ -140,6 +142,8 @@ export async function mutateCycle(actor: Actor, input: unknown) {
         },
       });
       ensure(task && (!data.remove || task.cycleId === cycle.id));
+      const project = await tx.project.findFirst({ where: { id: cycle.projectId!, workspaceId: actor.workspace.id }, select: { restrictTaskEdits: true, ownerId: true } });
+      ensure(await canEditTaskInTx(tx, actor, [task], project), RESTRICTED_EDIT_MESSAGE);
       if (task.cycleId && task.cycleId !== cycle.id) {
         const previous = await tx.cycle.findFirst({
           where: { workspaceId: actor.workspace.id, id: task.cycleId },

@@ -37,7 +37,7 @@ export function TaskDrawer({ slug, number, onClose, onChanged }: { slug: string;
         presentation="drawer"
         hideClose
         aria-describedby={undefined}
-        className="left-auto right-0 top-0 h-dvh max-h-dvh w-full max-w-[760px] translate-x-0 translate-y-0 rounded-none border-y-0 border-r-0 data-[state=open]:animate-[yy-fade-in_200ms_ease-out] sm:w-[92vw]"
+        className="left-auto right-0 top-0 h-dvh max-h-dvh w-full max-w-[760px] translate-x-0 translate-y-0 rounded-none border-y-0 border-r-0 sm:w-[92vw]"
       >
         <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-2 sm:px-6">
           <DialogPrimitive.Title className="text-label text-ink-muted">Task</DialogPrimitive.Title>
@@ -56,7 +56,7 @@ export function TaskDrawer({ slug, number, onClose, onChanged }: { slug: string;
               <Skeleton className="h-24 w-full" />
             </div>
           ) : loaded.task ? (
-            <TaskDetail slug={slug} initial={loaded.task} variant="drawer" onChanged={onChanged} />
+            <div className="sw-fade-in"><TaskDetail slug={slug} initial={loaded.task} variant="drawer" onChanged={onChanged} /></div>
           ) : (
             <EmptyState title="That task isn't here.">It may have been archived, or you may not have access to it.</EmptyState>
           )}

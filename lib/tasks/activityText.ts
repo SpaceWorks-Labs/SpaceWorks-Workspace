@@ -18,6 +18,17 @@ function joinNames(names: string[]) {
   return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
 }
 
+/** " via Assistant" / " via MCP · client" / " via API" for changes that did not come from the web app. */
+export function sourceSuffix(d: Record<string, unknown>): string {
+  const client = str(d.client);
+  switch (d.source) {
+    case "assistant": return " via Assistant";
+    case "mcp": return client ? ` via MCP · ${client}` : " via MCP";
+    case "api": return client ? ` via API · ${client}` : " via API";
+    default: return "";
+  }
+}
+
 /** Kinds shown elsewhere (comments have their own list) or internal markers. */
 export const HIDDEN_ACTIVITY_KINDS = new Set(["commented"]);
 
@@ -41,10 +52,25 @@ export function activityText(kind: string, data: Data, context: { nameOf: (userI
       return d.to ? `set the due date to ${formatDayShort(str(d.to), context.timeZone)}` : "cleared the due date";
     case "moved":
       return d.from ? `moved this from ${str(d.from)} to ${str(d.to)}` : `moved this to ${str(d.to)}`;
-    case "assigned":
-      return `assigned ${joinNames(list(d.userIds).map(context.nameOf))}`;
-    case "unassigned":
-      return `unassigned ${joinNames(list(d.userIds).map(context.nameOf))}`;
+    case "type_changed":
+      return str(d.from) ? `changed the type from ${str(d.from)} to ${str(d.to)}` : `set the type to ${str(d.to)}`;
+    case "transferred": {
+      const from = d.from as { key?: unknown; name?: unknown } | null | undefined;
+      const to = d.to as { key?: unknown; name?: unknown } | null | undefined;
+      const dropped = list(d.droppedAssignees);
+      const base = `moved this from ${str(from?.name)} (${str(from?.key)}) to ${str(to?.name)} (${str(to?.key)})`;
+      return (dropped.length > 0 ? `${base}; unassigned ${joinNames(dropped.map(context.nameOf))}` : base) + sourceSuffix(d);
+    }
+    case "assigned": {
+      const ids = list(d.userIds);
+      const text = d.claimed === true ? "took this task" : ids.length === 1 && ids[0] === str(d.by) ? "assigned themselves" : `assigned ${joinNames(ids.map(context.nameOf))}`;
+      return text + sourceSuffix(d);
+    }
+    case "unassigned": {
+      const ids = list(d.userIds);
+      const text = ids.length === 1 && ids[0] === str(d.by) ? "unassigned themselves" : `unassigned ${joinNames(ids.map(context.nameOf))}`;
+      return text + sourceSuffix(d);
+    }
     case "labeled":
       return `added the ${list(d.names).length === 1 ? "label" : "labels"} ${joinNames(list(d.names))}`;
     case "unlabeled":

@@ -6,7 +6,9 @@ import { formatRelativeDay } from "@/lib/format/datetime";
 import { labelChipTone } from "@/lib/labels";
 import { dueBucket } from "@/lib/tasks/due";
 import { PRIORITY_LABELS } from "@/lib/tasks/filters";
+import type { TaskTypeRef } from "@/lib/tasks/taskTypes";
 import type { LabelRef, PersonRef } from "@/lib/tasks/types";
+import { TASK_TYPE_GLYPHS } from "./typeIcons";
 
 /** Small presentational pieces shared by cards, rows and the task detail (server- and client-safe). */
 
@@ -31,6 +33,17 @@ export function DueChip({ dueAt, completedAt, timeZone, size = "sm", now }: { du
   return (
     <Chip tone={tone} size={size}>
       <span className="tabular-nums">{!completedAt && bucket === "overdue" ? `Overdue · ${label}` : `Due ${phrase}`}</span>
+    </Chip>
+  );
+}
+
+/** Type icon and name (`type` is the task's effective type). */
+export function TypeChip({ type, size = "sm" }: { type: TaskTypeRef | null | undefined; size?: "sm" | "md" }) {
+  if (!type) return null;
+  const Glyph = TASK_TYPE_GLYPHS[type.icon];
+  return (
+    <Chip tone={labelChipTone(type.tone)} size={size} icon={<Glyph />}>
+      {type.name}
     </Chip>
   );
 }

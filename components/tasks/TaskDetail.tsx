@@ -15,18 +15,21 @@ import { Button, IconButton } from "@/components/ui/button";
 import { Callout, Chip } from "@/components/ui/display";
 import { Menu, MenuContent, MenuItem, MenuTrigger } from "@/components/ui/menu";
 import { cn } from "@/lib/cn";
-import { formatRelativeTime } from "@/lib/format/datetime";
 import { taskReference, taskUrl } from "@/lib/tasks/links";
 import type { TaskDetailDTO } from "@/lib/tasks/types";
-import { BlockedChip, DueChip } from "./bits";
+import { BlockedChip, DueChip, TypeChip } from "./bits";
+import { MoveToProjectDialog } from "./MoveToProjectDialog";
+import { effectiveType } from "@/lib/tasks/taskTypes";
 import { RichTextEditor, RichTextView } from "./RichTextEditor";
 import { TaskPlan } from "@/components/projects/TaskPlan";
 import { TaskAttachments } from "./TaskAttachments";
 import { TaskComments } from "./TaskComments";
 import { TaskDependencies } from "./TaskDependencies";
+import { TaskHistory } from "./TaskHistory";
 import { TaskSubtasks } from "./TaskSubtasks";
 import { TitleEditor } from "./TaskTitleEditor";
 import { TaskProperties } from "./TaskProperties";
+import { useDetailAssignment } from "./useAssignment";
 import { useTaskRunner } from "./useTaskRunner";
 
 /**
@@ -38,9 +41,9 @@ import { useTaskRunner } from "./useTaskRunner";
  */
 export function TaskDetail({ slug, initial, variant, onChanged }: { slug: string; initial: TaskDetailDTO; variant: "page" | "drawer"; onChanged?: () => void }) {
   const [task, setTask] = useState(initial);
+  const [moving, setMoving] = useState(false);
   const [editingDescription, setEditingDescription] = useState(false);
   const [descriptionDraft, setDescriptionDraft] = useState("");
-  const [showAllActivity, setShowAllActivity] = useState(false);
   const { showToast } = useToast();
   const [seen, setSeen] = useState(initial);
   if (seen !== initial) {
@@ -54,6 +57,7 @@ export function TaskDetail({ slug, initial, variant, onChanged }: { slug: string
     onChanged?.();
   }, [slug, task.number, onChanged]);
   const run = useTaskRunner(reload);
+  const assignment = useDetailAssignment(slug, task, setTask, reload, variant === "drawer");
 
   const pending = useRef<ReturnType<typeof setTimeout> | null>(null);
   useRealtime(
@@ -85,7 +89,6 @@ export function TaskDetail({ slug, initial, variant, onChanged }: { slug: string
     }
   };
 
-  const visibleActivity = showAllActivity ? task.activity : task.activity.slice(0, 8);
   const properties = <TaskProperties slug={slug} task={task} canEdit={canEdit} run={run} />;
 
   return (
@@ -125,8 +128,14 @@ export function TaskDetail({ slug, initial, variant, onChanged }: { slug: string
           )}
           {(Boolean(task.blockerReason) || task.blockedBy.some((item) => !item.completedAt && !item.archivedAt)) ? <BlockedChip size="md" /> : null}
           {task.archivedAt ? <Chip tone="outline">Archived</Chip> : null}
+          <TypeChip type={effectiveType(task.taskTypes, task.typeId)} size="md" />
           <DueChip dueAt={task.dueAt} completedAt={task.completedAt} timeZone={task.timeZone} size="md" />
           <div className="ml-auto flex items-center gap-1.5">
+            {assignment.mode ? (
+              <Button variant="secondary" size="sm" onClick={assignment.toggle} title="Shortcut: I">
+                {assignment.mode === "claim" ? "Assign to me" : "Unassign me"}
+              </Button>
+            ) : null}
             {canEdit ? (
               <Button
                 variant={task.completedAt ? "secondary" : "primary"}
@@ -155,6 +164,11 @@ export function TaskDetail({ slug, initial, variant, onChanged }: { slug: string
                 <MenuItem icon={null} onSelect={() => void copyLink()}>
                   Copy link
                 </MenuItem>
+                {canEdit && !task.parent ? (
+                  <MenuItem icon={null} onSelect={() => setMoving(true)}>
+                    Move to project…
+                  </MenuItem>
+                ) : null}
                 {task.permissions.canEdit ? (
                   task.archivedAt ? (
                     <MenuItem icon={null} onSelect={() => void run(() => setTaskArchivedAction(slug, { taskId: task.id, archived: false }), `${reference} restored.`)}>
@@ -236,26 +250,10 @@ export function TaskDetail({ slug, initial, variant, onChanged }: { slug: string
           <TaskDependencies slug={slug} task={task} run={run} />
           <TaskAttachments slug={slug} task={task} run={run} />
           <TaskComments slug={slug} task={task} run={run} mentionable={task.members} />
-          <section aria-labelledby={`history-${task.id}`} className="flex flex-col gap-3">
-            <h3 id={`history-${task.id}`} className="text-title text-ink">
-              History
-            </h3>
-            <ol className="flex flex-col gap-2.5 border-l border-line pl-4">
-              {visibleActivity.map((item) => (
-                <li key={item.id} className="text-body-ui text-ink-secondary">
-                  <span className="font-semibold text-ink">{item.actor?.name ?? (item.kind === "created_recurring" ? "This task" : "Someone")}</span> {item.text}
-                  <span className="text-caption text-ink-muted"> · {formatRelativeTime(item.createdAt, task.timeZone)}</span>
-                </li>
-              ))}
-            </ol>
-            {task.activity.length > 8 ? (
-              <Button variant="quiet" size="sm" className="self-start" onClick={() => setShowAllActivity((value) => !value)}>
-                {showAllActivity ? "Show less" : `Show all ${task.activity.length}`}
-              </Button>
-            ) : null}
-          </section>
+          <TaskHistory task={task} />
         </div>
       </div>
+      {moving ? <MoveToProjectDialog slug={slug} task={task} open onOpenChange={setMoving} /> : null}
     </article>
   );
 }

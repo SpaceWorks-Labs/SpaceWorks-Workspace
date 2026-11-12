@@ -412,154 +412,169 @@ import { transitionMoneyControlAction as endpoint408 } from "@/app/actions/money
 import { uploadMoneyControlFilesAction as endpoint409 } from "@/app/actions/money-controls";
 import { removeMoneyControlFileAction as endpoint410 } from "@/app/actions/money-controls";
 import { reconcileMoneyMovementAction as endpoint411 } from "@/app/actions/money-controls";
-import { loadNotepadAction as endpoint412 } from "@/app/actions/notepad";
-import { createNoteAction as endpoint413 } from "@/app/actions/notepad";
-import { updateNoteAction as endpoint414 } from "@/app/actions/notepad";
-import { setNoteArchivedAction as endpoint415 } from "@/app/actions/notepad";
-import { deleteNoteAction as endpoint416 } from "@/app/actions/notepad";
-import { createTodoAction as endpoint417 } from "@/app/actions/notepad";
-import { updateTodoAction as endpoint418 } from "@/app/actions/notepad";
-import { moveTodoAction as endpoint419 } from "@/app/actions/notepad";
-import { deleteTodoAction as endpoint420 } from "@/app/actions/notepad";
-import { clearDoneTodosAction as endpoint421 } from "@/app/actions/notepad";
-import { sendTodoToTasksAction as endpoint422 } from "@/app/actions/notepad";
-import { notificationStateAction as endpoint423 } from "@/app/actions/notificationPreferences";
-import { notificationSummaryAction as endpoint424 } from "@/app/actions/notificationPreferences";
-import { saveNotificationPreference as endpoint425 } from "@/app/actions/notificationPreferences";
-import { saveNotificationSettings as endpoint426 } from "@/app/actions/notificationPreferences";
-import { removeNotificationMute as endpoint427 } from "@/app/actions/notificationPreferences";
-import { muteNotificationResource as endpoint428 } from "@/app/actions/notificationPreferences";
-import { updateRouting as endpoint429 } from "@/app/actions/notificationRouting";
-import { markNotificationsReadAction as endpoint430 } from "@/app/actions/notifications";
-import { newHelpTicket as endpoint431 } from "@/app/actions/opsGaps";
-import { saveHelpTicket as endpoint432 } from "@/app/actions/opsGaps";
-import { replyHelpTicket as endpoint433 } from "@/app/actions/opsGaps";
-import { newSafetyReport as endpoint434 } from "@/app/actions/opsGaps";
-import { saveSafetyReport as endpoint435 } from "@/app/actions/opsGaps";
-import { newSafetyFollowUp as endpoint436 } from "@/app/actions/opsGaps";
-import { finishSafetyFollowUp as endpoint437 } from "@/app/actions/opsGaps";
-import { newVolunteerHours as endpoint438 } from "@/app/actions/opsGaps";
-import { decideVolunteerHours as endpoint439 } from "@/app/actions/opsGaps";
-import { cancelVolunteerHours as endpoint440 } from "@/app/actions/opsGaps";
-import { newHiringOpening as endpoint441 } from "@/app/actions/opsGaps";
-import { saveHiringOpening as endpoint442 } from "@/app/actions/opsGaps";
-import { newHiringCandidate as endpoint443 } from "@/app/actions/opsGaps";
-import { saveHiringCandidate as endpoint444 } from "@/app/actions/opsGaps";
-import { newHiringInterview as endpoint445 } from "@/app/actions/opsGaps";
-import { startCandidateOnboarding as endpoint446 } from "@/app/actions/opsGaps";
-import { newLeaveType as endpoint447 } from "@/app/actions/opsGaps";
-import { saveYearlyBalance as endpoint448 } from "@/app/actions/opsGaps";
-import { saveMemberEngagement as endpoint449 } from "@/app/actions/opsGaps";
-import { submitLeave as endpoint450 } from "@/app/actions/opsGaps";
-import { reviewLeave as endpoint451 } from "@/app/actions/opsGaps";
-import { withdrawLeave as endpoint452 } from "@/app/actions/opsGaps";
-import { saveFacilityLease as endpoint453 } from "@/app/actions/opsGaps";
-import { newFacilityContact as endpoint454 } from "@/app/actions/opsGaps";
-import { newInspectionTemplate as endpoint455 } from "@/app/actions/opsGaps";
-import { newInspection as endpoint456 } from "@/app/actions/opsGaps";
-import { saveInspectionFinding as endpoint457 } from "@/app/actions/opsGaps";
-import { newInspectionAction as endpoint458 } from "@/app/actions/opsGaps";
-import { closeInspection as endpoint459 } from "@/app/actions/opsGaps";
-import { uploadPeopleServiceFiles as endpoint460 } from "@/app/actions/opsGaps";
-import { saveDepartmentAction as endpoint461 } from "@/app/actions/orgPeople";
-import { saveReportingAction as endpoint462 } from "@/app/actions/orgPeople";
-import { saveResponsibilityAction as endpoint463 } from "@/app/actions/orgPeople";
-import { saveAttendanceAction as endpoint464 } from "@/app/actions/orgPeople";
-import { saveEscalationAction as endpoint465 } from "@/app/actions/orgPeople";
-import { uploadOrgFiles as endpoint466 } from "@/app/actions/orgPeople";
-import { mutatePeople as endpoint467 } from "@/app/actions/people";
-import { revealEmergencyAction as endpoint468 } from "@/app/actions/people";
-import { saveOidcProvider as endpoint469 } from "@/app/actions/platformShell";
-import { pollAction as endpoint470 } from "@/app/actions/polls";
-import { saveProductRecord as endpoint471 } from "@/app/actions/productOps";
-import { productOperation as endpoint472 } from "@/app/actions/productOps";
-import { uploadProductFile as endpoint473 } from "@/app/actions/productOps";
-import { removeProductFile as endpoint474 } from "@/app/actions/productOps";
-import { saveProductOwnership as endpoint475 } from "@/app/actions/productOps";
-import { createProjectAction as endpoint476 } from "@/app/actions/projects";
-import { updateProjectAction as endpoint477 } from "@/app/actions/projects";
-import { archiveProjectAction as endpoint478 } from "@/app/actions/projects";
-import { restoreProjectAction as endpoint479 } from "@/app/actions/projects";
-import { addColumnAction as endpoint480 } from "@/app/actions/projects";
-import { updateColumnAction as endpoint481 } from "@/app/actions/projects";
-import { reorderColumnsAction as endpoint482 } from "@/app/actions/projects";
-import { deleteColumnAction as endpoint483 } from "@/app/actions/projects";
-import { saveMilestoneAction as endpoint484 } from "@/app/actions/projectsPlus";
-import { removeMilestoneAction as endpoint485 } from "@/app/actions/projectsPlus";
-import { postProjectUpdateAction as endpoint486 } from "@/app/actions/projectsPlus";
-import { saveTaskPlanAction as endpoint487 } from "@/app/actions/projectsPlus";
-import { recurringCostAction as endpoint488 } from "@/app/actions/recurring-costs";
-import { submitMoneyRequest as endpoint489 } from "@/app/actions/requests";
-import { decideRequest as endpoint490 } from "@/app/actions/requests";
-import { finishMoneyRequest as endpoint491 } from "@/app/actions/requests";
-import { saveBudget as endpoint492 } from "@/app/actions/requests";
-import { saveApprovalPolicy as endpoint493 } from "@/app/actions/requests";
-import { changeMoneyRequest as endpoint494 } from "@/app/actions/requests";
-import { reviseMoneyRequest as endpoint495 } from "@/app/actions/requests";
-import { submitGenericRequest as endpoint496 } from "@/app/actions/requests";
-import { addApprovalComment as endpoint497 } from "@/app/actions/requests";
-import { mutateRota as endpoint498 } from "@/app/actions/rota";
-import { searchAction as endpoint499 } from "@/app/actions/search";
-import { loadWorkspaceTools as endpoint500 } from "@/app/actions/search";
-import { secretsAction as endpoint501 } from "@/app/actions/secrets";
-import { approveSecretsDevice as endpoint502 } from "@/app/actions/secrets";
-import { revokeSecretsCliSession as endpoint503 } from "@/app/actions/secrets";
-import { updateSeo as endpoint504 } from "@/app/actions/seo";
-import { saveMonitorAction as endpoint505 } from "@/app/actions/services";
-import { serviceAction as endpoint506 } from "@/app/actions/services";
-import { commentAction as endpoint507 } from "@/app/actions/social";
-import { connectAction as endpoint508 } from "@/app/actions/social";
-import { selectAccountsAction as endpoint509 } from "@/app/actions/social";
-import { accountAction as endpoint510 } from "@/app/actions/social";
-import { reconcileCommentAction as endpoint511 } from "@/app/actions/social";
-import { saveSubscriptionRecord as endpoint512 } from "@/app/actions/subscriptions";
-import { loadBoardAction as endpoint513 } from "@/app/actions/tasks";
-import { loadTaskAction as endpoint514 } from "@/app/actions/tasks";
-import { loadMyTasksAction as endpoint515 } from "@/app/actions/tasks";
-import { createTaskAction as endpoint516 } from "@/app/actions/tasks";
-import { updateTaskAction as endpoint517 } from "@/app/actions/tasks";
-import { moveTaskAction as endpoint518 } from "@/app/actions/tasks";
-import { setTaskCompletedAction as endpoint519 } from "@/app/actions/tasks";
-import { setAssigneesAction as endpoint520 } from "@/app/actions/tasks";
-import { setLabelsAction as endpoint521 } from "@/app/actions/tasks";
-import { setTaskArchivedAction as endpoint522 } from "@/app/actions/tasks";
-import { addCommentAction as endpoint523 } from "@/app/actions/tasks";
-import { editCommentAction as endpoint524 } from "@/app/actions/tasks";
-import { deleteCommentAction as endpoint525 } from "@/app/actions/tasks";
-import { addDependencyAction as endpoint526 } from "@/app/actions/tasks";
-import { removeDependencyAction as endpoint527 } from "@/app/actions/tasks";
-import { setRecurrenceAction as endpoint528 } from "@/app/actions/tasks";
-import { stopRecurrenceAction as endpoint529 } from "@/app/actions/tasks";
-import { skipNextOccurrenceAction as endpoint530 } from "@/app/actions/tasks";
-import { uploadTaskAttachmentAction as endpoint531 } from "@/app/actions/tasks";
-import { removeTaskAttachmentAction as endpoint532 } from "@/app/actions/tasks";
-import { saveTeamAction as endpoint533 } from "@/app/actions/teams";
-import { archiveTeamAction as endpoint534 } from "@/app/actions/teams";
-import { addTeamMemberAction as endpoint535 } from "@/app/actions/teams";
-import { removeTeamMemberAction as endpoint536 } from "@/app/actions/teams";
-import { setTeamMemberRoleAction as endpoint537 } from "@/app/actions/teams";
-import { joinTeamAction as endpoint538 } from "@/app/actions/teams";
-import { templateAction as endpoint539 } from "@/app/actions/templates";
-import { saveVaultItem as endpoint540 } from "@/app/actions/vault";
-import { saveVaultCollection as endpoint541 } from "@/app/actions/vault";
-import { saveVaultGrant as endpoint542 } from "@/app/actions/vault";
-import { removeVaultGrant as endpoint543 } from "@/app/actions/vault";
-import { askVaultAccess as endpoint544 } from "@/app/actions/vault";
-import { stepUpVault as endpoint545 } from "@/app/actions/vault";
-import { archiveVaultItem as endpoint546 } from "@/app/actions/vault";
-import { saveView as endpoint547 } from "@/app/actions/views";
-import { deleteView as endpoint548 } from "@/app/actions/views";
-import { updateWorkspaceSettings as endpoint549 } from "@/app/actions/workspace-settings";
-import { createInvitationAction as endpoint550 } from "@/app/actions/workspace-settings";
-import { resendInvitationAction as endpoint551 } from "@/app/actions/workspace-settings";
-import { revokeInvitationAction as endpoint552 } from "@/app/actions/workspace-settings";
-import { changeMemberRoleAction as endpoint553 } from "@/app/actions/workspace-settings";
-import { setMemberStatusAction as endpoint554 } from "@/app/actions/workspace-settings";
-import { removeMemberAction as endpoint555 } from "@/app/actions/workspace-settings";
-import { leaveWorkspaceAction as endpoint556 } from "@/app/actions/workspace-settings";
-import { createLabelAction as endpoint557 } from "@/app/actions/workspace-settings";
-import { updateLabelAction as endpoint558 } from "@/app/actions/workspace-settings";
-import { deleteLabelAction as endpoint559 } from "@/app/actions/workspace-settings";
+import { loadMyTasksTabAction as endpoint412 } from "@/app/actions/myTasks";
+import { loadNotepadAction as endpoint413 } from "@/app/actions/notepad";
+import { createNoteAction as endpoint414 } from "@/app/actions/notepad";
+import { updateNoteAction as endpoint415 } from "@/app/actions/notepad";
+import { setNoteArchivedAction as endpoint416 } from "@/app/actions/notepad";
+import { deleteNoteAction as endpoint417 } from "@/app/actions/notepad";
+import { createTodoAction as endpoint418 } from "@/app/actions/notepad";
+import { updateTodoAction as endpoint419 } from "@/app/actions/notepad";
+import { moveTodoAction as endpoint420 } from "@/app/actions/notepad";
+import { deleteTodoAction as endpoint421 } from "@/app/actions/notepad";
+import { clearDoneTodosAction as endpoint422 } from "@/app/actions/notepad";
+import { sendTodoToTasksAction as endpoint423 } from "@/app/actions/notepad";
+import { notificationStateAction as endpoint424 } from "@/app/actions/notificationPreferences";
+import { notificationSummaryAction as endpoint425 } from "@/app/actions/notificationPreferences";
+import { saveNotificationPreference as endpoint426 } from "@/app/actions/notificationPreferences";
+import { saveNotificationSettings as endpoint427 } from "@/app/actions/notificationPreferences";
+import { removeNotificationMute as endpoint428 } from "@/app/actions/notificationPreferences";
+import { muteNotificationResource as endpoint429 } from "@/app/actions/notificationPreferences";
+import { updateRouting as endpoint430 } from "@/app/actions/notificationRouting";
+import { markNotificationsReadAction as endpoint431 } from "@/app/actions/notifications";
+import { newHelpTicket as endpoint432 } from "@/app/actions/opsGaps";
+import { saveHelpTicket as endpoint433 } from "@/app/actions/opsGaps";
+import { replyHelpTicket as endpoint434 } from "@/app/actions/opsGaps";
+import { newSafetyReport as endpoint435 } from "@/app/actions/opsGaps";
+import { saveSafetyReport as endpoint436 } from "@/app/actions/opsGaps";
+import { newSafetyFollowUp as endpoint437 } from "@/app/actions/opsGaps";
+import { finishSafetyFollowUp as endpoint438 } from "@/app/actions/opsGaps";
+import { newVolunteerHours as endpoint439 } from "@/app/actions/opsGaps";
+import { decideVolunteerHours as endpoint440 } from "@/app/actions/opsGaps";
+import { cancelVolunteerHours as endpoint441 } from "@/app/actions/opsGaps";
+import { newHiringOpening as endpoint442 } from "@/app/actions/opsGaps";
+import { saveHiringOpening as endpoint443 } from "@/app/actions/opsGaps";
+import { newHiringCandidate as endpoint444 } from "@/app/actions/opsGaps";
+import { saveHiringCandidate as endpoint445 } from "@/app/actions/opsGaps";
+import { newHiringInterview as endpoint446 } from "@/app/actions/opsGaps";
+import { startCandidateOnboarding as endpoint447 } from "@/app/actions/opsGaps";
+import { newLeaveType as endpoint448 } from "@/app/actions/opsGaps";
+import { saveYearlyBalance as endpoint449 } from "@/app/actions/opsGaps";
+import { saveMemberEngagement as endpoint450 } from "@/app/actions/opsGaps";
+import { submitLeave as endpoint451 } from "@/app/actions/opsGaps";
+import { reviewLeave as endpoint452 } from "@/app/actions/opsGaps";
+import { withdrawLeave as endpoint453 } from "@/app/actions/opsGaps";
+import { saveFacilityLease as endpoint454 } from "@/app/actions/opsGaps";
+import { newFacilityContact as endpoint455 } from "@/app/actions/opsGaps";
+import { newInspectionTemplate as endpoint456 } from "@/app/actions/opsGaps";
+import { newInspection as endpoint457 } from "@/app/actions/opsGaps";
+import { saveInspectionFinding as endpoint458 } from "@/app/actions/opsGaps";
+import { newInspectionAction as endpoint459 } from "@/app/actions/opsGaps";
+import { closeInspection as endpoint460 } from "@/app/actions/opsGaps";
+import { uploadPeopleServiceFiles as endpoint461 } from "@/app/actions/opsGaps";
+import { saveDepartmentAction as endpoint462 } from "@/app/actions/orgPeople";
+import { saveReportingAction as endpoint463 } from "@/app/actions/orgPeople";
+import { saveResponsibilityAction as endpoint464 } from "@/app/actions/orgPeople";
+import { saveAttendanceAction as endpoint465 } from "@/app/actions/orgPeople";
+import { saveEscalationAction as endpoint466 } from "@/app/actions/orgPeople";
+import { uploadOrgFiles as endpoint467 } from "@/app/actions/orgPeople";
+import { mutatePeople as endpoint468 } from "@/app/actions/people";
+import { revealEmergencyAction as endpoint469 } from "@/app/actions/people";
+import { saveOidcProvider as endpoint470 } from "@/app/actions/platformShell";
+import { pollAction as endpoint471 } from "@/app/actions/polls";
+import { saveProductRecord as endpoint472 } from "@/app/actions/productOps";
+import { productOperation as endpoint473 } from "@/app/actions/productOps";
+import { uploadProductFile as endpoint474 } from "@/app/actions/productOps";
+import { removeProductFile as endpoint475 } from "@/app/actions/productOps";
+import { saveProductOwnership as endpoint476 } from "@/app/actions/productOps";
+import { createProjectAction as endpoint477 } from "@/app/actions/projects";
+import { updateProjectAction as endpoint478 } from "@/app/actions/projects";
+import { archiveProjectAction as endpoint479 } from "@/app/actions/projects";
+import { restoreProjectAction as endpoint480 } from "@/app/actions/projects";
+import { addColumnAction as endpoint481 } from "@/app/actions/projects";
+import { updateColumnAction as endpoint482 } from "@/app/actions/projects";
+import { reorderColumnsAction as endpoint483 } from "@/app/actions/projects";
+import { deleteColumnAction as endpoint484 } from "@/app/actions/projects";
+import { saveMilestoneAction as endpoint485 } from "@/app/actions/projectsPlus";
+import { removeMilestoneAction as endpoint486 } from "@/app/actions/projectsPlus";
+import { postProjectUpdateAction as endpoint487 } from "@/app/actions/projectsPlus";
+import { saveTaskPlanAction as endpoint488 } from "@/app/actions/projectsPlus";
+import { recurringCostAction as endpoint489 } from "@/app/actions/recurring-costs";
+import { submitMoneyRequest as endpoint490 } from "@/app/actions/requests";
+import { decideRequest as endpoint491 } from "@/app/actions/requests";
+import { finishMoneyRequest as endpoint492 } from "@/app/actions/requests";
+import { saveBudget as endpoint493 } from "@/app/actions/requests";
+import { saveApprovalPolicy as endpoint494 } from "@/app/actions/requests";
+import { changeMoneyRequest as endpoint495 } from "@/app/actions/requests";
+import { reviseMoneyRequest as endpoint496 } from "@/app/actions/requests";
+import { submitGenericRequest as endpoint497 } from "@/app/actions/requests";
+import { addApprovalComment as endpoint498 } from "@/app/actions/requests";
+import { mutateRota as endpoint499 } from "@/app/actions/rota";
+import { searchAction as endpoint500 } from "@/app/actions/search";
+import { loadWorkspaceTools as endpoint501 } from "@/app/actions/search";
+import { secretsAction as endpoint502 } from "@/app/actions/secrets";
+import { approveSecretsDevice as endpoint503 } from "@/app/actions/secrets";
+import { revokeSecretsCliSession as endpoint504 } from "@/app/actions/secrets";
+import { updateSeo as endpoint505 } from "@/app/actions/seo";
+import { saveMonitorAction as endpoint506 } from "@/app/actions/services";
+import { serviceAction as endpoint507 } from "@/app/actions/services";
+import { commentAction as endpoint508 } from "@/app/actions/social";
+import { connectAction as endpoint509 } from "@/app/actions/social";
+import { selectAccountsAction as endpoint510 } from "@/app/actions/social";
+import { accountAction as endpoint511 } from "@/app/actions/social";
+import { reconcileCommentAction as endpoint512 } from "@/app/actions/social";
+import { saveSubscriptionRecord as endpoint513 } from "@/app/actions/subscriptions";
+import { assignTaskAction as endpoint514 } from "@/app/actions/taskAssign";
+import { unassignTaskAction as endpoint515 } from "@/app/actions/taskAssign";
+import { claimTaskAction as endpoint516 } from "@/app/actions/taskAssign";
+import { unclaimTaskAction as endpoint517 } from "@/app/actions/taskAssign";
+import { bulkUpdateTasksAction as endpoint518 } from "@/app/actions/taskBulk";
+import { listTransferTargetsAction as endpoint519 } from "@/app/actions/taskTransfer";
+import { previewTransferAction as endpoint520 } from "@/app/actions/taskTransfer";
+import { transferTaskAction as endpoint521 } from "@/app/actions/taskTransfer";
+import { listTaskTypesAction as endpoint522 } from "@/app/actions/taskTypes";
+import { createTaskTypeAction as endpoint523 } from "@/app/actions/taskTypes";
+import { updateTaskTypeAction as endpoint524 } from "@/app/actions/taskTypes";
+import { setDefaultTaskTypeAction as endpoint525 } from "@/app/actions/taskTypes";
+import { reorderTaskTypesAction as endpoint526 } from "@/app/actions/taskTypes";
+import { deleteTaskTypeAction as endpoint527 } from "@/app/actions/taskTypes";
+import { loadBoardAction as endpoint528 } from "@/app/actions/tasks";
+import { loadTaskAction as endpoint529 } from "@/app/actions/tasks";
+import { loadMyTasksAction as endpoint530 } from "@/app/actions/tasks";
+import { createTaskAction as endpoint531 } from "@/app/actions/tasks";
+import { updateTaskAction as endpoint532 } from "@/app/actions/tasks";
+import { moveTaskAction as endpoint533 } from "@/app/actions/tasks";
+import { setTaskCompletedAction as endpoint534 } from "@/app/actions/tasks";
+import { setAssigneesAction as endpoint535 } from "@/app/actions/tasks";
+import { setLabelsAction as endpoint536 } from "@/app/actions/tasks";
+import { setTaskArchivedAction as endpoint537 } from "@/app/actions/tasks";
+import { addCommentAction as endpoint538 } from "@/app/actions/tasks";
+import { editCommentAction as endpoint539 } from "@/app/actions/tasks";
+import { deleteCommentAction as endpoint540 } from "@/app/actions/tasks";
+import { addDependencyAction as endpoint541 } from "@/app/actions/tasks";
+import { removeDependencyAction as endpoint542 } from "@/app/actions/tasks";
+import { setRecurrenceAction as endpoint543 } from "@/app/actions/tasks";
+import { stopRecurrenceAction as endpoint544 } from "@/app/actions/tasks";
+import { skipNextOccurrenceAction as endpoint545 } from "@/app/actions/tasks";
+import { uploadTaskAttachmentAction as endpoint546 } from "@/app/actions/tasks";
+import { removeTaskAttachmentAction as endpoint547 } from "@/app/actions/tasks";
+import { saveTeamAction as endpoint548 } from "@/app/actions/teams";
+import { archiveTeamAction as endpoint549 } from "@/app/actions/teams";
+import { addTeamMemberAction as endpoint550 } from "@/app/actions/teams";
+import { removeTeamMemberAction as endpoint551 } from "@/app/actions/teams";
+import { setTeamMemberRoleAction as endpoint552 } from "@/app/actions/teams";
+import { joinTeamAction as endpoint553 } from "@/app/actions/teams";
+import { templateAction as endpoint554 } from "@/app/actions/templates";
+import { saveVaultItem as endpoint555 } from "@/app/actions/vault";
+import { saveVaultCollection as endpoint556 } from "@/app/actions/vault";
+import { saveVaultGrant as endpoint557 } from "@/app/actions/vault";
+import { removeVaultGrant as endpoint558 } from "@/app/actions/vault";
+import { askVaultAccess as endpoint559 } from "@/app/actions/vault";
+import { stepUpVault as endpoint560 } from "@/app/actions/vault";
+import { archiveVaultItem as endpoint561 } from "@/app/actions/vault";
+import { saveView as endpoint562 } from "@/app/actions/views";
+import { deleteView as endpoint563 } from "@/app/actions/views";
+import { updateWorkspaceSettings as endpoint564 } from "@/app/actions/workspace-settings";
+import { createInvitationAction as endpoint565 } from "@/app/actions/workspace-settings";
+import { resendInvitationAction as endpoint566 } from "@/app/actions/workspace-settings";
+import { revokeInvitationAction as endpoint567 } from "@/app/actions/workspace-settings";
+import { changeMemberRoleAction as endpoint568 } from "@/app/actions/workspace-settings";
+import { setMemberStatusAction as endpoint569 } from "@/app/actions/workspace-settings";
+import { removeMemberAction as endpoint570 } from "@/app/actions/workspace-settings";
+import { leaveWorkspaceAction as endpoint571 } from "@/app/actions/workspace-settings";
+import { createLabelAction as endpoint572 } from "@/app/actions/workspace-settings";
+import { updateLabelAction as endpoint573 } from "@/app/actions/workspace-settings";
+import { deleteLabelAction as endpoint574 } from "@/app/actions/workspace-settings";
 export const viewReaders = Object.freeze({
 "a-tag-page:loadAssetLabel": endpoint0,
 "account-page:loadAccountPage": endpoint1,
@@ -975,152 +990,167 @@ export const backendActions = Object.freeze({
 "money-controls:uploadMoneyControlFilesAction": endpoint409,
 "money-controls:removeMoneyControlFileAction": endpoint410,
 "money-controls:reconcileMoneyMovementAction": endpoint411,
-"notepad:loadNotepadAction": endpoint412,
-"notepad:createNoteAction": endpoint413,
-"notepad:updateNoteAction": endpoint414,
-"notepad:setNoteArchivedAction": endpoint415,
-"notepad:deleteNoteAction": endpoint416,
-"notepad:createTodoAction": endpoint417,
-"notepad:updateTodoAction": endpoint418,
-"notepad:moveTodoAction": endpoint419,
-"notepad:deleteTodoAction": endpoint420,
-"notepad:clearDoneTodosAction": endpoint421,
-"notepad:sendTodoToTasksAction": endpoint422,
-"notificationPreferences:notificationStateAction": endpoint423,
-"notificationPreferences:notificationSummaryAction": endpoint424,
-"notificationPreferences:saveNotificationPreference": endpoint425,
-"notificationPreferences:saveNotificationSettings": endpoint426,
-"notificationPreferences:removeNotificationMute": endpoint427,
-"notificationPreferences:muteNotificationResource": endpoint428,
-"notificationRouting:updateRouting": endpoint429,
-"notifications:markNotificationsReadAction": endpoint430,
-"opsGaps:newHelpTicket": endpoint431,
-"opsGaps:saveHelpTicket": endpoint432,
-"opsGaps:replyHelpTicket": endpoint433,
-"opsGaps:newSafetyReport": endpoint434,
-"opsGaps:saveSafetyReport": endpoint435,
-"opsGaps:newSafetyFollowUp": endpoint436,
-"opsGaps:finishSafetyFollowUp": endpoint437,
-"opsGaps:newVolunteerHours": endpoint438,
-"opsGaps:decideVolunteerHours": endpoint439,
-"opsGaps:cancelVolunteerHours": endpoint440,
-"opsGaps:newHiringOpening": endpoint441,
-"opsGaps:saveHiringOpening": endpoint442,
-"opsGaps:newHiringCandidate": endpoint443,
-"opsGaps:saveHiringCandidate": endpoint444,
-"opsGaps:newHiringInterview": endpoint445,
-"opsGaps:startCandidateOnboarding": endpoint446,
-"opsGaps:newLeaveType": endpoint447,
-"opsGaps:saveYearlyBalance": endpoint448,
-"opsGaps:saveMemberEngagement": endpoint449,
-"opsGaps:submitLeave": endpoint450,
-"opsGaps:reviewLeave": endpoint451,
-"opsGaps:withdrawLeave": endpoint452,
-"opsGaps:saveFacilityLease": endpoint453,
-"opsGaps:newFacilityContact": endpoint454,
-"opsGaps:newInspectionTemplate": endpoint455,
-"opsGaps:newInspection": endpoint456,
-"opsGaps:saveInspectionFinding": endpoint457,
-"opsGaps:newInspectionAction": endpoint458,
-"opsGaps:closeInspection": endpoint459,
-"opsGaps:uploadPeopleServiceFiles": endpoint460,
-"orgPeople:saveDepartmentAction": endpoint461,
-"orgPeople:saveReportingAction": endpoint462,
-"orgPeople:saveResponsibilityAction": endpoint463,
-"orgPeople:saveAttendanceAction": endpoint464,
-"orgPeople:saveEscalationAction": endpoint465,
-"orgPeople:uploadOrgFiles": endpoint466,
-"people:mutatePeople": endpoint467,
-"people:revealEmergencyAction": endpoint468,
-"platformShell:saveOidcProvider": endpoint469,
-"polls:pollAction": endpoint470,
-"productOps:saveProductRecord": endpoint471,
-"productOps:productOperation": endpoint472,
-"productOps:uploadProductFile": endpoint473,
-"productOps:removeProductFile": endpoint474,
-"productOps:saveProductOwnership": endpoint475,
-"projects:createProjectAction": endpoint476,
-"projects:updateProjectAction": endpoint477,
-"projects:archiveProjectAction": endpoint478,
-"projects:restoreProjectAction": endpoint479,
-"projects:addColumnAction": endpoint480,
-"projects:updateColumnAction": endpoint481,
-"projects:reorderColumnsAction": endpoint482,
-"projects:deleteColumnAction": endpoint483,
-"projectsPlus:saveMilestoneAction": endpoint484,
-"projectsPlus:removeMilestoneAction": endpoint485,
-"projectsPlus:postProjectUpdateAction": endpoint486,
-"projectsPlus:saveTaskPlanAction": endpoint487,
-"recurring-costs:recurringCostAction": endpoint488,
-"requests:submitMoneyRequest": endpoint489,
-"requests:decideRequest": endpoint490,
-"requests:finishMoneyRequest": endpoint491,
-"requests:saveBudget": endpoint492,
-"requests:saveApprovalPolicy": endpoint493,
-"requests:changeMoneyRequest": endpoint494,
-"requests:reviseMoneyRequest": endpoint495,
-"requests:submitGenericRequest": endpoint496,
-"requests:addApprovalComment": endpoint497,
-"rota:mutateRota": endpoint498,
-"search:searchAction": endpoint499,
-"search:loadWorkspaceTools": endpoint500,
-"secrets:secretsAction": endpoint501,
-"secrets:approveSecretsDevice": endpoint502,
-"secrets:revokeSecretsCliSession": endpoint503,
-"seo:updateSeo": endpoint504,
-"services:saveMonitorAction": endpoint505,
-"services:serviceAction": endpoint506,
-"social:commentAction": endpoint507,
-"social:connectAction": endpoint508,
-"social:selectAccountsAction": endpoint509,
-"social:accountAction": endpoint510,
-"social:reconcileCommentAction": endpoint511,
-"subscriptions:saveSubscriptionRecord": endpoint512,
-"tasks:loadBoardAction": endpoint513,
-"tasks:loadTaskAction": endpoint514,
-"tasks:loadMyTasksAction": endpoint515,
-"tasks:createTaskAction": endpoint516,
-"tasks:updateTaskAction": endpoint517,
-"tasks:moveTaskAction": endpoint518,
-"tasks:setTaskCompletedAction": endpoint519,
-"tasks:setAssigneesAction": endpoint520,
-"tasks:setLabelsAction": endpoint521,
-"tasks:setTaskArchivedAction": endpoint522,
-"tasks:addCommentAction": endpoint523,
-"tasks:editCommentAction": endpoint524,
-"tasks:deleteCommentAction": endpoint525,
-"tasks:addDependencyAction": endpoint526,
-"tasks:removeDependencyAction": endpoint527,
-"tasks:setRecurrenceAction": endpoint528,
-"tasks:stopRecurrenceAction": endpoint529,
-"tasks:skipNextOccurrenceAction": endpoint530,
-"tasks:uploadTaskAttachmentAction": endpoint531,
-"tasks:removeTaskAttachmentAction": endpoint532,
-"teams:saveTeamAction": endpoint533,
-"teams:archiveTeamAction": endpoint534,
-"teams:addTeamMemberAction": endpoint535,
-"teams:removeTeamMemberAction": endpoint536,
-"teams:setTeamMemberRoleAction": endpoint537,
-"teams:joinTeamAction": endpoint538,
-"templates:templateAction": endpoint539,
-"vault:saveVaultItem": endpoint540,
-"vault:saveVaultCollection": endpoint541,
-"vault:saveVaultGrant": endpoint542,
-"vault:removeVaultGrant": endpoint543,
-"vault:askVaultAccess": endpoint544,
-"vault:stepUpVault": endpoint545,
-"vault:archiveVaultItem": endpoint546,
-"views:saveView": endpoint547,
-"views:deleteView": endpoint548,
-"workspace-settings:updateWorkspaceSettings": endpoint549,
-"workspace-settings:createInvitationAction": endpoint550,
-"workspace-settings:resendInvitationAction": endpoint551,
-"workspace-settings:revokeInvitationAction": endpoint552,
-"workspace-settings:changeMemberRoleAction": endpoint553,
-"workspace-settings:setMemberStatusAction": endpoint554,
-"workspace-settings:removeMemberAction": endpoint555,
-"workspace-settings:leaveWorkspaceAction": endpoint556,
-"workspace-settings:createLabelAction": endpoint557,
-"workspace-settings:updateLabelAction": endpoint558,
-"workspace-settings:deleteLabelAction": endpoint559,
+"myTasks:loadMyTasksTabAction": endpoint412,
+"notepad:loadNotepadAction": endpoint413,
+"notepad:createNoteAction": endpoint414,
+"notepad:updateNoteAction": endpoint415,
+"notepad:setNoteArchivedAction": endpoint416,
+"notepad:deleteNoteAction": endpoint417,
+"notepad:createTodoAction": endpoint418,
+"notepad:updateTodoAction": endpoint419,
+"notepad:moveTodoAction": endpoint420,
+"notepad:deleteTodoAction": endpoint421,
+"notepad:clearDoneTodosAction": endpoint422,
+"notepad:sendTodoToTasksAction": endpoint423,
+"notificationPreferences:notificationStateAction": endpoint424,
+"notificationPreferences:notificationSummaryAction": endpoint425,
+"notificationPreferences:saveNotificationPreference": endpoint426,
+"notificationPreferences:saveNotificationSettings": endpoint427,
+"notificationPreferences:removeNotificationMute": endpoint428,
+"notificationPreferences:muteNotificationResource": endpoint429,
+"notificationRouting:updateRouting": endpoint430,
+"notifications:markNotificationsReadAction": endpoint431,
+"opsGaps:newHelpTicket": endpoint432,
+"opsGaps:saveHelpTicket": endpoint433,
+"opsGaps:replyHelpTicket": endpoint434,
+"opsGaps:newSafetyReport": endpoint435,
+"opsGaps:saveSafetyReport": endpoint436,
+"opsGaps:newSafetyFollowUp": endpoint437,
+"opsGaps:finishSafetyFollowUp": endpoint438,
+"opsGaps:newVolunteerHours": endpoint439,
+"opsGaps:decideVolunteerHours": endpoint440,
+"opsGaps:cancelVolunteerHours": endpoint441,
+"opsGaps:newHiringOpening": endpoint442,
+"opsGaps:saveHiringOpening": endpoint443,
+"opsGaps:newHiringCandidate": endpoint444,
+"opsGaps:saveHiringCandidate": endpoint445,
+"opsGaps:newHiringInterview": endpoint446,
+"opsGaps:startCandidateOnboarding": endpoint447,
+"opsGaps:newLeaveType": endpoint448,
+"opsGaps:saveYearlyBalance": endpoint449,
+"opsGaps:saveMemberEngagement": endpoint450,
+"opsGaps:submitLeave": endpoint451,
+"opsGaps:reviewLeave": endpoint452,
+"opsGaps:withdrawLeave": endpoint453,
+"opsGaps:saveFacilityLease": endpoint454,
+"opsGaps:newFacilityContact": endpoint455,
+"opsGaps:newInspectionTemplate": endpoint456,
+"opsGaps:newInspection": endpoint457,
+"opsGaps:saveInspectionFinding": endpoint458,
+"opsGaps:newInspectionAction": endpoint459,
+"opsGaps:closeInspection": endpoint460,
+"opsGaps:uploadPeopleServiceFiles": endpoint461,
+"orgPeople:saveDepartmentAction": endpoint462,
+"orgPeople:saveReportingAction": endpoint463,
+"orgPeople:saveResponsibilityAction": endpoint464,
+"orgPeople:saveAttendanceAction": endpoint465,
+"orgPeople:saveEscalationAction": endpoint466,
+"orgPeople:uploadOrgFiles": endpoint467,
+"people:mutatePeople": endpoint468,
+"people:revealEmergencyAction": endpoint469,
+"platformShell:saveOidcProvider": endpoint470,
+"polls:pollAction": endpoint471,
+"productOps:saveProductRecord": endpoint472,
+"productOps:productOperation": endpoint473,
+"productOps:uploadProductFile": endpoint474,
+"productOps:removeProductFile": endpoint475,
+"productOps:saveProductOwnership": endpoint476,
+"projects:createProjectAction": endpoint477,
+"projects:updateProjectAction": endpoint478,
+"projects:archiveProjectAction": endpoint479,
+"projects:restoreProjectAction": endpoint480,
+"projects:addColumnAction": endpoint481,
+"projects:updateColumnAction": endpoint482,
+"projects:reorderColumnsAction": endpoint483,
+"projects:deleteColumnAction": endpoint484,
+"projectsPlus:saveMilestoneAction": endpoint485,
+"projectsPlus:removeMilestoneAction": endpoint486,
+"projectsPlus:postProjectUpdateAction": endpoint487,
+"projectsPlus:saveTaskPlanAction": endpoint488,
+"recurring-costs:recurringCostAction": endpoint489,
+"requests:submitMoneyRequest": endpoint490,
+"requests:decideRequest": endpoint491,
+"requests:finishMoneyRequest": endpoint492,
+"requests:saveBudget": endpoint493,
+"requests:saveApprovalPolicy": endpoint494,
+"requests:changeMoneyRequest": endpoint495,
+"requests:reviseMoneyRequest": endpoint496,
+"requests:submitGenericRequest": endpoint497,
+"requests:addApprovalComment": endpoint498,
+"rota:mutateRota": endpoint499,
+"search:searchAction": endpoint500,
+"search:loadWorkspaceTools": endpoint501,
+"secrets:secretsAction": endpoint502,
+"secrets:approveSecretsDevice": endpoint503,
+"secrets:revokeSecretsCliSession": endpoint504,
+"seo:updateSeo": endpoint505,
+"services:saveMonitorAction": endpoint506,
+"services:serviceAction": endpoint507,
+"social:commentAction": endpoint508,
+"social:connectAction": endpoint509,
+"social:selectAccountsAction": endpoint510,
+"social:accountAction": endpoint511,
+"social:reconcileCommentAction": endpoint512,
+"subscriptions:saveSubscriptionRecord": endpoint513,
+"taskAssign:assignTaskAction": endpoint514,
+"taskAssign:unassignTaskAction": endpoint515,
+"taskAssign:claimTaskAction": endpoint516,
+"taskAssign:unclaimTaskAction": endpoint517,
+"taskBulk:bulkUpdateTasksAction": endpoint518,
+"taskTransfer:listTransferTargetsAction": endpoint519,
+"taskTransfer:previewTransferAction": endpoint520,
+"taskTransfer:transferTaskAction": endpoint521,
+"taskTypes:listTaskTypesAction": endpoint522,
+"taskTypes:createTaskTypeAction": endpoint523,
+"taskTypes:updateTaskTypeAction": endpoint524,
+"taskTypes:setDefaultTaskTypeAction": endpoint525,
+"taskTypes:reorderTaskTypesAction": endpoint526,
+"taskTypes:deleteTaskTypeAction": endpoint527,
+"tasks:loadBoardAction": endpoint528,
+"tasks:loadTaskAction": endpoint529,
+"tasks:loadMyTasksAction": endpoint530,
+"tasks:createTaskAction": endpoint531,
+"tasks:updateTaskAction": endpoint532,
+"tasks:moveTaskAction": endpoint533,
+"tasks:setTaskCompletedAction": endpoint534,
+"tasks:setAssigneesAction": endpoint535,
+"tasks:setLabelsAction": endpoint536,
+"tasks:setTaskArchivedAction": endpoint537,
+"tasks:addCommentAction": endpoint538,
+"tasks:editCommentAction": endpoint539,
+"tasks:deleteCommentAction": endpoint540,
+"tasks:addDependencyAction": endpoint541,
+"tasks:removeDependencyAction": endpoint542,
+"tasks:setRecurrenceAction": endpoint543,
+"tasks:stopRecurrenceAction": endpoint544,
+"tasks:skipNextOccurrenceAction": endpoint545,
+"tasks:uploadTaskAttachmentAction": endpoint546,
+"tasks:removeTaskAttachmentAction": endpoint547,
+"teams:saveTeamAction": endpoint548,
+"teams:archiveTeamAction": endpoint549,
+"teams:addTeamMemberAction": endpoint550,
+"teams:removeTeamMemberAction": endpoint551,
+"teams:setTeamMemberRoleAction": endpoint552,
+"teams:joinTeamAction": endpoint553,
+"templates:templateAction": endpoint554,
+"vault:saveVaultItem": endpoint555,
+"vault:saveVaultCollection": endpoint556,
+"vault:saveVaultGrant": endpoint557,
+"vault:removeVaultGrant": endpoint558,
+"vault:askVaultAccess": endpoint559,
+"vault:stepUpVault": endpoint560,
+"vault:archiveVaultItem": endpoint561,
+"views:saveView": endpoint562,
+"views:deleteView": endpoint563,
+"workspace-settings:updateWorkspaceSettings": endpoint564,
+"workspace-settings:createInvitationAction": endpoint565,
+"workspace-settings:resendInvitationAction": endpoint566,
+"workspace-settings:revokeInvitationAction": endpoint567,
+"workspace-settings:changeMemberRoleAction": endpoint568,
+"workspace-settings:setMemberStatusAction": endpoint569,
+"workspace-settings:removeMemberAction": endpoint570,
+"workspace-settings:leaveWorkspaceAction": endpoint571,
+"workspace-settings:createLabelAction": endpoint572,
+"workspace-settings:updateLabelAction": endpoint573,
+"workspace-settings:deleteLabelAction": endpoint574,
 });

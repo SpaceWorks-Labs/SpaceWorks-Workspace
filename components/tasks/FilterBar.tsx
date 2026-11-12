@@ -8,7 +8,9 @@ import { Avatar } from "@/components/ui/display";
 import { Dropdown, SearchInput } from "@/components/ui/field";
 import { activeFilterCount, DUE_FILTERS, EMPTY_FILTERS, GROUP_OPTIONS, PRIORITIES, PRIORITY_LABELS, SORT_OPTIONS, type DueFilter, type GroupKey, type SortKey, type TaskQuery } from "@/lib/tasks/filters";
 import type { LabelRef, PersonRef } from "@/lib/tasks/types";
+import type { TaskTypeRef } from "@/lib/tasks/taskTypes";
 import { MultiSelect } from "./MultiSelect";
+import { useRememberedTaskQuery } from "./useRememberedTaskQuery";
 
 /** A Button element (not a component) so the popover trigger can attach its ref and ARIA. */
 function filterTrigger(label: string, count: number) {
@@ -20,9 +22,10 @@ function filterTrigger(label: string, count: number) {
   );
 }
 
-/** Search, filters and (in list view) sorting and grouping. State lives in the URL (lib/tasks/filters). */
-export function FilterBar({ query, onChange, members, labels }: { query: TaskQuery; onChange: (query: TaskQuery) => void; members: PersonRef[]; labels: LabelRef[] }) {
+/** Search, filters and (in list view) sorting and grouping. State lives in the URL (lib/tasks/filters) and is remembered per project when the URL has none. */
+export function FilterBar({ query, onChange, members, labels, taskTypes = [] }: { query: TaskQuery; onChange: (query: TaskQuery) => void; members: PersonRef[]; labels: LabelRef[]; taskTypes?: TaskTypeRef[] }) {
   const { filters } = query;
+  useRememberedTaskQuery(query, onChange);
   const [text, setText] = useState(filters.q);
   const [seen, setSeen] = useState(filters.q);
   if (seen !== filters.q) {
@@ -67,14 +70,6 @@ export function FilterBar({ query, onChange, members, labels }: { query: TaskQue
           searchPlaceholder="Find a member"
         />
         <MultiSelect
-          title="Label"
-          trigger={filterTrigger("Label", filters.labels.length)}
-          items={labels.map((label) => ({ id: label.id, label: label.name }))}
-          selected={filters.labels}
-          onChange={(selected) => set({ labels: selected })}
-          emptyText="No labels yet. Admins add them in settings."
-        />
-        <MultiSelect
           title="Priority"
           trigger={filterTrigger("Priority", filters.priorities.length)}
           items={PRIORITIES.map((priority) => ({ id: priority, label: PRIORITY_LABELS[priority] }))}
@@ -91,17 +86,30 @@ export function FilterBar({ query, onChange, members, labels }: { query: TaskQue
             ))}
           </Dropdown>
         </div>
+        {taskTypes.length ? (
+          <MultiSelect
+            title="Type"
+            trigger={filterTrigger("Type", filters.types.length)}
+            items={taskTypes.map((type) => ({ id: type.id, label: type.name }))}
+            selected={filters.types}
+            onChange={(types) => set({ types })}
+          />
+        ) : null}
+        <MultiSelect
+          title="Label"
+          trigger={filterTrigger("Label", filters.labels.length)}
+          items={labels.map((label) => ({ id: label.id, label: label.name }))}
+          selected={filters.labels}
+          onChange={(selected) => set({ labels: selected })}
+          emptyText="No labels yet. Admins add them in settings."
+        />
+        {count > 0 ? (
+          <Button variant="quiet" size="sm" onClick={() => onChange({ ...query, filters: EMPTY_FILTERS })}>
+            Clear filters
+          </Button>
+        ) : null}
         {query.view === "list" ? (
-          <>
-            <div className="w-[200px]">
-              <Dropdown aria-label="Sort by" value={query.sort} onChange={(event) => onChange({ ...query, sort: event.target.value as SortKey })}>
-                {SORT_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {`Sort: ${option.label}`}
-                  </option>
-                ))}
-              </Dropdown>
-            </div>
+          <div className="flex flex-wrap items-center gap-2 sm:ml-auto sm:border-l sm:border-line sm:pl-3">
             <div className="w-[200px]">
               <Dropdown aria-label="Group by" value={query.group} onChange={(event) => onChange({ ...query, group: event.target.value as GroupKey })}>
                 {GROUP_OPTIONS.map((option) => (
@@ -111,12 +119,16 @@ export function FilterBar({ query, onChange, members, labels }: { query: TaskQue
                 ))}
               </Dropdown>
             </div>
-          </>
-        ) : null}
-        {count > 0 ? (
-          <Button variant="quiet" size="sm" onClick={() => onChange({ ...query, filters: EMPTY_FILTERS })}>
-            Clear filters
-          </Button>
+            <div className="w-[200px]">
+              <Dropdown aria-label="Sort by" value={query.sort} onChange={(event) => onChange({ ...query, sort: event.target.value as SortKey })}>
+                {SORT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {`Sort: ${option.label}`}
+                  </option>
+                ))}
+              </Dropdown>
+            </div>
+          </div>
         ) : null}
       </div>
     </div>

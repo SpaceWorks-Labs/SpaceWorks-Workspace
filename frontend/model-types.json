@@ -264,9 +264,15 @@
     "value": false
   },
   {
+    "module": "lib/tasks/service/transfer",
+    "name": "TransferPreview",
+    "id": "Shared44",
+    "value": false
+  },
+  {
     "module": "lib/auth",
     "name": "SsoMfaChallenge",
-    "id": "Shared44",
+    "id": "Shared45",
     "value": false
   }
 ]

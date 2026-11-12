@@ -7,6 +7,8 @@ import { recordAuditEvent } from "@/lib/audit";
 import { recordActivity } from "@/lib/activity";
 import { canManageProjectPlan, canEditTaskPlan } from "@/lib/roles";
 import { assignableMembers, visibleProjectWhere, visibleTaskWhere, type TaskActor } from "@/lib/tasks/access";
+import { RESTRICTED_EDIT_MESSAGE, canPerformTaskAction } from "@/lib/tasks/capabilities";
+import { canEditTaskInTx } from "@/lib/tasks/service/helpers";
 import { publishTaskChange } from "@/lib/tasks/realtime";
 import { toDateInputValue } from "@/lib/tasks/localDate";
 import { indexSearchDocument, removeSearchDocument } from "@/lib/search/documents";
@@ -41,6 +43,11 @@ export async function saveMilestone(inputActor: TaskActor, input: unknown): Prom
     // Existing archived links may be retained; new links must point to active tasks in this project.
     const tasks = await tx.task.findMany({ where: { workspaceId: actor.workspace.id, projectId: project.id, id: { in: data.taskIds }, OR: [{ archivedAt: null }, ...(data.id ? [{ milestones: { some: { workspaceId: actor.workspace.id, milestoneId: data.id } } }] : [])] }, select: { id: true } });
     if (tasks.length !== data.taskIds.length) return actionError("Link tasks from this project only. Reload and try again.");
+    // Adding or removing a link edits that task's plan, so restrictTaskEdits applies to each changed task.
+    const linked = data.id ? (await tx.projectMilestoneTask.findMany({ where: { workspaceId: actor.workspace.id, milestoneId: data.id }, select: { taskId: true } })).map(link => link.taskId) : [];
+    const changedIds = [...data.taskIds.filter(id => !linked.includes(id)), ...linked.filter(id => !data.taskIds.includes(id))];
+    const changedTasks = changedIds.length ? await tx.task.findMany({ where: { workspaceId: actor.workspace.id, id: { in: changedIds } }, select: { id: true, creatorId: true } }) : [];
+    if (!await canEditTaskInTx(tx, actor, changedTasks, project)) return actionError(RESTRICTED_EDIT_MESSAGE);
     const values = { name: data.name, targetOn: new Date(`${data.targetOn}T00:00:00Z`), status: data.status, notes: data.notes };
     const milestone = data.id
       ? await tx.projectMilestone.update({ where: { id: data.id, workspaceId: actor.workspace.id, projectId: project.id }, data: values })
@@ -90,6 +97,8 @@ export async function saveTaskPlan(inputActor: TaskActor, input: unknown): Promi
     await tx.$queryRaw`SELECT id FROM "Task" WHERE id=${data.taskId} AND "workspaceId"=${actor.workspace.id} FOR UPDATE`;
     const task = await tx.task.findFirst({ where: { AND: [await visibleTaskWhere(actor, tx), { id: data.taskId, archivedAt: null }] }, include: { project: true } });
     if (!task || task.project?.status === "ARCHIVED") return { error: NOT_ALLOWED };
+    const assigneeIds = (await tx.taskAssignee.findMany({ where: { taskId: task.id }, select: { userId: true } })).map(row => row.userId);
+    if (!canPerformTaskAction("edit", { role: actor.membership.role, userId: actor.user.id, restrictTaskEdits: task.project?.restrictTaskEdits ?? false, projectOwnerId: task.project?.ownerId ?? null, creatorId: task.creatorId, assigneeIds })) return { error: RESTRICTED_EDIT_MESSAGE };
     if (data.startsOn && task.dueAt && data.startsOn > toDateInputValue(task.dueAt, actor.workspace.timezone)) return { error: "Start must be on or before the due date. Change the due date first." };
     if (data.blockerOwnerId && !(await assignableMembers(actor.workspace.id, task.project, tx)).some(p => p.id === data.blockerOwnerId)) return { error: "Choose an active member who can see this task." };
     const updated = await tx.task.update({ where: { id: task.id, workspaceId: actor.workspace.id }, data: { startsOn: data.startsOn ? new Date(`${data.startsOn}T00:00:00Z`) : null, blockerReason: data.blockerReason || null, blockerOwnerId: data.blockerReason ? data.blockerOwnerId : null } });

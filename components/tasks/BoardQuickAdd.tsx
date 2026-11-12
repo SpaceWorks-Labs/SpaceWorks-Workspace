@@ -1,30 +1,44 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/field";
 
-export function QuickAdd({ onCreate }: { onCreate: (title: string) => Promise<boolean> }) {
-  const [open, setOpen] = useState(false);
+/**
+ * Add tasks to a column. Stays open after Enter for rapid entry; Shift+Enter
+ * adds the task and opens it; Escape closes and returns focus to the button.
+ */
+export function QuickAdd({ onCreate, open, onOpenChange }: { onCreate: (title: string, options: { openAfter: boolean }) => Promise<boolean>; open: boolean; onOpenChange: (open: boolean) => void }) {
   const [title, setTitle] = useState("");
   const [busy, setBusy] = useState(false);
+  const trigger = useRef<HTMLButtonElement>(null);
+
+  const close = () => {
+    onOpenChange(false);
+    requestAnimationFrame(() => trigger.current?.focus());
+  };
+  const submit = async (openAfter: boolean) => {
+    const value = title.trim();
+    if (!value || busy) return;
+    setBusy(true);
+    const ok = await onCreate(value, { openAfter });
+    setBusy(false);
+    if (ok) setTitle("");
+  };
+
   if (!open) {
     return (
-      <Button variant="quiet" size="sm" startIcon={<Plus />} onClick={() => setOpen(true)} className="justify-start">
+      <Button ref={trigger} variant="quiet" size="sm" startIcon={<Plus />} onClick={() => onOpenChange(true)} className="justify-start">
         Add task
       </Button>
     );
   }
   return (
     <form
-      onSubmit={async (event) => {
+      onSubmit={(event) => {
         event.preventDefault();
-        if (!title.trim()) return;
-        setBusy(true);
-        const ok = await onCreate(title.trim());
-        setBusy(false);
-        if (ok) setTitle("");
+        void submit(false);
       }}
       className="flex flex-col gap-2"
     >
@@ -36,14 +50,21 @@ export function QuickAdd({ onCreate }: { onCreate: (title: string) => Promise<bo
         placeholder="Task title, then Enter"
         aria-label="New task title"
         onKeyDown={(event) => {
-          if (event.key === "Escape") setOpen(false);
+          if (event.key === "Escape") {
+            event.stopPropagation();
+            close();
+          } else if (event.key === "Enter" && event.shiftKey) {
+            event.preventDefault();
+            void submit(true);
+          }
         }}
       />
+      <p className="text-caption text-ink-muted">Enter adds another. Shift+Enter adds and opens. Esc closes.</p>
       <div className="flex gap-2">
         <Button type="submit" variant="primary" size="sm" loading={busy} disabled={!title.trim()}>
           Add
         </Button>
-        <Button variant="secondary" size="sm" onClick={() => setOpen(false)}>
+        <Button variant="secondary" size="sm" onClick={close}>
           Done
         </Button>
       </div>

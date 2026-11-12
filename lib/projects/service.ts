@@ -112,7 +112,7 @@ export async function updateProject(actor: TaskActor, input: unknown): Promise<A
   const updated = await prisma.$transaction(async (tx) => {
     const updated = await tx.project.update({
       where: { id: project.id },
-      data: { cyclesEnabled: data.cyclesEnabled, name: data.name, key: data.key, description: data.description, ownerId, teamId, status: data.status, startsOn: toDbDate(data.startsOn), dueOn: toDbDate(data.dueOn) },
+      data: { cyclesEnabled: data.cyclesEnabled, restrictTaskEdits: data.restrictTaskEdits, name: data.name, key: data.key, description: data.description, ownerId, teamId, status: data.status, startsOn: toDbDate(data.startsOn), dueOn: toDbDate(data.dueOn) },
     });
     await recordAuditEvent({
       action: "project.updated",
@@ -120,7 +120,7 @@ export async function updateProject(actor: TaskActor, input: unknown): Promise<A
       actorId: actor.user.id,
       targetType: "Project",
       targetId: project.id,
-      metadata: { key: updated.key, status: updated.status, keyChanged: updated.key !== project.key, cyclesEnabled: updated.cyclesEnabled, teamChanged: updated.teamId !== project.teamId },
+      metadata: { key: updated.key, status: updated.status, keyChanged: updated.key !== project.key, cyclesEnabled: updated.cyclesEnabled, restrictTaskEdits: updated.restrictTaskEdits, teamChanged: updated.teamId !== project.teamId },
       client: tx,
     });
     await indexProject(tx, actor.workspace.slug, updated);

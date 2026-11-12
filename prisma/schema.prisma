@@ -83,6 +83,18 @@ enum LabelTone {
   HIGHLIGHT
 }
 
+/// Glyph of a per-project task type (mapped to approved icons in components/tasks/typeIcons.ts).
+enum TaskTypeIcon {
+  TASK
+  BUG
+  FEATURE
+  DOCS
+  CHORE
+  MILESTONE
+  IDEA
+  RISK
+}
+
 enum ChannelKind {
   PUBLIC
   PRIVATE
@@ -196,6 +208,7 @@ model User {
   projectsOwned         Project[]               @relation("ProjectOwner")
   tasksCreated          Task[]                  @relation("TaskCreator")
   taskAssignments       TaskAssignee[]
+  tasksAssignedToOthers TaskAssignee[]          @relation("TaskAssignedBy")
   taskComments          TaskComment[]
   taskActivities        TaskActivity[]
   channelsCreated       Channel[]               @relation("ChannelCreatedBy")
@@ -628,6 +641,7 @@ model Workspace {
   advanceRecoveries        StaffAdvanceRecovery[]
   projectMilestones        ProjectMilestone[]
   projectMilestoneTasks    ProjectMilestoneTask[]
+  projectTaskTypes         ProjectTaskType[]
   projectStatusUpdates     ProjectStatusUpdate[]
 }
 
@@ -709,22 +723,24 @@ model WorkspaceCounter {
 // ───────────────────────────── Work ─────────────────────────────
 
 model Project {
-  id            String        @id @default(cuid())
-  workspaceId   String
+  id                String        @id @default(cuid())
+  workspaceId       String
   /// Short uppercase key shown in task references, e.g. "BOT".
-  key           String
-  name          String
-  description   String?
-  status        ProjectStatus @default(ACTIVE)
-  ownerId       String?
-  startsOn      DateTime?     @db.Date
-  dueOn         DateTime?     @db.Date
+  key               String
+  name              String
+  description       String?
+  status            ProjectStatus @default(ACTIVE)
+  ownerId           String?
+  startsOn          DateTime?     @db.Date
+  dueOn             DateTime?     @db.Date
   /// Owning team (null = workspace-wide). Private teams hide their projects.
-  teamId        String?
+  teamId            String?
   /// Per-project toggle for cycles (sprints).
-  cyclesEnabled Boolean       @default(false)
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  cyclesEnabled     Boolean       @default(false)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  /// When true only the task creator, assignees, project owner and admins edit a task.
+  restrictTaskEdits Boolean       @default(false)
 
   workspace     Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   owner         User?                 @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: SetNull)
@@ -736,6 +752,7 @@ model Project {
   monitors      Monitor[]
   milestones    ProjectMilestone[]
   statusUpdates ProjectStatusUpdate[]
+  taskTypes     ProjectTaskType[]
 
   @@unique([workspaceId, key])
   @@unique([workspaceId, id])
@@ -785,13 +802,16 @@ model Task {
   recurrenceId    String?
   /// Meeting whose notes produced this action item.
   sourceMeetingId String?
+  /// Project task type; null shows as the project's default type.
+  typeId          String?
 
-  workspace  Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  project    Project?       @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  column     BoardColumn?   @relation(fields: [columnId], references: [id], onDelete: SetNull)
-  creator    User?          @relation("TaskCreator", fields: [creatorId], references: [id], onDelete: SetNull)
-  parent     Task?          @relation("TaskSubtasks", fields: [parentId], references: [id], onDelete: Cascade)
-  subtasks   Task[]         @relation("TaskSubtasks")
+  workspace  Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  type       ProjectTaskType? @relation(fields: [typeId], references: [id], onDelete: SetNull)
+  project    Project?         @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  column     BoardColumn?     @relation(fields: [columnId], references: [id], onDelete: SetNull)
+  creator    User?            @relation("TaskCreator", fields: [creatorId], references: [id], onDelete: SetNull)
+  parent     Task?            @relation("TaskSubtasks", fields: [parentId], references: [id], onDelete: Cascade)
+  subtasks   Task[]           @relation("TaskSubtasks")
   assignees  TaskAssignee[]
   labels     TaskLabel[]
   comments   TaskComment[]
@@ -822,18 +842,23 @@ model Task {
   @@index([recurrenceId])
   @@index([sourceMeetingId])
   @@index([workspaceId, blockerOwnerId])
+  @@index([typeId])
 }
 
 model TaskAssignee {
-  taskId     String
-  userId     String
-  assignedAt DateTime @default(now())
+  taskId       String
+  userId       String
+  assignedAt   DateTime @default(now())
+  /// Who made the assignment (the assignee themselves when they claimed it).
+  assignedById String?
 
-  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task       Task  @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user       User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignedBy User? @relation("TaskAssignedBy", fields: [assignedById], references: [id], onDelete: SetNull)
 
   @@id([taskId, userId])
   @@index([userId])
+  @@index([assignedById])
 }
 
 model Label {
@@ -6843,6 +6868,26 @@ model ProjectMilestoneTask {
 
   @@id([workspaceId, milestoneId, taskId])
   @@index([workspaceId, taskId])
+}
+
+/// Per-project task type (Task, Bug, Feature by default; created lazily).
+model ProjectTaskType {
+  id          String       @id @default(cuid())
+  workspaceId String
+  projectId   String
+  name        String
+  tone        LabelTone    @default(NEUTRAL)
+  icon        TaskTypeIcon @default(TASK)
+  isDefault   Boolean      @default(false)
+  position    Int          @default(0)
+  createdAt   DateTime     @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks     Task[]
+
+  @@unique([projectId, name])
+  @@index([workspaceId, projectId, position])
 }
 
 model ProjectStatusUpdate {

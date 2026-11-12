@@ -41,6 +41,7 @@ export const createProjectSchema = z.object({
 export const updateProjectSchema = z.object({
   projectId: id,
   cyclesEnabled: z.boolean().optional(),
+  restrictTaskEdits: z.boolean().optional(),
   ...projectFields,
   status: z.enum(["ACTIVE", "PAUSED", "DONE"]),
 });
@@ -52,6 +53,14 @@ export const addColumnSchema = z.object({ projectId: id, name: columnNameSchema,
 export const updateColumnSchema = z.object({ columnId: id, name: columnNameSchema, category });
 export const reorderColumnsSchema = z.object({ projectId: id, columnIds: z.array(id).min(1).max(30) });
 export const deleteColumnSchema = z.object({ columnId: id, moveToColumnId: id });
+
+const tone = z.enum(["NEUTRAL", "SUCCESS", "WARNING", "INFO", "DANGER", "ACCENT", "HIGHLIGHT"]);
+const typeIcon = z.enum(["TASK", "BUG", "FEATURE", "DOCS", "CHORE", "MILESTONE", "IDEA", "RISK"]);
+export const taskTypeNameSchema = z.string().trim().min(1, "Name the type.").max(30, "Keep type names under 30 characters.");
+export const createTaskTypeSchema = z.object({ projectId: id, name: taskTypeNameSchema, tone: tone.default("NEUTRAL"), icon: typeIcon.default("TASK") });
+export const updateTaskTypeSchema = z.object({ typeId: id, name: taskTypeNameSchema.optional(), tone: tone.optional(), icon: typeIcon.optional() });
+export const taskTypeIdSchema = z.object({ typeId: id });
+export const reorderTaskTypesSchema = z.object({ projectId: id, typeIds: z.array(id).min(1).max(30) });
 
 export const taskTitleSchema = z.string().trim().min(1, "Give the task a title.").max(200, "Keep the title under 200 characters.");
 
@@ -67,11 +76,15 @@ export const createTaskSchema = z.object({
   labelIds: ids(20).default([]),
   /** Put the new card at the top of its column instead of the bottom. */
   atTop: z.boolean().default(false),
+  /** A type of the task's project; omitted = the project's default. */
+  typeId: optionalId,
 });
 
 export const updateTaskSchema = z
   .object({
     taskId: id,
+    /** A type of the task's project; null = back to the project's default. */
+    typeId: optionalId,
     title: taskTitleSchema.optional(),
     description: z.string().max(100_000).nullable().optional(),
     priority: priority.optional(),
@@ -82,10 +95,12 @@ export const updateTaskSchema = z
       .nullable()
       .optional(),
   })
-  .refine((value) => value.title !== undefined || value.description !== undefined || value.priority !== undefined || value.dueDate !== undefined, "Nothing to change.");
+  .refine((value) => value.title !== undefined || value.description !== undefined || value.priority !== undefined || value.dueDate !== undefined || value.typeId !== undefined, "Nothing to change.");
 
+export const transferTaskSchema = z.object({ taskId: id, targetProjectKey: projectKeySchema });
 export const moveTaskSchema = z.object({ taskId: id, columnId: id, afterTaskId: id.nullable() });
 export const setAssigneesSchema = z.object({ taskId: id, userIds: ids(20) });
+export const assignTaskSchema = z.object({ taskId: id, userId: id });
 export const setLabelsSchema = z.object({ taskId: id, labelIds: ids(20) });
 export const completeTaskSchema = z.object({ taskId: id, completed: z.boolean() });
 export const archiveTaskSchema = z.object({ taskId: id, archived: z.boolean() });

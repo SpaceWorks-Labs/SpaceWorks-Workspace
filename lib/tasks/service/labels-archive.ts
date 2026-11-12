@@ -3,63 +3,23 @@ import { prisma } from "@/lib/db";
 import { recordAuditEvent } from "@/lib/audit";
 import { actionError, validationError, type ActionResult } from "@/lib/actionResult";
 import { type TaskActor } from "@/lib/tasks/access";
-import { taskReference } from "@/lib/tasks/links";
 import { POSITION_GAP } from "@/lib/tasks/position";
 import { publishTaskChange } from "@/lib/tasks/realtime";
-import { archiveTaskSchema, setAssigneesSchema, setLabelsSchema } from "@/lib/tasks/schemas";
+import { archiveTaskSchema, setLabelsSchema } from "@/lib/tasks/schemas";
 import { indexTask } from "@/lib/tasks/search";
 import {
-  type After,
   loadEditableTask,
-  actorName,
-  eventBase,
-  notify,
-  runAfter,
   addHistory,
-  validateAssignees,
+  viaOf,
   validateLabels,
 } from "./helpers";
 
-/* ---------- Assignees and labels ---------- */
-
-export async function setAssignees(actor: TaskActor, input: unknown): Promise<ActionResult> {
-  const parsed = setAssigneesSchema.safeParse(input);
-  if (!parsed.success) return validationError(parsed.error);
-  const found = await loadEditableTask(actor, parsed.data.taskId);
-  if ("error" in found) return actionError(found.error);
-  const { task } = found;
-  const checked = await validateAssignees(actor, task.project, parsed.data.userIds, prisma);
-  if (!checked.ok) return actionError("Assign only members who can see this project.");
-  const current = (await prisma.taskAssignee.findMany({ where: { taskId: task.id }, select: { userId: true } })).map((row) => row.userId);
-  const added = checked.userIds.filter((id) => !current.includes(id));
-  const removed = current.filter((id) => !checked.userIds.includes(id));
-  if (added.length === 0 && removed.length === 0) return { ok: true };
-  const after: After = [];
-  await prisma.$transaction(async (tx) => {
-    if (removed.length) await tx.taskAssignee.deleteMany({ where: { taskId: task.id, userId: { in: removed } } });
-    if (added.length) await tx.taskAssignee.createMany({ data: added.map((userId) => ({ taskId: task.id, userId })), skipDuplicates: true });
-    await tx.task.update({ where: { id: task.id }, data: { updatedAt: new Date() } });
-    if (added.length) await addHistory(tx, task.id, actor.user.id, "assigned", { userIds: added });
-    if (removed.length) await addHistory(tx, task.id, actor.user.id, "unassigned", { userIds: removed });
-    const recipients = added.filter((id) => id !== actor.user.id);
-    if (recipients.length > 0) {
-      await notify(tx, after, actor.workspace.id, {
-        ...eventBase(actor, task, task.project),
-        type: "task.assigned",
-        title: `${actorName(actor)} assigned you ${taskReference(task.project?.key, task.number)}: ${task.title}`,
-        recipients,
-      });
-    }
-  });
-  await runAfter(after);
-  await publishTaskChange({ workspaceId: actor.workspace.id, project: task.project, taskIds: task.parentId ? [task.id, task.parentId] : [task.id], type: "task.changed", actorId: actor.user.id });
-  return { ok: true };
-}
+/* ---------- Labels ---------- */
 
 export async function setLabels(actor: TaskActor, input: unknown): Promise<ActionResult> {
   const parsed = setLabelsSchema.safeParse(input);
   if (!parsed.success) return validationError(parsed.error);
-  const found = await loadEditableTask(actor, parsed.data.taskId);
+  const found = await loadEditableTask(actor, parsed.data.taskId, { action: "edit" });
   if ("error" in found) return actionError(found.error);
   const { task } = found;
   const checked = await validateLabels(actor, parsed.data.labelIds, prisma);
@@ -73,8 +33,8 @@ export async function setLabels(actor: TaskActor, input: unknown): Promise<Actio
     if (removed.length) await tx.taskLabel.deleteMany({ where: { taskId: task.id, labelId: { in: removed.map((row) => row.labelId) } } });
     if (added.length) await tx.taskLabel.createMany({ data: added.map((label) => ({ taskId: task.id, labelId: label.id })), skipDuplicates: true });
     await tx.task.update({ where: { id: task.id }, data: { updatedAt: new Date() } });
-    if (added.length) await addHistory(tx, task.id, actor.user.id, "labeled", { names: added.map((label) => label.name) });
-    if (removed.length) await addHistory(tx, task.id, actor.user.id, "unlabeled", { names: removed.map((row) => row.label.name) });
+    if (added.length) await addHistory(tx, task.id, actor.user.id, "labeled", { names: added.map((label) => label.name) }, viaOf(actor));
+    if (removed.length) await addHistory(tx, task.id, actor.user.id, "unlabeled", { names: removed.map((row) => row.label.name) }, viaOf(actor));
   });
   await publishTaskChange({ workspaceId: actor.workspace.id, project: task.project, taskIds: [task.id], type: "task.changed", actorId: actor.user.id });
   return { ok: true };
@@ -85,7 +45,7 @@ export async function setLabels(actor: TaskActor, input: unknown): Promise<Actio
 export async function setTaskArchived(actor: TaskActor, input: unknown): Promise<ActionResult> {
   const parsed = archiveTaskSchema.safeParse(input);
   if (!parsed.success) return validationError(parsed.error);
-  const found = await loadEditableTask(actor, parsed.data.taskId, { allowArchived: true });
+  const found = await loadEditableTask(actor, parsed.data.taskId, { action: "edit", allowArchived: true });
   if ("error" in found) return actionError(found.error);
   const { task } = found;
   const archived = parsed.data.archived;
@@ -97,7 +57,7 @@ export async function setTaskArchived(actor: TaskActor, input: unknown): Promise
       position = (edge._max.position ?? 0) + POSITION_GAP;
     }
     const updated = await tx.task.update({ where: { id: task.id }, data: { archivedAt: archived ? new Date() : null, position } });
-    await addHistory(tx, task.id, actor.user.id, archived ? "archived" : "restored");
+    await addHistory(tx, task.id, actor.user.id, archived ? "archived" : "restored", undefined, viaOf(actor));
     await recordAuditEvent({ action: archived ? "task.archived" : "task.restored", workspaceId: actor.workspace.id, actorId: actor.user.id, targetType: "Task", targetId: task.id, metadata: { number: task.number }, client: tx });
     await indexTask(tx, actor.workspace.slug, updated, task.project);
   });

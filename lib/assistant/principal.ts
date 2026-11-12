@@ -34,6 +34,8 @@ export type Principal = {
   /** Effective role (capped at MEMBER for jobs). */
   role: WorkspaceRole;
   tokenId?: string;
+  /** The API token's name (MCP and /api/v1 callers), for history provenance. */
+  tokenName?: string;
   scopes?: readonly ApiScope[];
 };
 
