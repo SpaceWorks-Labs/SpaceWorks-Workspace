@@ -53,6 +53,7 @@ Tenancy is strict: `Workspace` is the tenant boundary.
 | `Dockerfile`, `compose.production.yml`, `docker/vps/`, `install.sh` | Container image and the single-VPS stack (see `docs/DEPLOYMENT_VPS.md`) |
 | `charts/`, `render.yaml`, `.do/`, `deploy/cloudflare-cron/` | Kubernetes, Render, DigitalOcean and the cron Worker (`docs/DEPLOYMENT_*.md`) |
 | `tests/unit`, `tests/integration`, `tests/e2e` | Vitest unit, PostgreSQL integration (`*.db.test.ts`), Playwright |
+| `design-kit/` | Git submodule (SpaceWorks-Labs/Design-Kit): source of truth for tokens and fonts; `npm run tokens:sync` regenerates `app/styles/palette.css`, `motion.css`, the token fixture and `public/brand/fonts`. Never needed by builds or CI |
 | `docs/` | `DESIGN.md` (brand and UI), `ARCHITECTURE.md` (services and flows), `ROADMAP-BUILD.md` (area ownership for parallel builds) |
 
 `prisma/schema.prisma` is authoritative for the data model. It already holds
@@ -112,7 +113,8 @@ messaging + notification routing). Read it before adding anything.
 Follow [docs/DESIGN.md](docs/DESIGN.md). Colours come only from tokens
 (`app/styles/tokens.css` mapped in `app/globals.css`): `bg-canvas`,
 `bg-panel`, `bg-primary`, `bg-sidebar`, `sw-*` brand colours, etc. Never
-hard-code hex in components. Gilroy everywhere; Unbounded (`font-accent`) only
+hard-code hex in components. Outfit for text, Gilroy ExtraBold only for display
+headings; Unbounded (`font-accent`) only
 for one accent phrase on auth/empty-state heroes, never in app chrome. Teal
 primary actions, Workshop Orange only as a fill with an ink label (and never
 in the app chrome as a button), Citron text-only sidebar with a teal active
@@ -171,6 +173,20 @@ navigation config), `lib/instanceSettings.ts` (`getAssistantSettings`,
 `lib/search/documents.ts`, `lib/activity.ts`, `lib/teamAccess.ts` and
 `lib/scheduled/<area>.ts` (periodic jobs).
 
+Tasks: every task write (app, assistant, MCP, REST) goes through
+`lib/tasks/service` and its single gate `loadEditableTask(actor, id, { action })`
+with the rules in `lib/tasks/capabilities.ts` (`restrictTaskEdits`, claim,
+unclaim). Assignment changes use `assignTask` / `unassignTask` / `claimTask` /
+`unclaimTask` / `setAssignees` (row lock, real diffs only); never write
+`TaskAssignee` directly. Assistant and API callers build the actor with
+`principalToActor` (`lib/assistant/tools/tasks/actor.ts`) so history records
+the source.
+
+Design tokens: never edit `app/styles/palette.css`, `motion.css` or
+`tests/fixtures/design-tokens.json` by hand; update the `design-kit` submodule
+(`git submodule update --init --depth 1 design-kit`) and run
+`npm run tokens:sync`.
+
 Parallel builds: [docs/ROADMAP-BUILD.md](docs/ROADMAP-BUILD.md) lists, per
 area, the routes, models and helpers it owns and the shared core nobody
 else edits.
@@ -185,6 +201,13 @@ npm run db:test:prepare        # migrate the disposable TEST_DATABASE_URL
 npm run test:integration       # wipes data in TEST_DATABASE_URL
 npm run build
 ```
+
+`npm run typecheck` needs `NODE_OPTIONS=--max-old-space-size=8192` on Node 26.
+Local Playwright runs (`npx playwright test`) need `AUTH_URL=http://127.0.0.1:3100`
+(the e2e server's origin); the first logins against a cold dev server can flake,
+so use `--retries=2` like CI.
+The files integration test needs local Silo: `docker compose up -d --wait silo silo-init`
+(creates the `sww-dev` and `sww-docsfiles` buckets).
 
 Run lint, typecheck and unit tests before every hand-off, integration tests
 for data or permission changes, and a build at least once per phase. Report

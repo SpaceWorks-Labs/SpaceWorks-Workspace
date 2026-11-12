@@ -1,5 +1,7 @@
 # Space Works Workspace Helm chart
 
+Helm chart for running Space Works Workspace on Kubernetes. Part of [Space Works Workspace](../../README.md); see also the [documentation index](../../docs/README.md).
+
 Runs the application on Kubernetes: a Deployment (non-root, read-only root
 filesystem), a Service, an optional Ingress, a pre-install/pre-upgrade
 migration Job, worker and beat Deployments, a PodDisruptionBudget and an optional HPA.

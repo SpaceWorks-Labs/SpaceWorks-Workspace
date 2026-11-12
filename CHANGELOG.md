@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Tasks: one-click **Assign to me** / **Unassign me** on cards, the task drawer (`i`) and list rows; the assignee picker lists you first.
+- Tasks: per-project **Restrict task edits** (creator, assignees, project owner and admins edit; any member can still take an unassigned task; comments stay open).
+- Tasks: assignment history records who assigned whom; people removed from a task are notified (`task.unassigned`).
+- Tasks: per-project task types (icon, tone, default) with a type filter and type chips on cards and list rows.
+- Tasks: move a task (with its subtasks) to another project; old links redirect to the new key.
+- My Tasks tabs: Assigned to me, Assigned by me, My team (direct reports) and Created by me, with a quick add that assigns to you.
+- List view: inline editing of status, priority, assignees and due date, and bulk edit of up to 50 tasks with per-task results.
+- Board: accessible drag and drop (pointer, touch and keyboard with screen-reader announcements), a per-card "Move to…" menu, rapid quick add and the `c` shortcut; each project remembers its view and filters.
+- Activity entries show where a change came from (web, assistant, MCP or API).
+- MCP tools `sw_add_comment`, `sw_archive_task`, `sw_move_task` (columns or another project), `sw_assign_task` and `sw_claim_task`; `sw_create_task` / `sw_update_task` accept `type` and `assignees`.
+- REST: `POST /api/v1/tasks/{ref}/comments|assignees|archive|move|transfer` and `POST`/`DELETE /api/v1/tasks/{ref}/claim`.
+- Design-Kit is a git submodule (`design-kit/`); `npm run tokens:sync` regenerates the palette, motion tokens, token fixture and brand fonts.
+- `npm run loc` and the codebase audit in `docs/AUDIT-2026-11.md`; new light and dark README banners.
+- Collapsible groups everywhere: sidebar groups, list-view groups, board columns and My Tasks sections, each remembered per browser.
+- Loading skeletons for every major page, a route progress bar, and token-driven motion for dialogs, drawers, menus, toasts, cards and rows (off under reduced motion).
+- Project task lists and My Tasks in the README screenshots.
+
+### Changed
+
+- Design tokens follow Design-Kit 0.12.0: solid-black dark palette, scrim overlay and motion tokens (durations, easing, reduced motion).
+- Typography follows Design-Kit: Outfit for body and UI, Gilroy ExtraBold for display headings, Unbounded for one accent phrase. PDFs use Gilroy Light and ExtraBold.
+- MCP/REST task writes now go through the same services as the app (archived projects reject writes, disabled members can't be assigned, tasks keep board order, dates use the workspace time zone, completing unblocks dependants).
+- README, docs index, CONTRIBUTING and package READMEs rewritten; Node is pinned to 22.18 or newer (`engines`, `.nvmrc`).
+- Sidebar regrouped around daily work: personal items first, then Work, Chat, Knowledge, Community and People; Operations, Support & IT, Outreach, Finance, Settings and Preferences collapse by default. Clearer labels (Organisation, Companies, Blockers, Notification rules, Volunteer hours, Official documents).
+- Task filters ordered by use with view options separated; project tabs put Board and Timeline together; project settings grouped into Basics, Ownership and Task rules.
+- Light mode is the default; the sidebar shows "Workspace" under the Space Works lockup; Inbox and the top-bar notifications are icons.
+
+### Fixed
+
+- Concurrent assignee edits no longer overwrite each other (assignments lock the task and apply only real changes).
+
+### Removed
+
+- Unlicensed Gilroy Regular, Medium, SemiBold and Bold font files.
+
 ## [0.6.7] - 2026-10-29
 
 ### Fixed

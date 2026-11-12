@@ -1,5 +1,7 @@
 # Patched standard Caddy image
 
+The bundled automatic-HTTPS edge used by the VPS installer and production Compose stack. Part of [Space Works Workspace](../../README.md); see also the [documentation index](../../docs/README.md).
+
 The bundled edge keeps Caddy **2.11.7** and all its standard modules. Its Go build
 uses the official **1.26.10** builder, with `golang.org/x/net` **0.62.0** and
 `github.com/go-jose/go-jose/v4` **4.1.6** and `github.com/go-chi/chi/v5` **5.4.0**

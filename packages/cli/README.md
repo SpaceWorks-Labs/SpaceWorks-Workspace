@@ -1,5 +1,7 @@
 # Space Works Workspace CLI
 
+The `sww` command line and Node SDK for application secrets. Part of [Space Works Workspace](../../README.md); see also the [documentation index](../../docs/README.md).
+
 Install Node 20 or newer. The primary package registry is GitHub Packages.
 Authenticate before installing:
 

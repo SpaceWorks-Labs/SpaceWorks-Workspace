@@ -38,9 +38,20 @@ not visible, `429` rate limited.
 | Method and path | Scope | Notes |
 | --- | --- | --- |
 | `GET /api/v1/tasks` | `read:tasks` | Query: `project` (key), `assignee` (member id), `status` (`open` default, `done`, `all`), `dueWithinDays`, `query`, `limit` (≤50), `cursor`. |
-| `POST /api/v1/tasks` | `write:tasks` | Body: `title`, `description?` (plain text), `project?` (key), `assignees?` (member ids), `priority?` (`NONE`, `LOW`, `MEDIUM`, `HIGH`, `URGENT`), `dueAt?` (ISO). `201`. |
+| `POST /api/v1/tasks` | `write:tasks` | Body: `title`, `description?` (plain text), `project?` (key), `assignees?` (member ids), `priority?` (`NONE`, `LOW`, `MEDIUM`, `HIGH`, `URGENT`), `dueAt?` (ISO), `type?` (task type name on the project, e.g. `Bug`; case-insensitive). `201`. |
 | `GET /api/v1/tasks/{ref}` | `read:tasks` | `ref` is `BOT-12` or `12`. Adds description, labels, subtasks and the latest comments. |
-| `PATCH /api/v1/tasks/{ref}` | `write:tasks` | Body: `title?`, `status?` (`todo`, `in_progress`, `done`), `priority?`, `dueAt?` (ISO or `null`). |
+| `PATCH /api/v1/tasks/{ref}` | `write:tasks` | Body: `title?`, `status?` (`todo`, `in_progress`, `done`), `priority?`, `dueAt?` (ISO or `null`), `type?` (task type name), `assignees?` (full set; `me` allowed). |
+| `POST /api/v1/tasks/{ref}/comments` | `write:tasks` | Body: `body` (plain text). `201`, `{ commentId, task }`. |
+| `POST /api/v1/tasks/{ref}/assignees` | `write:tasks` | Body: `userIds` (`me` allowed), `mode?` (`add` default, `remove`, `set`). |
+| `POST /api/v1/tasks/{ref}/claim` | `write:tasks` | Assigns the token's creator. No body. |
+| `DELETE /api/v1/tasks/{ref}/claim` | `write:tasks` | Removes the token's creator from the task. |
+| `POST /api/v1/tasks/{ref}/archive` | `write:tasks` | Body: `archived?` (default `true`; `false` restores). |
+| `POST /api/v1/tasks/{ref}/move` | `write:tasks` | Body: `column?` (name) or `status?`, `position?` (`top`, `bottom`), `project?` (target key: moves the task to that project first). |
+| `POST /api/v1/tasks/{ref}/transfer` | `write:tasks` | Body: `project` (target project key). Moves the task and its subtasks to that project at the bottom of the matching column; milestone links and the cycle are removed, the type is matched by name, assignees who can't see the target are dropped. The reference number stays. `400` for a subtask, a repeating template or the task's own project, `409` for an archived target project, `404` for an unknown or hidden project. |
+
+Task DTOs include `type` (the type name, or the project's default; `null` without a project).
+
+Task writes use the same services as the app: archived projects and archived tasks answer `409`, disabled members cannot be assigned (`400`), unknown or hidden tasks `404`, missing rights `403`. A date-only `dueAt` is a day in the workspace time zone.
 
 Task DTO:
 
