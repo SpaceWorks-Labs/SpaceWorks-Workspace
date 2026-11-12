@@ -32,6 +32,7 @@ export async function workspaceToolsData(context: WorkspaceContext) {
   commands.push(
     { label: t("activity"), href: `${base}/activity` },
     { label: t("links"), href: `${base}/links` },
+    { label: "Go to notifications", href: `${base}/notifications` },
     {
       label: t("preferences"),
       href: `${base}/notifications/preferences`,

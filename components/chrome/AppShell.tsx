@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Suspense, useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { ChevronsUpDown, LogOut, Moon, Sun } from "lucide-react";
+import { ChevronsUpDown, Inbox, LogOut, Moon, Sun } from "lucide-react";
 import { cn } from "@/lib/cn";
 import type { ShellData } from "@/lib/appShell";
 import { activeNavKey } from "@/lib/nav";
@@ -15,28 +15,9 @@ import { useAppColorMode } from "@/components/providers";
 import { useRealtime } from "@/components/realtime/useRealtime";
 import { Avatar } from "@/components/ui/display";
 import { IconButton } from "@/components/ui/button";
+import { RouteProgress } from "@/components/chrome/RouteProgress";
+import { NavLink, SidebarNav } from "@/components/chrome/SidebarNav";
 import { Menu, MenuContent, MenuItem, MenuLabel, MenuSeparator, MenuTrigger } from "@/components/ui/menu";
-
-function NavLink({ href, active, children, onNavigate }: { href: string; active: boolean; children: string; onNavigate?: () => void }) {
-  const link = useRef<HTMLAnchorElement>(null);
-  useEffect(() => {
-    if (active) link.current?.scrollIntoView({ block: "nearest", inline: "nearest" });
-  }, [active]);
-  return (
-    <Link
-      ref={link}
-      href={href}
-      onClick={onNavigate}
-      aria-current={active ? "page" : undefined}
-      className={cn(
-        "flex min-h-11 items-center rounded-md border border-transparent px-3 text-sm text-ink transition-colors duration-[120ms] hover:bg-sidebar-hover",
-        active && "bg-sidebar-active border-accent-text font-semibold text-on-sidebar-active hover:bg-sidebar-active",
-      )}
-    >
-      <span className="min-w-0 flex-1 truncate">{children}</span>
-    </Link>
-  );
-}
 
 function WorkspaceSwitcher({ data, onNavigate }: { data: ShellData; onNavigate?: () => void }) {
   return (
@@ -120,7 +101,7 @@ function NotificationsLink({ data, onNavigate }: { data: ShellData; onNavigate?:
       aria-label={label}
       className="relative inline-flex size-11 shrink-0 items-center justify-center rounded-md text-ink transition-colors hover:bg-sidebar-hover"
     >
-      <span className="text-xs font-semibold">Inbox</span>
+      <Inbox aria-hidden className="size-5" />
       {count > 0 ? (
         <span aria-hidden className="absolute right-1 top-1 min-w-5 rounded-full bg-accent-soft px-1.5 text-center text-xs font-semibold leading-5 tabular-nums text-accent-text">
           {count > 99 ? "99+" : count}
@@ -137,7 +118,10 @@ function SidebarContents({ data, onNavigate, headerAction }: { data: ShellData; 
     <div className="flex h-full min-h-0 flex-col gap-4 p-5">
       <div className="relative flex shrink-0 items-center justify-center">
         <Link href={`/w/${data.workspace.slug}`} onClick={onNavigate} aria-label="Space Works Workspace home" className="inline-flex rounded-md">
-          <SpaceWorksLogo variant="lockup-stacked" height={64} label={null} />
+          <span className="flex flex-col items-center gap-1.5">
+            <SpaceWorksLogo variant="lockup-stacked" height={64} label={null} />
+            <span className="text-label font-semibold uppercase tracking-[0.18em] text-ink-muted">Workspace</span>
+          </span>
         </Link>
       </div>
       <div className="flex shrink-0 items-center gap-2">
@@ -145,16 +129,7 @@ function SidebarContents({ data, onNavigate, headerAction }: { data: ShellData; 
         {headerAction ?? <NotificationsLink data={data} onNavigate={onNavigate} />}
       </div>
       <nav aria-label="Workspace" className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
-        {data.nav.map((group) => (
-          <div key={group.key} className="flex flex-col gap-1">
-            {group.label ? <p className="px-3 pb-0.5 text-overline text-ink-muted">{group.label}</p> : null}
-            {group.items.map((item) => (
-              <NavLink key={item.key} href={item.href} active={active === item.key} onNavigate={onNavigate}>
-                {item.label}
-              </NavLink>
-            ))}
-          </div>
-        ))}
+        <SidebarNav groups={data.nav} active={active} onNavigate={onNavigate} />
         {data.pinned.length ? <div className="flex flex-col gap-0.5">
           <p className="px-3 pb-0.5 text-overline text-ink-muted">Pinned</p>
           {data.pinned.map((link) => <NavLink key={link.id} href={`/w/${data.workspace.slug}/links#${link.id}`} active={false} onNavigate={onNavigate}>{link.title}</NavLink>)}
@@ -188,6 +163,7 @@ export function AppShell({ data, children }: { data: ShellData; children: ReactN
 
   return (
     <div className="flex min-h-dvh flex-col md:flex-row">
+      <Suspense fallback={null}><RouteProgress /></Suspense>
       <aside className="sticky top-0 hidden h-dvh w-[256px] shrink-0 border-r border-line bg-sidebar md:block">
         <SidebarContents data={data} />
       </aside>

@@ -27,7 +27,8 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   // Next.js attach it to every framework script.
   await connection();
   const saved = (await cookies()).get(COLOR_MODE_COOKIE)?.value;
-  const initialColorMode = isColorMode(saved) ? saved : null;
+  // Light is the default; "system" (an explicit choice) follows the operating system.
+  const initialColorMode = isColorMode(saved) ? saved : saved === "system" ? null : "light";
 
   return (
     <html lang="en" data-color-mode={initialColorMode ?? undefined} suppressHydrationWarning>

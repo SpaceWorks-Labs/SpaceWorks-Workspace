@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import * as Popover from "@radix-ui/react-popover";
+import { Bell } from "lucide-react";
 
 import {
   notificationSummaryAction,
@@ -45,10 +46,10 @@ export function NotificationBell({
       }}
     >
       <Popover.Trigger
-        className="relative flex min-h-11 min-w-11 px-3 shrink-0 items-center justify-center rounded-md hover:bg-muted"
+        className="relative flex size-11 shrink-0 items-center justify-center rounded-md hover:bg-muted"
       >
-        <span className="inline-flex items-center justify-center text-xs font-semibold">Notifications</span>
-        <span className="sr-only">, {data.unread} unread</span>
+        <Bell aria-hidden className="size-5" />
+        <span className="sr-only">Notifications, {data.unread} unread</span>
         {data.unread > 0 ? (
           <span
             aria-hidden
@@ -65,7 +66,7 @@ export function NotificationBell({
         <Popover.Content
           align="start"
           sideOffset={8}
-          className="z-50 w-[min(360px,calc(100vw-32px))] rounded-xl border border-line bg-panel p-4 text-ink shadow-float"
+          className="sw-pop z-50 w-[min(360px,calc(100vw-32px))] rounded-xl border border-line bg-panel p-4 text-ink shadow-float"
         >
           <h2 className="text-title">Notifications</h2>
           {error ? <p role="alert">{error}</p> : null}
