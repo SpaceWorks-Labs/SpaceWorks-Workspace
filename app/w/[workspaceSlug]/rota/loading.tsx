@@ -1,5 +1,5 @@
-import { BrandPageLoader } from "@/components/brand/BrandLoader";
+import { LogoLoader } from "@/components/brand/LogoLoader";
 
 export default function Loading() {
-  return <BrandPageLoader label="Loading the volunteer rota" />;
+  return <LogoLoader showLabel label="Loading the volunteer rota" />;
 }

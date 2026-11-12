@@ -32,7 +32,7 @@ export function TrendChart({ title, points, bucketDays }: { title: string; point
         {points.map((p, i) => {
           const h = p.value > 0 ? Math.max(2, ((height - pad * 2) * p.value) / max) : 0;
           return (
-            <rect key={p.start} x={pad + i * bar + 1} y={height - pad - h} width={Math.max(1, bar - 2)} height={h} rx="2" className="fill-accent-text">
+            <rect key={p.start} x={pad + i * bar + 1} y={height - pad - h} width={Math.max(1, bar - 2)} height={h} rx="2" className="fill-chart-accent">
               <title>{`${bucketLabel(p.start, bucketDays)}: ${p.value}`}</title>
             </rect>
           );

@@ -1,17 +1,22 @@
 import type { ReactNode } from "react";
+import { BoxArt } from "@/components/brand/BoxSpinner";
 import { cn } from "@/lib/cn";
 import { Skeleton } from "./display";
 
 /**
  * Shared route-loading layouts (docs/DESIGN.md §2.10). Each mirrors the page it
  * stands in for (header, then content blocks) so nothing shifts on arrival, and
- * announces `label` once. The shimmer is static under reduced motion.
+ * announces `label` once. The shapes are static; the box loader over the content
+ * block is the moving cue (the still, open logo under reduced motion).
  */
 function Frame({ label, className, children }: { label: string; className?: string; children: ReactNode }) {
   return (
-    <div role="status" aria-busy="true" className={cn("sw-fade-in min-w-0 space-y-6", className)}>
+    <div role="status" aria-busy="true" className={cn("sw-fade-in relative min-w-0 space-y-6", className)}>
       <span className="sr-only">{label}</span>
       {children}
+      <span aria-hidden className="pointer-events-none absolute inset-x-0 top-44 flex justify-center">
+        <BoxArt size={48} />
+      </span>
     </div>
   );
 }

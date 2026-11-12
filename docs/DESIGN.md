@@ -3,12 +3,16 @@
 > Read this before building or changing any Space Works Workspace UI. It describes how the brand is
 > implemented in this app.
 >
-> **Source of truth for the brand:** [SpaceWorks-Labs/Design-Kit](https://github.com/SpaceWorks-Labs/Design-Kit),
-> mounted as the `design-kit/` git submodule: `tokens/tokens.json` (colour and motion values),
-> `docs/ui-brand-spec.md` (tokens, states, type, shape, logo, icons), `logo/` (master artwork), `fonts/`
-> (Gilroy, Outfit, Unbounded and their licences). When this file and the kit disagree, the kit wins.
-> After bumping the submodule run `npm run tokens:sync`: it regenerates `app/styles/palette.css`,
-> `app/styles/motion.css`, `tests/fixtures/design-tokens.json` and `public/brand/fonts/`, which are
+> **Source of truth for the brand:** the Space Works Design System
+> ([SpaceWorks-Labs/SpaceWorks-Design-System](https://github.com/SpaceWorks-Labs/SpaceWorks-Design-System),
+> **0.12.0**, site at [spaceworks-labs.github.io/SpaceWorks-Design-System](https://spaceworks-labs.github.io/SpaceWorks-Design-System/)),
+> mounted as the `design-kit/` git submodule: `tokens/tokens.json` (colour, chart, loader and motion values),
+> `motion/box-open/` (the loader and logo opening), `motion/theme-reveal/` (the light/dark switch),
+> `docs/ui-brand-spec.md` (tokens, states, type, shape, logo, icons), `docs/motion.md`, `docs/theming.md`,
+> `logo/` (master artwork), `fonts/` (Gilroy, Outfit, Unbounded and their licences). When this file and the
+> kit disagree, the kit wins. After bumping the submodule run `npm run tokens:sync`: it regenerates
+> `app/styles/palette.css`, `motion.css`, `box-open.css`, `theme-reveal.css`,
+> `components/brand/boxOpenMarkup.ts`, `tests/fixtures/design-tokens.json` and `public/brand/fonts/`, which are
 > committed so builds and CI never need the submodule (`git submodule update --init design-kit` only for the sync).
 >
 > The `--yy-*` variable prefix and the `yy-*` helper classes (`ease-yy`, `yy-prose`) match Space Works
@@ -59,7 +63,7 @@ ink on citron 13.23, ink on sky 9.23. Orange on cream is 2.47, which is why oran
 
 ### 2.2 Neutrals and surfaces
 
-Light mode is the default: a Warm Cream page with white panels. Dark is an explicit choice (account menu or Appearance settings), remembered per browser. Dark mode is one solid-black neutral family (Design-Kit 0.12.0): no green or teal tint, with teal, Citron and orange as accents.
+Light mode is the default: a Warm Cream page with white panels. Dark is an explicit choice (account menu or Appearance settings), remembered per browser. Dark mode is one solid-black neutral family (Design System 0.12.0): no green or teal tint, with teal, Citron and orange as accents.
 
 | Token (`--yy-…`) | Utility | Light | Dark | Use |
 |---|---|---|---|---|
@@ -118,6 +122,26 @@ matching label: `text-on-success`, `text-on-warning`, `text-on-info`, `text-on-d
 Deep Ink in dark). Never `text-white` on a status solid.
 Internal attention counters use `bg-accent-soft text-accent-text`. Orange emphasis is reserved for public surfaces.
 
+### 2.5 Chart series
+
+Charts never reuse UI fills. Series colours come from the Design System `chart` tokens (`--sw-chart-*` in
+`palette.css`, utilities `fill-/stroke-/bg-/text-chart-*`), in this order:
+
+| Series | Utility | Light | Dark |
+|---|---|---|---|
+| Accent | `chart-accent` | `#006E63` | `#80B1A6` |
+| Info | `chart-info` | `#51697B` | `#B5CDFF` |
+| Success | `chart-success` | `#536D49` | `#DFFF8F` |
+| Warn | `chart-warn` | `#696834` | `#FFD447` |
+| Danger | `chart-danger` | `#B91C1C` | `#FCA5A5` |
+
+Light uses the darker ink shades, dark the brighter fills (teal marks are too dim on the black panel). A
+single-series chart uses `chart-accent`. A multi-series chart picks each colour with `chartSeries(label)`
+(`components/ui/chart-series.ts`), which hashes the series identity so a series keeps its colour when sorted or
+filtered. Colour is never the only cue: a legend or data table names every series, and a second line series is
+dashed (`8 4`; then `2 4`, `10 3 2 3`). Every series is at least 3:1 on the page, panel and surface in both modes
+(`design-fidelity.test.ts`).
+
 ### 2.6 Typography
 
 | Role | Family | Weights | Files |
@@ -128,7 +152,7 @@ Internal attention counters use `bg-accent-soft text-accent-text`. Orange emphas
 | One short expressive accent | **Unbounded** | 500 (600 allowed) | `Unbounded-Variable.woff2` |
 | Code, secrets, JSON | Outfit | 500 | `.code-text`, tabular figures and slashed zero |
 
-Fonts come from the Design-Kit `fonts/` folder (`npm run tokens:sync` copies them and their licences into
+Fonts come from the Design System `fonts/` folder (`npm run tokens:sync` copies them and their licences into
 `public/brand/fonts/`) and are self-hosted with `@font-face` in `app/styles/global-theme.css` (privacy
 invariant: no font CDNs). Licences are in `public/brand/fonts/LICENSES/`. Only the two free Gilroy weights
 are licensed; the paid weights must not be re-added. `font-synthesis: none` is set on `body`: there is no
@@ -194,17 +218,17 @@ Prefer `rounded-md` over `rounded-control` inside `cn()`: `tailwind-merge` does 
 
 ### 2.10 Motion
 
-- Tokens come from Design-Kit (`app/styles/motion.css`): durations `--sw-dur-fast` 120ms (press, hover,
+- Tokens come from the Design System (`app/styles/motion.css`): durations `--sw-dur-fast` 120ms (press, hover,
   exit), `--sw-dur-base` 180ms (overlays, indicators), `--sw-dur-slow` 240ms (route settle); curves
   `--sw-ease-standard`, `--sw-ease-enter` (arrivals), `--sw-ease-exit` (departures); distances
   `--sw-enter-y`, `--sw-pop-scale`, `--sw-pop-offset`, `--sw-slide-x`. `ease-yy` is an alias of
   `--sw-ease-standard`; Tailwind has `ease-standard`, `ease-enter` and `ease-exit`; use `duration-[var(--sw-dur-base)]` for durations.
 - `.sw-kiosk` and `.sw-tv` zero the distances (fade only).
-- **No translate, scale or shadow on hover.** Buttons change colour only; the one exception is the press
-  (`:active`) scale to `--sw-pop-scale`.
+- **No translate, scale or shadow on hover.** Buttons change colour only; the exceptions are the press
+  (`:active`) scale to `--sw-pop-scale` and the Space Works mark opening (below).
 - Content is visible by default; scroll reveals only enhance.
 - `prefers-reduced-motion: reduce` zeroes durations and distances (the tokens do it); looping loaders
-  (`sw-skeleton`, `sw-progress-bar`) stop and show a static state.
+  (the box loader, `sw-progress-bar`) stop and show a static state (the still, open logo).
 - Vocabulary (`app/styles/motion-utilities.css`; every value is a token, never a literal):
 
 | Interaction | Class / mechanism | Timing |
@@ -218,14 +242,25 @@ Prefer `rounded-md` over `rounded-control` inside `cn()`: `tailwind-merge` does 
 | Empty states, loaded drawer content, skeleton frames | `sw-fade-in` / `sw-rise-in` | base / slow |
 | Tabs | underline scales in from the centre | base |
 | Buttons, checkbox, switch, radio | colour transitions; press scale; tick fades in | fast |
-| Loading | `Skeleton` shimmer (`sw-shimmer`); layouts in `components/ui/skeletons.tsx`; top `RouteProgress` bar after 150ms | looping, static when reduced |
+| Page, panel, Suspense loading | `LogoLoader` (`components/brand/LogoLoader.tsx`): the box opens, holds, folds shut and repeats, 72px, centred, with a status label | 4400ms loop, still when reduced |
+| Busy button, row, field | `BoxSpinner` (20px, polite status) or `BoxArt` (decorative, beside text that already says "Saving"); `mono` in filled buttons follows the text colour. `Button loading` does this and sets `aria-busy` | same loop |
+| Skeleton layouts | `components/ui/skeletons.tsx`: static shapes (no shimmer) plus the box loader over the content block | same loop |
+| Navigation | top `RouteProgress` bar after 150ms (segments without `loading.tsx`) | looping, static when reduced |
+| Space Works mark | `LogoBoxOverlay`, built into `SpaceWorksLogo`: on pointer hover (never touch) or keyboard focus-visible of the mark or its link the box folds shut and opens back once; the master image hides the symbol column meanwhile, so nothing shifts. Tenant logos never animate; the app-icon tile stays still | 2200ms once (fold 600 + open 1600), never when reduced |
 
 - Entrance animations use fill-mode `backwards` so they never pin a `transform` (drag-and-drop writes
   its own); exits use `forwards`. Radix keeps content mounted while the `data-[state=closed]` animation runs.
 - Every route segment that awaits data has a `loading.tsx` built from the shared skeletons
   (`PageSkeleton`, `ListSkeleton`, `CardsSkeleton`, `BoardSkeleton`, `DetailSkeleton`, `ChatSkeleton`).
-- Colour-mode switch (`components/providers.tsx`): the new mode grows from the toggle as a soft circle
-  (View Transitions); without them colours cross-fade; reduced motion switches instantly.
+- Colour-mode switch (Design System `motion/theme-reveal`): `components/providers.tsx` commits the mode through
+  `lib/themeTransition.ts`; the new mode grows from the toggle as a soft-edged circle over 720ms
+  (`cubic-bezier(0.45, 0, 0.2, 1)`, View Transitions, CSS in the generated `app/styles/theme-reveal.css`); without
+  View Transitions every colour cross-fades for 420ms; reduced motion switches instantly; if the animation API
+  throws the mode still changes. The `theme-color` meta follows the chosen mode (Warm Cream / black). This is a
+  page-level moment, deliberately longer than the 240ms interaction ceiling, and never blocks input.
+- Loader artwork: `app/styles/box-open.css` (generated) colours it from the `loader` tokens (`--sw-loader-under`,
+  `-spark`, `-seam`) and shows the full-colour (`.lt`) or reversed (`.dk`) drawing for the current mode, dark band
+  or OS fallback; `.g-dark` / `.g-light` force a ground for a mark on a surface that never changes.
 - Restart-safe sequences: React runs effects twice in development. An imperative `animate()` sequence
   must check it is still the current run after each `await` (see `AGENTS.md`).
 
@@ -249,6 +284,7 @@ rotation, effects or re-typed wordmarks). Brand components live in `components/b
 | Deep Ink or Maker Teal (dark mode, dark bands) | Reversed cream (`*-reversed.svg`) |
 
 - Clear space: ¼ of the symbol height on every side.
+- Hover and keyboard focus open the box once (§2.10); every placement goes through `SpaceWorksLogo`.
 - Minimum sizes: symbol ≥ 48px; primary lockup ≥ 180px wide. Favicon and app icon are the only
   exceptions (they use `app-icon.svg`, rasterised).
 - Placements: workspace sidebar stacked lockup at 180px; mobile top bar symbol at 48px with 12px clear space; auth brand panel stacked lockup 240–320px; social card cream
@@ -296,8 +332,8 @@ shadow; colour changes only. Focus uses the global 2px ring with a 2px offset.
 | `dangerQuiet` | `text-danger-fg` | underline | Revoke, Turn off station |
 | `inverse` | `bg-on-inverse text-inverse` | `bg-subtle` | On dark bands |
 
-**Disabled** is explicit, never opacity: `bg-surface text-ink-muted border-line`. Loading keeps the
-width and swaps in a spinner. Destructive actions are never `primary`; triggers end with "…" and open
+**Disabled** is explicit, never opacity: `bg-surface text-ink-muted border-line`. Loading swaps in the
+mono box loader beside the loading label and sets `aria-busy`. Destructive actions are never `primary`; triggers end with "…" and open
 a dialog.
 
 ### 4.2 Text input / textarea / select
@@ -444,11 +480,13 @@ One primitive, `components/ui/collapsible-section.tsx` (`CollapseToggle`, `Colla
 
 ## 8. Dark mode
 
-- A full theme built from the brand's reversed pairings: Deep Ink ground, teal-lit panels, cream text.
-  **No black.**
+- One solid-black neutral family (Design System 0.12.0, decision 316): `#000` page, layers stepping up to
+  `#0B0B0B`, `#141414`, `#1C1C1C`, cream text, no green or teal tint in any surface. Teal, Citron and orange are
+  accents only; teal text and marks use the lifted `accent-ink` (`#80B1A6`). Browser chrome is black.
 - Primary stays Maker Teal with cream labels. Focus becomes Citron.
 - Status pills switch from solid pastels to soft fills with the brand colour as the word.
-- Overlays keep the same Deep Ink shadow; rely on hairlines and panel steps for structure.
+- Overlays use the black scrim and shadow; rely on hairlines and panel steps for structure.
+- Charts switch to the brighter dark series (§2.5); the box loader shows the reversed artwork.
 - QR codes (MFA setup) stay on a light plate.
 - The mode is `data-color-mode` on `<html>` (set from the cookie on the server, so there is no flash),
   or follows the system when unset. `.yy-dark-band` forces dark tokens on one band.
@@ -462,7 +500,7 @@ security invariants (CSP nonce, tenant isolation). Don't add external scripts, f
 
 ### 9.1 One source of truth for tokens
 
-1. `app/styles/palette.css` is generated by `npm run tokens:sync` from the Design-Kit submodule (never edit it by hand) and pins every canonical sRGB triplet (including `scrim`, which feeds `--yy-overlay`) (with a `--sw-color-*` prefix to avoid Tailwind collisions). `app/styles/tokens.css` adapts them to the stable `--yy-*` names. It declares every token as `--yy-*` (plus raw `--sw-*` brand colours). Light
+1. `app/styles/palette.css` is generated by `npm run tokens:sync` from the Design System submodule (never edit it by hand) and pins every canonical sRGB triplet (including `scrim`, which feeds `--yy-overlay`) (with a `--sw-color-*` prefix to avoid Tailwind collisions). `app/styles/tokens.css` adapts them to the stable `--yy-*` names. It declares every token as `--yy-*` (plus raw `--sw-*` brand colours). Light
    values go under `:root`. Dark values go under `:root[data-color-mode="dark"], .yy-dark-band` **and**
    the `@media (prefers-color-scheme: dark) { :root:not([data-color-mode]) }` mirror. Keep all three in
    sync.
@@ -491,7 +529,7 @@ emoji in chrome; the orange button in the app; colour-only status.
 
 ---
 
-*Version 1.0 · 19 Oct 2026 · Space Works Workspace. Brand values from SpaceWorks-Labs/SpaceWorks-Design.*
+*Version 1.1 · 13 Nov 2026 · Space Works Workspace. Brand values from SpaceWorks-Labs/SpaceWorks-Design-System 0.12.0.*
 
 
 ## 10. Fidelity checks and source priority

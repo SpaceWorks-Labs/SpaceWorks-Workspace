@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-11-13
+
+Adopts the Space Works Design System 0.12.0 (the renamed Design-Kit) and takes every dependency update within its current range. No migrations and no new settings.
+
+### Changed
+
+- The design submodule follows its upstream rename to [SpaceWorks-Design-System](https://github.com/SpaceWorks-Labs/SpaceWorks-Design-System) (0.12.0); the path stays `design-kit/`. Run `git submodule sync design-kit` in existing checkouts.
+- One loader everywhere: page and Suspense loading states, busy buttons, chat uploads, older-message loading and assistant tool runs show the Space Works box opening (`LogoLoader`, `BoxSpinner`), still under reduced motion. Skeleton layouts are static shapes with the box loader instead of a shimmer.
+- The Space Works logo opens its box once on hover and keyboard focus (never on touch or with reduced motion).
+- Charts (analytics, admin dashboard, finance, cycles, social, services, SEO, app reviews) use the Design System chart series colours, which are brighter in dark mode; a series keeps its colour when sorted or filtered.
+- The light/dark switch reveal runs 720 ms with a 420 ms cross-fade fallback, as in the Design System theme reveal, and the browser chrome colour follows the chosen mode (black in dark).
+- `npm run tokens:sync` also generates the chart and loader tokens, the box-open loader CSS and artwork, and the theme reveal CSS.
+- Dependencies updated within their ranges, including Next.js 16.4.6, Tailwind CSS 4.3.5, Tiptap 3.33, Playwright 1.65 and the AWS S3 client; `npm audit` reports no production vulnerabilities.
+- The public landing page describes 0.11.0.
+
+### Removed
+
+- The three-dot `BrandLoader`, the Patch walking page loader and the ring `Spinner`.
+
 ## [0.10.0] - 2026-11-12
 
 A large release: organisations with super-admin approval, limits and module switches; more sign-in options; payments, email campaigns, bank import, statements and accounting exports; makerspace stock and operations; connected analytics; and a board and task upgrade. Run the migrations before starting the new version. Every new feature is off until an admin turns it on. Operators: read [Upgrading to 0.10.0](docs/production-operations.md#upgrading-to-0100) first.

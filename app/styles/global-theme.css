@@ -11,7 +11,7 @@
 }
 
 /*
- * Space Works type (Design-Kit, docs/ui-brand-spec.md D): Outfit 400-700 for
+ * Space Works type (Design System, docs/ui-brand-spec.md D): Outfit 400-700 for
  * body and UI, Gilroy ExtraBold 800 for display headings (Light 300 for light
  * display text; the only free Gilroy weights), Unbounded 500-600 for one short
  * accent phrase per public layout (`.font-accent`). Self-hosted from
@@ -124,6 +124,15 @@
   --color-on-accent: var(--yy-on-accent);
   --color-accent-text: var(--yy-accent-text);
 
+  /* Chart series (Design System `chart`, synced into palette.css): light uses the
+     darker ink shades, dark the brighter fills. Order: accent, info, success, warn,
+     danger (components/ui/chart-series.ts). Charts only, never UI chrome. */
+  --color-chart-accent: rgb(var(--sw-chart-accent));
+  --color-chart-info: rgb(var(--sw-chart-info));
+  --color-chart-success: rgb(var(--sw-chart-success));
+  --color-chart-warn: rgb(var(--sw-chart-warn));
+  --color-chart-danger: rgb(var(--sw-chart-danger));
+
   --font-display: "Gilroy", ui-sans-serif, system-ui, sans-serif;
   --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
   --font-accent: "Unbounded", "Outfit", ui-sans-serif, sans-serif;
@@ -148,7 +157,7 @@
   --breakpoint-md: 960px;
   --breakpoint-lg: 1200px;
 
-  /* Motion tokens come from Design-Kit (app/styles/motion.css). */
+  /* Motion tokens come from the Design System (app/styles/motion.css). */
   --ease-yy: var(--sw-ease-standard);
   --ease-standard: var(--sw-ease-standard);
   --ease-enter: var(--sw-ease-enter);

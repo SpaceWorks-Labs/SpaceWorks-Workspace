@@ -10,7 +10,7 @@ import type { RunAction } from "../useTaskRunner";
 import { BoardColumn } from "./BoardColumn";
 import { boardCollision, useBoardDnd } from "./useBoardDnd";
 
-/** A Design-Kit duration token in ms (the drop animation runs in JS, not CSS). */
+/** A Design System duration token in ms (the drop animation runs in JS, not CSS). */
 const tokenMs = (name: string) => Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue(name)) || 0;
 
 export type LaneProps = {

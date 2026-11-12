@@ -2,5 +2,7 @@
 @import "./styles/tokens.css";
 @import "./styles/motion.css";
 @import "./styles/motion-utilities.css";
+@import "./styles/box-open.css";
+@import "./styles/theme-reveal.css";
 @import "./styles/global-theme.css";
 @import "./styles/global-elements.css";

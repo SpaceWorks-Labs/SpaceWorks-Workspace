@@ -5,7 +5,7 @@
 </picture>
 
 <p align="center">
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-0.10.0-006E63?style=flat-square&amp;labelColor=142C2A" alt="Version 0.10.0" /></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-0.11.0-006E63?style=flat-square&amp;labelColor=142C2A" alt="Version 0.11.0" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/licence-AGPL--3.0--or--later-006E63?style=flat-square&amp;labelColor=142C2A" alt="Licence: AGPL-3.0-or-later" /></a>
   <a href="docs/DEVELOPMENT.md"><img src="https://img.shields.io/badge/Node-%E2%89%A522.18-DFFF8F?style=flat-square&amp;labelColor=142C2A" alt="Node 22.18 or newer" /></a>
   <a href="https://nextjs.org"><img src="https://img.shields.io/badge/Next.js-16-B5CDFF?style=flat-square&amp;labelColor=142C2A" alt="Next.js 16" /></a>
@@ -196,11 +196,12 @@ identities, export, the SDK, keychain storage and secret scanning.
 
 ## Design system
 
-The look comes from [Design-Kit](https://github.com/SpaceWorks-Labs/Design-Kit),
+The look comes from the [Space Works Design System](https://github.com/SpaceWorks-Labs/SpaceWorks-Design-System)
+(0.12.0, browse it at [spaceworks-labs.github.io/SpaceWorks-Design-System](https://spaceworks-labs.github.io/SpaceWorks-Design-System/)),
 included as the shallow git submodule `design-kit/`. `npm run tokens:sync`
-regenerates `app/styles/palette.css`, `app/styles/motion.css` and the token
-fixture from it; the generated files are committed, so builds never need the
-submodule. Type is Outfit for body and UI, Gilroy ExtraBold for display and one
+regenerates the palette (colour, chart and loader tokens), motion tokens, the
+box-open loader, the theme reveal and the token fixture from it; the generated
+files are committed, so builds never need the submodule. Type is Outfit for body and UI, Gilroy ExtraBold for display and one
 Unbounded accent phrase. Light mode (Warm Cream) is the default; dark mode is solid black and one click away.
 
 | | Colour | Used for |

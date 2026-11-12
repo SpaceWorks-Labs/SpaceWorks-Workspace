@@ -2,6 +2,7 @@ import { EmptyState, Chip } from "@/components/ui/display";
 import { ChartDataTable } from "./ChartDataTable";
 import type { ChartKind, Point, Unit } from "@/lib/analytics/types";
 import { displayValue } from "@/lib/analytics/metrics";
+import { chartSeries } from "@/components/ui/chart-series";
 export function Chart({
   title,
   points,
@@ -48,7 +49,6 @@ export function Chart({
     .join(" ");
   const radial = kind === "donut",
     total = display.reduce((s, p) => s + Math.max(0, p.value), 0);
-  const seriesFills = ["bg-accent-text", "bg-info-solid", "bg-success-solid", "bg-warning-solid"];
   let offset = 0;
   return (
     <figure className="min-w-0" aria-label={title}>
@@ -72,7 +72,7 @@ export function Chart({
             <>
               <path
                 d={line}
-                className="stroke-accent-text"
+                className="stroke-chart-accent"
                 strokeWidth={compact ? 3 : 2}
                 fill="none"
               />
@@ -82,7 +82,7 @@ export function Chart({
                     cx={x(i)}
                     cy={y(p.value)}
                     r={compact ? 5 : 7}
-                    className="fill-accent-text stroke-panel"
+                    className="fill-chart-accent stroke-panel"
                     strokeWidth="2"
                   >
                     <title>{`${p.label}: ${fmt(p.value)}`}</title>
@@ -91,7 +91,7 @@ export function Chart({
               ))}
             </>
           ) : radial ? (
-            display.map((p, i) => {
+            display.map((p) => {
               const length =
                   total > 0 ? (Math.max(0, p.value) / total) * 100 : 0,
                 at = offset;
@@ -108,14 +108,7 @@ export function Chart({
                     strokeDasharray={`${length} ${100 - length}`}
                     strokeDashoffset={-at}
                     transform={`rotate(-90 ${width / 2} ${height / 2})`}
-                    className={
-                      [
-                        "stroke-accent-text",
-                        "stroke-info-solid",
-                        "stroke-success-solid",
-                        "stroke-warning-solid",
-                      ][i % 4]
-                    }
+                    className={chartSeries(p.label).stroke}
                   >
                     <title>{`${p.label}: ${fmt(p.value)}`}</title>
                   </circle>
@@ -141,7 +134,7 @@ export function Chart({
                     width={Math.max(2, w)}
                     height={Math.max(2, row - 5)}
                     rx="3"
-                    className="fill-accent-text"
+                    className="fill-chart-accent"
                   >
                     <title>{`${p.label}: ${fmt(p.value)}`}</title>
                   </rect>
@@ -159,10 +152,10 @@ export function Chart({
                   rx="5"
                   className={
                     p.value >= 90
-                      ? "fill-success-solid"
+                      ? "fill-chart-success"
                       : p.value >= 50
-                        ? "fill-warning-solid"
-                        : "fill-danger-solid"
+                        ? "fill-chart-warn"
+                        : "fill-chart-danger"
                   }
                 >
                   <title>{`${p.label}: ${fmt(p.value)}`}</title>
@@ -192,7 +185,7 @@ export function Chart({
                     height={bh}
                     rx="3"
                     className={
-                      p.value < 0 ? "fill-danger-solid" : "fill-accent-text"
+                      p.value < 0 ? "fill-chart-danger" : "fill-chart-accent"
                     }
                   >
                     <title>{`${p.label}: ${fmt(p.value)}`}</title>
@@ -215,9 +208,9 @@ export function Chart({
       )}
       {radial && display.length ? (
         <figcaption className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-body-sm">
-          {display.map((p, i) => (
+          {display.map((p) => (
             <span key={p.label} className="inline-flex items-center gap-2">
-              <span aria-hidden className={`size-3 shrink-0 rounded-full ${seriesFills[i % 4]}`} />
+              <span aria-hidden className={`size-3 shrink-0 rounded-full ${chartSeries(p.label).bg}`} />
               {p.label}: {fmt(p.value)}
             </span>
           ))}

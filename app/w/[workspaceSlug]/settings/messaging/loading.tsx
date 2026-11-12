@@ -1,5 +1,5 @@
-import { BrandPageLoader } from "@/components/brand/BrandLoader";
+import { LogoLoader } from "@/components/brand/LogoLoader";
 
 export default function Loading() {
-  return <BrandPageLoader label="Loading workspace settings" />;
+  return <LogoLoader showLabel label="Loading workspace settings" />;
 }

@@ -58,7 +58,7 @@ Tenancy is strict: `Workspace` is the tenant boundary.
 | `Dockerfile`, `compose.production.yml`, `docker/vps/`, `install.sh` | Container image and the single-VPS stack (see `docs/DEPLOYMENT_VPS.md`) |
 | `charts/`, `render.yaml`, `.do/`, `deploy/cloudflare-cron/` | Kubernetes, Render, DigitalOcean and the cron Worker (`docs/DEPLOYMENT_*.md`) |
 | `tests/unit`, `tests/integration`, `tests/e2e` | Vitest unit, PostgreSQL integration (`*.db.test.ts`), Playwright |
-| `design-kit/` | Git submodule (SpaceWorks-Labs/Design-Kit): source of truth for tokens and fonts; `npm run tokens:sync` regenerates `app/styles/palette.css`, `motion.css`, the token fixture and `public/brand/fonts`. Never needed by builds or CI |
+| `design-kit/` | Git submodule (SpaceWorks-Labs/SpaceWorks-Design-System, 0.12.0): source of truth for tokens, motion and fonts; `npm run tokens:sync` regenerates `app/styles/palette.css`, `motion.css`, `box-open.css`, `theme-reveal.css`, `components/brand/boxOpenMarkup.ts`, the token fixture and `public/brand/fonts`. Never needed by builds or CI |
 | `docs/` | `DESIGN.md` (brand and UI), `ARCHITECTURE.md` (services and flows), `ROADMAP-BUILD.md` (area ownership for parallel builds) |
 
 `prisma/schema.prisma` is authoritative for the data model. It already holds
@@ -214,7 +214,8 @@ unclaim). Assignment changes use `assignTask` / `unassignTask` / `claimTask` /
 `principalToActor` (`lib/assistant/tools/tasks/actor.ts`) so history records
 the source.
 
-Design tokens: never edit `app/styles/palette.css`, `motion.css` or
+Design tokens: never edit `app/styles/palette.css`, `motion.css`, `box-open.css`,
+`theme-reveal.css`, `components/brand/boxOpenMarkup.ts` or
 `tests/fixtures/design-tokens.json` by hand; update the `design-kit` submodule
 (`git submodule update --init --depth 1 design-kit`) and run
 `npm run tokens:sync`.

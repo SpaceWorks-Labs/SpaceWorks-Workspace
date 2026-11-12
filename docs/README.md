@@ -11,7 +11,7 @@ configuration and recovery guides before inviting members.
 | Guide | Purpose |
 | --- | --- |
 | [Architecture](ARCHITECTURE.md) | Services, tenancy and data flows |
-| [Design](DESIGN.md) | Brand, Design-Kit tokens, accessible controls, voice and layout |
+| [Design](DESIGN.md) | Brand, Design System tokens, accessible controls, voice and layout |
 | [Roles and access](ROLES.md) | What the super admin, owners, admins, members and guests see and do |
 | [Development](DEVELOPMENT.md) | Local installation and daily commands |
 | [Configuration](CONFIGURATION.md) | Environment, instance settings and secret reference |

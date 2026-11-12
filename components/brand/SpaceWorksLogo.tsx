@@ -1,4 +1,6 @@
+import type { CSSProperties } from "react";
 import { cn } from "@/lib/cn";
+import { LogoBoxOverlay, SYMBOL_BOX } from "./LogoBoxOverlay";
 
 export type SpaceWorksLogoVariant = "symbol" | "lockup-horizontal" | "lockup-stacked" | "app-icon";
 export type SpaceWorksLogoTone = "full" | "reversed" | "ink";
@@ -63,10 +65,15 @@ export type SpaceWorksLogoProps = {
 /**
  * The Space Works logo, drawn from the unaltered master SVGs. Use full colour
  * on cream/light surfaces, ink on white, and reversed on Deep Ink or teal.
+ * Every placement opens the box on hover and keyboard focus (`LogoBoxOverlay`,
+ * Design System 0.12.0); the app-icon tile stays still.
  */
 export function SpaceWorksLogo({ variant = "lockup-horizontal", tone = "full", adaptive = true, height, clearSpace = true, label = "Space Works", className }: SpaceWorksLogoProps) {
   const size = spaceWorksLogoSize(variant, height);
   const twin = adaptive && tone !== "reversed" && variant !== "app-icon";
+  const offset = clearSpace ? Math.round(size.height / 4) : 0;
+  const symbol = variant === "app-icon" ? null : SYMBOL_BOX[variant];
+  const symbolWidth = symbol ? (size.width * symbol.w) / symbol.vw : 0;
   const image = (src: string, display: string) => (
     // eslint-disable-next-line @next/next/no-img-element -- static SVG masters from /public
     <img src={src} alt="" width={size.width} height={size.height} className={cn("block max-w-none shrink-0", display)} draggable={false} />
@@ -77,11 +84,19 @@ export function SpaceWorksLogo({ variant = "lockup-horizontal", tone = "full", a
       aria-label={label ?? undefined}
       aria-hidden={label ? undefined : true}
       data-logo={variant}
-      className={cn("inline-flex shrink-0", className)}
-      style={clearSpace ? { padding: Math.round(size.height / 4) } : undefined}
+      className={cn("relative inline-flex shrink-0", className)}
+      style={{ padding: offset || undefined, "--sw-logo-sym": symbol ? `${symbolWidth}px` : undefined } as CSSProperties}
     >
       {image(spaceWorksLogoSrc(variant, tone), twin ? SHOW_IN_LIGHT : "")}
       {twin ? image(spaceWorksLogoSrc(variant, "reversed"), SHOW_IN_DARK) : null}
+      {symbol ? (
+        <LogoBoxOverlay
+          width={symbolWidth}
+          height={(size.height * symbol.h) / symbol.vh}
+          offset={offset}
+          ground={tone === "reversed" ? "dark" : adaptive ? undefined : "light"}
+        />
+      ) : null}
     </span>
   );
 }

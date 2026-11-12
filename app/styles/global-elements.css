@@ -180,57 +180,23 @@
   .yy-prose blockquote { border-left: 3px solid var(--yy-border-strong); padding-left: 1em; color: var(--yy-text-muted); }
 }
 
-/* Colour-mode switch (components/providers.tsx). The new mode is revealed as a
-   soft-edged circle growing from the toggle; the old snapshot stays still. */
-@property --yy-reveal {
-  syntax: "<length>";
-  inherits: true;
-  initial-value: 0px;
-}
-
-.yy-theme-reveal::view-transition-old(root),
-.yy-theme-reveal::view-transition-new(root),
-.yy-theme-reveal-soft::view-transition-old(root),
-.yy-theme-reveal-soft::view-transition-new(root) {
-  animation: none;
-  mix-blend-mode: normal;
-}
-
-.yy-theme-reveal::view-transition-new(root),
-.yy-theme-reveal-soft::view-transition-new(root) {
-  z-index: 1;
-}
-
-.yy-theme-reveal-soft::view-transition-new(root) {
-  -webkit-mask-image: radial-gradient(circle at var(--yy-reveal-x) var(--yy-reveal-y), var(--sw-ink) calc(var(--yy-reveal) - 160px), transparent var(--yy-reveal));
-  mask-image: radial-gradient(circle at var(--yy-reveal-x) var(--yy-reveal-y), var(--sw-ink) calc(var(--yy-reveal) - 160px), transparent var(--yy-reveal));
-}
-
-/* Fallback when View Transitions aren't available: a gentle colour cross-fade. */
-.yy-theme-fade,
-.yy-theme-fade *,
-.yy-theme-fade *::before,
-.yy-theme-fade *::after {
-  transition-property: background-color, border-color, color, fill, stroke, box-shadow !important;
-  transition-duration: var(--sw-dur-fast) !important;
-  transition-timing-function: var(--sw-ease-standard) !important;
-}
-
 .yy-mode-icon {
   transition: transform var(--sw-dur-base) var(--sw-ease-enter), opacity var(--sw-dur-fast) var(--sw-ease-enter);
 }
 
-/* BrandLoader (components/brand/BrandLoader.tsx): the three dots hop one after
-   the other; with reduced motion they rest on the baseline. */
-@keyframes yy-dot-jump {
-  0%, 45%, 100% { transform: translateY(0); }
-  20% { transform: translateY(-80%); }
+/* Interactive elements change colour only. The one exception is the Space Works
+   mark (components/brand/LogoBoxOverlay.tsx): on hover or keyboard focus its box
+   folds shut and opens back over the symbol, while the master image hides that
+   column (--sw-logo-sym is the symbol width). Never on touch or reduced motion. */
+.sw-logo-box { display: block; position: absolute; pointer-events: none; }
+.sw-logo-box > .sw-box { display: block; width: 100%; height: 100%; }
+[data-logo][data-logo-playing] img {
+  -webkit-mask-image: linear-gradient(to right, transparent var(--sw-logo-sym), black var(--sw-logo-sym));
+  mask-image: linear-gradient(to right, transparent var(--sw-logo-sym), black var(--sw-logo-sym));
 }
-.yy-dot-loader-jump {
-  animation: yy-dot-jump 1.2s cubic-bezier(0.45, 0, 0.3, 1) infinite;
+@media (prefers-reduced-motion: reduce) {
+  .sw-logo-box { display: none; }
 }
-
-/* Interactive elements change colour only; the artwork stays still. */
 
 @layer base {
   input[type="search"] { background-color: var(--yy-sidebar); border-color: transparent; }

@@ -6,7 +6,8 @@ import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import tokens from "../fixtures/design-tokens.json";
 import { Patch } from "@/components/brand/Patch";
-import { BrandPageLoader } from "@/components/brand/BrandLoader";
+import { LogoLoader } from "@/components/brand/LogoLoader";
+import { BoxSpinner } from "@/components/brand/BoxSpinner";
 import { SpaceWorksLogo, spaceWorksLogoSize, spaceWorksLogoSrc } from "@/components/brand/SpaceWorksLogo";
 import { Button, IconButton } from "@/components/ui/button";
 import { Chip, EmptyState, PageHeader } from "@/components/ui/display";
@@ -63,6 +64,12 @@ describe("design token contract", () => {
     expect(modes[1]).toEqual(modes[2]);
     expect(adapters).toContain("--yy-shadow-raised: none;");
   });
+  it.each(["light", "dark"] as const)("keeps every %s chart series at 3:1 on the page and panels", mode => {
+    expect(Object.keys(tokens.chart[mode])).toEqual(tokens.chart.order);
+    for (const series of tokens.chart.order) for (const bg of ["bg", "panel", "surface"] as const) {
+      expect(contrast(tokens.chart[mode][series as keyof typeof tokens.chart.light], tokens[mode][bg]), `${mode} ${series} on ${bg}`).toBeGreaterThanOrEqual(3);
+    }
+  });
   it.each(["light", "dark"] as const)("keeps text and action labels readable in %s", mode => {
     const p = tokens[mode];
     expect(contrast(p["accent-ink"], p.line), `${mode} progress mark on track`).toBeGreaterThanOrEqual(3);
@@ -112,10 +119,16 @@ describe("brand and accessible primitives", () => {
     expect(success).toContain("padding:28px");
     const assetNames = [...success.matchAll(/(?:src|srcSet)="([^\"]+)"/g)].map(m => m[1]);
     for (const asset of assetNames) expect(existsSync(path.join(process.cwd(), "public", asset))).toBe(true);
-    const loading = render(createElement(BrandPageLoader, { label: "Loading projects" }));
-    expect(loading).toContain('data-patch="walk"');
+  });
+  it("uses the box-open loader for every loading state and no ring spinners", () => {
+    const loading = render(createElement(LogoLoader, { label: "Loading projects", showLabel: true }));
+    expect(loading).toContain('role="status"');
+    expect(loading).toContain("sw-box loop");
     expect(loading).toContain("Loading projects</p>");
-    for (const file of files.filter(f => f.endsWith("/loading.tsx"))) expect(read(file), file).toMatch(/BrandPageLoader|@\/components\/ui\/skeletons/);
+    expect(render(createElement(BoxSpinner, { label: "Uploading", mono: true }))).toMatch(/aria-label="Uploading".*"sw-box loop [^"]*mono"/);
+    expect(render(createElement(Button, { loading: true, loadingLabel: "Saving" }, "Save"))).toMatch(/aria-busy="true".*"sw-box loop [^"]*mono".*Saving/);
+    for (const file of files.filter(f => f.endsWith("/loading.tsx"))) expect(read(file), file).toMatch(/LogoLoader|@\/components\/ui\/skeletons/);
+    for (const file of files.filter(f => f.endsWith(".tsx"))) expect(read(file), file).not.toMatch(/\banimate-spin\b|components\/ui\/spinner|BrandLoader/);
   });
   it("names icon buttons and keeps all sizes at least 44px", () => {
     const html = render(createElement(IconButton, { label: "Close", size: "sm" }, "×"));

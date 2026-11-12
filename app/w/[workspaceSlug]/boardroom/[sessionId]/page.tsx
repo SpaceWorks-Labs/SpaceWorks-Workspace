@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { Card, CardHeader, Callout, PageHeader } from "@/components/ui/display";
-import { Spinner } from "@/components/ui/spinner";
+import { BoxArt } from "@/components/brand/BoxSpinner";
 import { Markdown } from "@/components/assistant/Markdown";
 import { BoardroomLive } from "@/components/boardroom/BoardroomLive";
 import { BoardroomSessionActions } from "@/components/boardroom/BoardroomSessionActions";
@@ -95,7 +95,7 @@ export default async function BoardroomSessionPage({ params }: PageProps<"/w/[wo
         })}
         {speaking ? (
           <p className="flex items-center gap-2 text-body-ui text-ink-muted" role="status">
-            <Spinner className="size-4" /> {speaking} is thinking
+            <BoxArt size={16} /> {speaking} is thinking
           </p>
         ) : seatTurns.length === 0 && session.status === "DRAFT" ? (
           <p className="text-body-ui text-ink-muted">The panel hasn&apos;t started yet.</p>

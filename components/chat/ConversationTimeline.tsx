@@ -4,7 +4,7 @@ import { Fragment } from "react";
 import type { ChannelInfo, MessageDTO } from "@/lib/chat/types";
 import { Button } from "@/components/ui/button";
 import { Chip } from "@/components/ui/display";
-import { Spinner } from "@/components/ui/spinner";
+import { BoxSpinner } from "@/components/brand/BoxSpinner";
 import { Composer, type ComposerSubmit } from "./Composer";
 import { MessageItem } from "./MessageItem";
 import type { useMessageActions } from "./useMessageActions";
@@ -38,7 +38,7 @@ export function ConversationTimeline({ info, timeZone, timeline, actions, saveEd
       <div ref={topSentinel} aria-hidden className="h-px" />
       {hasOlder ? (
         <div className="flex justify-center py-3">
-          {loading === "older" ? <Spinner className="size-5" label="Loading older messages" /> : (
+          {loading === "older" ? <BoxSpinner label="Loading older messages" /> : (
             <Button size="sm" variant="quiet" onClick={() => void loadOlder()}>
               Load older messages
             </Button>
