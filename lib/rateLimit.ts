@@ -11,6 +11,7 @@ import Redis from "ioredis";
 export type Bucket =
   | "global"
   | "frontendAction"
+  | "frontendView"
   | "action"
   | "bulk"
   | "auth"
@@ -42,6 +43,7 @@ export type Bucket =
 const limits: Record<Bucket, { max: number; windowMs: number; }> = {
   global: { max: 600, windowMs: 60_000 },
   frontendAction: { max: 240, windowMs: 60_000 },
+  frontendView: { max: 3000, windowMs: 60_000 },
   action: { max: 240, windowMs: 60_000 },
   // Bulk edits spend one unit per task (lib/tasks/bulkSchemas MAX_BULK = 50 per call).
   bulk: { max: 200, windowMs: 60_000 },
