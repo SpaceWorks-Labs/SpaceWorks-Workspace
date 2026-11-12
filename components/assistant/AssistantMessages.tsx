@@ -6,7 +6,7 @@ import { CircleCheck, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Callout, EmptyState } from "@/components/ui/display";
 import { Menu, MenuContent, MenuItem, MenuTrigger } from "@/components/ui/menu";
-import { Spinner } from "@/components/ui/spinner";
+import { BoxArt } from "@/components/brand/BoxSpinner";
 import { Markdown } from "@/components/assistant/Markdown";
 import { cn } from "@/lib/cn";
 import type { PendingCall } from "@/lib/assistant/chat";
@@ -79,7 +79,7 @@ export function AssistantMessages({
                 </div>
               ) : (
                 <div className={cn("inline-flex max-w-full items-center gap-2 rounded-md border px-3 py-2 text-caption", item.error ? "border-danger-border text-danger-fg" : "border-line bg-surface text-ink-secondary")}>
-                  {"running" in item && item.running ? <Spinner className="size-3.5" /> : item.error ? <TriangleAlert aria-hidden className="size-3.5" /> : <CircleCheck aria-hidden className="size-3.5 text-accent-text" />}
+                  {"running" in item && item.running ? <BoxArt size={14} /> : item.error ? <TriangleAlert aria-hidden className="size-3.5" /> : <CircleCheck aria-hidden className="size-3.5 text-accent-text" />}
                   <span className="font-semibold text-ink">{item.title}</span>
                   <span className="truncate">{item.summary}</span>
                 </div>
@@ -87,7 +87,7 @@ export function AssistantMessages({
             </li>
           ))}
           {streaming && items.at(-1)?.kind === "user" ? (
-            <li className="flex items-center gap-2 text-caption text-ink-muted"><Spinner className="size-4" /> Thinking</li>
+            <li className="flex items-center gap-2 text-caption text-ink-muted"><BoxArt size={16} /> Thinking</li>
           ) : null}
         </ol>
       )}

@@ -1,12 +1,16 @@
 // Copy for the public landing page. Every claim comes from README.md,
-// CHANGELOG.md [0.10.0], install.sh or docs/; keep it true when they change.
+// CHANGELOG.md, install.sh or docs/; keep it true when they change.
 
 export const REPO_URL = "https://github.com/SpaceWorks-Labs/SpaceWorks-Workspace";
 export const repoFile = (path: string) => `${REPO_URL}/blob/main/${path}`;
 export const INSTALL_COMMAND = "curl -fsSL https://raw.githubusercontent.com/SpaceWorks-Labs/SpaceWorks-Workspace/main/install.sh | bash";
 
 /** The release this landing describes. tests/unit/landing-page.test.ts keeps it in step with package.json. */
-export const RELEASE = { version: "0.10.0", date: "12 Nov 2026" } as const;
+export const RELEASE = {
+  version: "0.11.0",
+  date: "13 Nov 2026",
+  summary: "The Space Works Design System 0.12.0 across the app: one box-opening loader, a soft light and dark reveal, solid-black dark mode and chart colours that read in both modes.",
+} as const;
 
 /** Section links shared by the header and the footer. */
 export const NAV_LINKS = [

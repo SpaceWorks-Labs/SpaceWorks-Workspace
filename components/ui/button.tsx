@@ -1,7 +1,7 @@
 import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { cn } from "@/lib/cn";
-import { Spinner } from "./spinner";
+import { BoxArt } from "@/components/brand/BoxSpinner";
 
 /**
  * Space Works button family (docs/DESIGN.md §4.1):
@@ -117,7 +117,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     <button ref={ref} type={type ?? "button"} className={classes} disabled={disabled || loading} aria-busy={loading || undefined} {...props}>
       {loading ? (
         <>
-          <Spinner className="size-4" />
+          <BoxArt size={16} mono />
           <span>{loadingLabel ?? children}</span>
         </>
       ) : (

@@ -1,4 +1,4 @@
 [submodule "design-kit"]
 	path = design-kit
-	url = https://github.com/SpaceWorks-Labs/Design-Kit.git
+	url = https://github.com/SpaceWorks-Labs/SpaceWorks-Design-System.git
 	shallow = true

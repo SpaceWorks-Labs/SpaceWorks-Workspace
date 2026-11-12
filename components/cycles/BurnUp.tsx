@@ -37,15 +37,15 @@ export function BurnUp({
           fill="none"
           stroke="currentColor"
           strokeWidth="2"
-          strokeDasharray="5 5"
-          className="text-ink-muted"
+          strokeDasharray="8 4"
+          className="text-chart-info"
         />
         <polyline
           points={line("completed")}
           fill="none"
           stroke="currentColor"
           strokeWidth="3"
-          className="text-accent-text"
+          className="text-chart-accent"
         />
       </svg>
       <p className="text-caption text-ink-muted">

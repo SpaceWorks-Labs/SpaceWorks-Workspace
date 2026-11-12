@@ -1,5 +1,5 @@
 /* Motion vocabulary (docs/DESIGN.md §2.10). Every duration, curve and distance
- * comes from the Design-Kit tokens in motion.css, so reduced motion (zeroed
+ * comes from the Design System tokens in motion.css, so reduced motion (zeroed
  * tokens) and kiosk/TV screens (zeroed distances, fade only) need no extra rules.
  * Entrances use fill-mode `backwards` so they never pin a transform afterwards
  * (drag-and-drop writes its own). Exits use `forwards` so nothing flashes back. */
@@ -20,7 +20,6 @@
 @keyframes sw-slide-in-right { from { opacity: 0; transform: translateX(var(--sw-slide-x)); } }
 @keyframes sw-slide-out-right { to { opacity: 0; transform: translateX(var(--sw-slide-x)); } }
 @keyframes sw-lift { from { transform: scale(1); box-shadow: none; } }
-@keyframes sw-shimmer { to { background-position: -200% 0; } }
 @keyframes sw-progress { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
 
 /* Enter-only utilities. `--sw-i` (0-5) staggers siblings by --sw-stagger. */
@@ -60,14 +59,11 @@
 .sw-toast[data-state="open"] { animation: sw-rise-in var(--sw-dur-base) var(--sw-ease-enter) backwards; }
 .sw-toast[data-state="closed"] { animation: sw-fade-out var(--sw-dur-fast) var(--sw-ease-exit) forwards; }
 
-/* Loading indicators are the only looping motion; reduced motion shows them still. */
-.sw-skeleton {
-  background: linear-gradient(90deg, var(--yy-bg-muted) 0%, var(--yy-bg-emphasis) 50%, var(--yy-bg-muted) 100%);
-  background-size: 200% 100%;
-  animation: sw-shimmer var(--sw-shimmer-dur) linear infinite;
-}
+/* Skeletons are static shapes (Design System 0.12.0: no shimmer sweeps); the box
+   loader in the skeleton layouts is the moving cue. Loaders are the only looping
+   motion; reduced motion shows them still. */
+.sw-skeleton { background: var(--yy-bg-muted); }
 .sw-progress-bar { animation: sw-progress var(--sw-shimmer-dur) var(--sw-ease-standard) infinite; }
 @media (prefers-reduced-motion: reduce) {
-  .sw-skeleton { animation: none; background: var(--yy-bg-muted); }
   .sw-progress-bar { animation: none; transform: none; }
 }

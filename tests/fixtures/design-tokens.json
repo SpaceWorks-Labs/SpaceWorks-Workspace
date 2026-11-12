@@ -124,5 +124,40 @@
     "sidebar-hover": "#1C1C1C",
     "sidebar-active": "#006E63",
     "scrim": "#000000"
+  },
+  "chart": {
+    "light": {
+      "accent": "#006E63",
+      "info": "#51697B",
+      "success": "#536D49",
+      "warn": "#696834",
+      "danger": "#B91C1C"
+    },
+    "dark": {
+      "accent": "#80B1A6",
+      "info": "#B5CDFF",
+      "success": "#DFFF8F",
+      "warn": "#FFD447",
+      "danger": "#FCA5A5"
+    },
+    "order": [
+      "accent",
+      "info",
+      "success",
+      "warn",
+      "danger"
+    ]
+  },
+  "loader": {
+    "light": {
+      "under": "#354845",
+      "spark": "#142C2A",
+      "seam": "#142C2A"
+    },
+    "dark": {
+      "under": "#66625D",
+      "spark": "#FFF4E8",
+      "seam": "#000000"
+    }
   }
 }

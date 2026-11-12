@@ -40,10 +40,11 @@ PORT=3290 npm run dev:stack           # web, worker and beat; open http://localh
 to create the first workspace. Add a migration with `npm run db:migrate -- --name <area>`.
 Never commit `.env` or real secrets.
 
-The Design-Kit submodule in `design-kit/` is optional: builds use the generated
-files that are already committed. Only when you change design tokens, run
-`git submodule update --init --depth 1` and then `npm run tokens:sync` to
-regenerate `app/styles/palette.css`, `app/styles/motion.css` and the token fixture.
+The Design System submodule in `design-kit/` (SpaceWorks-Labs/SpaceWorks-Design-System)
+is optional: builds use the generated files that are already committed. Only when you
+change design tokens, run `git submodule update --init --depth 1` and then
+`npm run tokens:sync` to regenerate `app/styles/palette.css`, `motion.css`,
+`box-open.css`, `theme-reveal.css`, `components/brand/boxOpenMarkup.ts` and the token fixture.
 
 ## Before opening a pull request
 

@@ -18,11 +18,12 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-// Browser chrome matches the canvas: Warm Cream in light mode, Deep Ink in dark.
+// Browser chrome matches the canvas: Warm Cream in light mode, black in dark (Design System 0.12.0).
+// An explicit Light/Dark choice repaints these tags (lib/themeTransition.ts syncThemeColorMeta).
 export const viewport: Viewport = {
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#FFF4E8" },
-    { media: "(prefers-color-scheme: dark)", color: "#142C2A" },
+    { media: "(prefers-color-scheme: dark)", color: "#000000" },
   ],
 };
 

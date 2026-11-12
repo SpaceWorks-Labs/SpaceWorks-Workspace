@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createElement } from "react";
 import { Chart } from "@/components/analytics/Chart";
+import { chartSeries } from "@/components/ui/chart-series";
 import tokens from "../fixtures/design-tokens.json";
 import type { ChartKind } from "@/lib/analytics/types";
 describe("analytics accessible SVG chart kit", () => {
@@ -50,25 +51,29 @@ describe("analytics accessible SVG chart kit", () => {
     }));
     for (const word of ["High:", "Medium:", "Low:", "Recorded level"]) expect(html).toContain(word);
     expect(html.match(/<details[^>]*>/)?.[0]).not.toContain("sr-only");
-    expect(html).toContain("fill-success-solid");
-    expect(html).toContain("fill-warning-solid");
-    expect(html).toContain("fill-danger-solid");
+    expect(html).toContain("fill-chart-success");
+    expect(html).toContain("fill-chart-warn");
+    expect(html).toContain("fill-chart-danger");
   });
 
   it.each(["light", "dark"] as const)("uses chart marks with at least 3:1 contrast on the %s panel", (mode) => {
-    const p = tokens[mode];
+    const p = tokens[mode], series = tokens.chart[mode];
     const luminance = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
       .map((v) => v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)
       .reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0);
-    for (const colour of ["accent-ink", "success-ink", "warn-ink", "info-ink", "danger"] as const) {
-      const [a, b] = [luminance(p[colour]), luminance(p.panel)].sort((a, b) => b - a);
+    for (const colour of tokens.chart.order) {
+      const [a, b] = [luminance(series[colour as keyof typeof series]), luminance(p.panel)].sort((a, b) => b - a);
       expect((a + 0.05) / (b + 0.05)).toBeGreaterThanOrEqual(3);
     }
     const html = renderToStaticMarkup(createElement(Chart, {
       title: "Groups", kind: "donut", href: "/records",
       points: [1, 2, 3, 4].map((value) => ({ label: `Group ${value}`, value, base: 0, count: 1 })),
     }));
-    for (const token of ["accent-text", "success-solid", "warning-solid", "info-solid"]) expect(html).toContain(`stroke-${token}`);
+    // Series colours come from the chart tokens, hashed from the label so they survive sorting and filtering.
+    const strokes = [...html.matchAll(/stroke-chart-(\w+)/g)].map((m) => m[1]);
+    expect(strokes).toHaveLength(4);
+    for (const label of ["Group 1", "Group 2", "Group 3", "Group 4"]) expect(html).toContain(chartSeries(label).bg);
+    expect(strokes.every((name) => tokens.chart.order.includes(name))).toBe(true);
     expect(html).not.toMatch(/(?:fill|stroke)-primary/);
     expect(html).toContain("<figcaption");
   });

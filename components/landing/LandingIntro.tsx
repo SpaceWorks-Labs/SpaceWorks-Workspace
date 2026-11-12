@@ -63,7 +63,7 @@ export function ReleaseBand() {
       <div data-reveal className="landing-wrap grid justify-items-center gap-6">
         <h2 id="landing-release-title" className="text-xl font-medium">Latest release</h2>
         <p className="landing-accent tabular-nums text-sw-yellow">{RELEASE.version}</p>
-        <p className="max-w-2xl text-body-l text-ink-muted">Organisations with approval, limits and modules; more ways to sign in; payments, campaigns and bank import; makerspace stock; connected analytics; and a board and task upgrade. Released {RELEASE.date}.</p>
+        <p className="max-w-2xl text-body-l text-ink-muted">{RELEASE.summary} Released {RELEASE.date}.</p>
         <ExternalLink href={repoFile("CHANGELOG.md")} className="text-sw-citron">Read the changelog</ExternalLink>
       </div>
     </section>
