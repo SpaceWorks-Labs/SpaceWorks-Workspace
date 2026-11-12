@@ -11,7 +11,7 @@ import { recordAuditEvent } from "@/lib/audit";
 import type { ActionResult } from "@/lib/actionResult";
 export async function updateSeo(slug: string, raw: unknown): Promise<ActionResult<{ output?: string }>> {
   try {
-    const { workspace, user } = await integrationAccess(slug); const workspaceId = workspace.id;
+    const { workspace, user } = await integrationAccess(slug, "ADMIN", "social"); const workspaceId = workspace.id;
     const input = z.object({ operation: z.enum(["connect", "sync", "audit", "inspect", "sitemaps", "submitSitemap"]), siteId: z.string().max(64).optional(), url: z.string().max(2048).optional() }).parse(raw); let output: string | undefined;
     if (input.operation === "connect") {
       const available = await searchConsoleSites(workspaceId); const connection = await findGoogleConnection(workspaceId);

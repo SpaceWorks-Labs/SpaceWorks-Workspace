@@ -7,18 +7,32 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Callout } from "@/components/ui/display";
 import { Field, Input, PasswordInput } from "@/components/ui/field";
+import { resendEmailVerification } from "@/app/actions/auth";
+import { OAuthButtons } from "@/components/auth/OAuthButtons";
 import { safeAuthRedirect } from "@/lib/authRedirect";
+import { OAUTH_ERROR_MESSAGES, type OAuthProvider } from "@/lib/oauthLinking";
 
-const ERRORS: Record<string, string> = {
-  not_invited: "There's no account for that email. Ask an admin for an invitation.",
-  disabled: "This account is disabled. Contact your workspace admin.",
+type Props = {
+  providers: OAuthProvider[];
+  oidcProviders?: { id: string; name: string }[];
+  ssoMfa?: boolean;
+  allowSignup?: boolean;
+  /** Pre-filled username or email, e.g. the invited address when signing in to accept an invitation. */
+  defaultIdentifier?: string;
 };
 
-export function LoginForm({ googleEnabled, oidcProviders = [], ssoMfa = false }: { googleEnabled: boolean; oidcProviders?: { id: string; name: string }[]; ssoMfa?: boolean }) {
+const SIGN_IN_ERRORS: Record<string, string> = {
+  account_disabled: "This account is switched off. Ask the instance admin to turn it back on.",
+  rate_limited: "Too many sign-in attempts. Wait a few minutes, then try again.",
+};
+
+export function LoginForm({ providers, oidcProviders = [], ssoMfa = false, allowSignup = false, defaultIdentifier = "" }: Props) {
   const router = useRouter();
   const params = useSearchParams();
   const callbackUrl = safeAuthRedirect(params.get("callbackUrl"));
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState(defaultIdentifier);
+  const [unverified, setUnverified] = useState(false);
+  const [resent, setResent] = useState(false);
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
   const [mfaStep, setMfaStep] = useState(ssoMfa);
@@ -26,28 +40,35 @@ export function LoginForm({ googleEnabled, oidcProviders = [], ssoMfa = false }:
   const [error, setError] = useState<string | null>(() => {
     const value = params.get("error");
     if (!value) return null;
-    return ERRORS[value] ?? "Sign-in couldn't be completed. Try again.";
+    return OAUTH_ERROR_MESSAGES[value] ?? "Sign-in couldn't be completed. Try again.";
   });
   const resetDone = params.get("reset") === "1";
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
+    setUnverified(false);
     setLoading("credentials");
     try {
-      const result = await signIn(ssoMfa ? "sso-mfa" : "credentials", { email, password, totp: mfaStep ? code : undefined, redirect: false });
+      const result = await signIn(ssoMfa ? "sso-mfa" : "credentials", { identifier, password, totp: mfaStep ? code : undefined, redirect: false });
       if (!result || result.error) {
         if (result?.code === "mfa_required") {
           setMfaStep(true);
+        } else if (result?.code === "email_not_verified") {
+          setUnverified(true);
+          setResent(false);
+        } else if (result?.code && SIGN_IN_ERRORS[result.code]) {
+          setError(SIGN_IN_ERRORS[result.code]!);
         } else {
-          setError(mfaStep ? "That code didn't work. Check your authenticator app or use a recovery code." : "Wrong email or password. Try again or reset your password.");
+          setError(mfaStep ? "That code didn't work. Check your authenticator app or use a recovery code." : "Wrong username, email or password. Try again or reset your password.");
         }
         return;
       }
       router.push(callbackUrl);
       router.refresh();
     } catch {
-      setError("Sign-in is unavailable right now. Refresh the page and try again.");
+      // Also reached when the sign-in endpoint itself is rate limited.
+      setError("Couldn't sign you in just now. Wait a minute, then try again.");
     } finally {
       setLoading(null);
     }
@@ -85,44 +106,26 @@ export function LoginForm({ googleEnabled, oidcProviders = [], ssoMfa = false }:
     <div className="flex flex-col gap-4">
       {resetDone ? <Callout tone="success" role="status">Password updated. Sign in with your new password.</Callout> : null}
       {error ? <Callout tone="danger" role="alert">{error}</Callout> : null}
-      {oidcProviders.map((provider) => (
-        <Button key={provider.id} variant="secondary" size="lg" fullWidth loading={loading === provider.id} disabled={loading !== null} onClick={() => {
-          setError(null); setLoading(provider.id);
-          void signIn(`oidc-${provider.id}`, { callbackUrl }).catch(() => { setLoading(null); setError("Sign-in is unavailable right now. Try again."); });
-        }}>Continue with {provider.name}</Button>
-      ))}
-      {googleEnabled ? (
-        <>
-          <Button
-            variant="secondary"
-            size="lg"
-            fullWidth
-            loading={loading === "google"}
-            onClick={() => {
-              setError(null);
-              setLoading("google");
-              void signIn("google", { callbackUrl }).catch(() => {
-                setLoading(null);
-                setError("Google sign-in is unavailable right now. Use your email and password.");
-              });
-            }}
-          >
-            Continue with Google
-          </Button>
-          <div className="flex items-center gap-3 text-sm text-ink-muted">
-            <span aria-hidden className="h-px flex-1 bg-line" />
-            or with email
-            <span aria-hidden className="h-px flex-1 bg-line" />
-          </div>
-        </>
+      {unverified ? (
+        <Callout tone="warning" role="alert" title="Confirm your email first">
+          {resent ? (
+            "If that account needs confirming, a new link is on its way. It expires in 1 hour."
+          ) : (
+            <>
+              We sent a confirmation link when the account was created.{" "}
+              <button type="button" className="font-semibold underline underline-offset-4" onClick={() => { setResent(true); void resendEmailVerification({ identifier }); }}>Send it again</button>
+            </>
+          )}
+        </Callout>
       ) : null}
+      <OAuthButtons providers={providers} oidcProviders={oidcProviders} callbackUrl={callbackUrl} onError={setError} busy={loading !== null} />
       <form className="flex flex-col gap-4" onSubmit={submit}>
-        <Field label="Email" required>
-          <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
+        <Field label="Username or email" required>
+          <Input value={identifier} onChange={(e) => setIdentifier(e.target.value)} autoComplete="username" autoCapitalize="none" spellCheck={false} maxLength={254} />
         </Field>
         <div className="relative">
           <Field label="Password" required>
-            <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" maxLength={128} />
+            <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} autoFocus={Boolean(defaultIdentifier)} autoComplete="current-password" maxLength={128} />
           </Field>
           <Link href="/forgot-password" className="absolute right-0 top-0 text-sm font-semibold text-ink-secondary underline underline-offset-4 hover:text-ink">
             Forgot password?
@@ -130,7 +133,11 @@ export function LoginForm({ googleEnabled, oidcProviders = [], ssoMfa = false }:
         </div>
         <Button type="submit" variant="primary" size="lg" fullWidth loading={loading === "credentials"} className="mt-1">Sign in</Button>
       </form>
-      <p className="text-center text-sm text-ink-muted">Space Works is invite-only. Ask a workspace admin for an invitation.</p>
+      {allowSignup ? (
+        <p className="text-center text-sm text-ink-muted">New here? <Link href="/signup" className="font-semibold text-ink underline underline-offset-4">Create an account</Link></p>
+      ) : (
+        <p className="text-center text-sm text-ink-muted">Space Works is invite-only. Ask a workspace admin for an invitation.</p>
+      )}
     </div>
   );
 }

@@ -11,6 +11,7 @@ import { canContribute, hasRoleAtLeast } from "@/lib/roles";
 import { actionError, NOT_ALLOWED, RATE_LIMITED, validationError, type ActionResult } from "@/lib/actionResult";
 import { idSchema } from "@/lib/validation";
 import { getAssistantConfig } from "@/lib/assistant/client";
+import { assertAssistantAllowed } from "@/lib/assistant/usage";
 import { runBoardroomSession } from "@/lib/assistant/boardroom";
 
 /**
@@ -24,7 +25,7 @@ const slugSchema = z.string().min(1).max(64);
 async function context(slug: unknown) {
   const parsed = slugSchema.safeParse(slug);
   if (!parsed.success) return null;
-  const ctx = await getWorkspaceForAction(parsed.data, "MEMBER");
+  const ctx = await getWorkspaceForAction(parsed.data, "MEMBER", { module: "assistant" });
   return ctx && canContribute(ctx.membership) ? ctx : null;
 }
 
@@ -45,6 +46,8 @@ export async function createBoardroomSessionAction(slug: string, input: unknown)
   const parsed = sessionSchema.safeParse(input);
   if (!parsed.success) return validationError(parsed.error);
   if (!(await getAssistantConfig())) return actionError("The assistant isn't set up yet, so the Boardroom can't meet.");
+  const allowed = await assertAssistantAllowed(ctx.workspace.id);
+  if (!allowed.ok) return actionError(allowed.error);
   const names = parsed.data.seats.map((s) => s.name.toLowerCase());
   if (new Set(names).size !== names.length) return actionError("Give every seat a different name.");
   const title = parsed.data.title || (parsed.data.question.length > 80 ? `${parsed.data.question.slice(0, 79).trimEnd()}…` : parsed.data.question);

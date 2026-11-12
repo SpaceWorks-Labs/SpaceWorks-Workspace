@@ -4,6 +4,7 @@ import { OutboxStatus, Prisma } from "@prisma/client";
 import { prisma, type DbClient } from "@/lib/db";
 import { describeOperationalError } from "@/lib/redactSensitiveText";
 import { sendRenderedEmail } from "@/lib/email/send";
+import { renderSubscriptionConfirmationEmail } from "@/lib/email/templates-campaigns";
 import {
   renderEmailVerificationEmail,
   renderInviteEmail,
@@ -19,8 +20,14 @@ import {
  * Kinds:
  * - "email": a pre-rendered message. Any feature can queue one with
  *   `enqueueEmail` without touching this file. Never put bearer links in it.
+ * - "invoice.email": { workspaceId, invoiceId, to }; rendered when sent so the
+ *   hosted pay link is never stored in the (retained) outbox row.
  * - "workspace-invite", "password-reset", "email-verification": carry a
  *   bearer URL, so the row is deleted after delivery or terminal failure.
+ * - "campaign.confirm": a double opt-in confirmation ({ workspaceId, to,
+ *   workspaceName, listName, confirmUrl, expiresAt}); carries a bearer link, so
+ *   the row is deleted after delivery or terminal failure, but it is sent
+ *   through the workspace SMTP like other workspace mail.
  * - "notify.deliver": one notification delivery ({ deliveryId }) queued by
  *   `dispatch()` (lib/notify); the adapter sends it and the delivery row
  *   tracks attempts, so this row only mirrors the outcome.
@@ -31,7 +38,9 @@ type InvitePayload = { workspaceId?: string; to: string; workspaceName: string; 
 type ResetPayload = { to: string; resetUrl: string; expiresAt: string };
 type VerificationPayload = { to: string; verificationUrl: string; expiresAt: string };
 
-const CAPABILITY_KINDS = new Set(["workspace-invite", "password-reset", "email-verification"]);
+const CAPABILITY_KINDS = new Set(["workspace-invite", "password-reset", "email-verification", "campaign.confirm"]);
+/** Capability kinds that are account mail and always use the instance transport. */
+const INSTANCE_TRANSPORT_KINDS = new Set(["workspace-invite", "password-reset", "email-verification"]);
 
 function create(client: DbClient, kind: string, payload: object) {
   return client.outboxMessage.create({ data: { kind, payload: payload as Prisma.InputJsonValue }, select: { id: true } });
@@ -39,6 +48,16 @@ function create(client: DbClient, kind: string, payload: object) {
 
 export function enqueueEmail(client: DbClient, payload: EmailPayload) {
   return create(client, "email", payload);
+}
+
+/** An invoice email, rendered at send time from the invoice and its latest pay link; the row holds ids only, never the pay URL. */
+export function enqueueInvoiceEmail(client: DbClient, payload: { workspaceId: string; invoiceId: string; to: string }) {
+  return create(client, "invoice.email", payload);
+}
+
+/** A double opt-in confirmation. The row is removed once sent, because it holds the bearer confirm link. */
+export function enqueueCampaignConfirmation(client: DbClient, payload: { workspaceId: string; to: string; workspaceName: string; listName: string; confirmUrl: string; expiresAt: Date }) {
+  return create(client, "campaign.confirm", { ...payload, expiresAt: payload.expiresAt.toISOString() });
 }
 
 export function enqueueInviteEmail(client: DbClient, payload: Omit<InvitePayload, "expiresAt"> & { expiresAt: Date }) {
@@ -113,6 +132,9 @@ export function renderOutboxMessage(kind: string, raw: Prisma.JsonValue, now = n
     case "email-verification":
       if (!isSafeUrl(p.verificationUrl)) throw new PermanentOutboxError();
       return { to: p.to, email: renderEmailVerificationEmail({ verificationUrl: p.verificationUrl }) };
+    case "campaign.confirm":
+      if (!isBoundedString(p.workspaceName, 200) || !isBoundedString(p.listName, 200) || !isSafeUrl(p.confirmUrl)) throw new PermanentOutboxError();
+      return { to: p.to, email: renderSubscriptionConfirmationEmail({ workspaceName: p.workspaceName, listName: p.listName, confirmUrl: p.confirmUrl }) };
     default:
       throw new PermanentOutboxError();
   }
@@ -207,6 +229,8 @@ export async function deliverOutboxBatch(limit = 20, scope: { ids?: string[] } =
       }
       const rendered = message.kind === "analytics.email"
         ? await (await import("@/lib/analytics/email")).renderAnalyticsEmail(message.payload)
+        : message.kind === "invoice.email"
+        ? await (await import("@/lib/finance/service/invoice-email")).renderInvoiceOutboxEmail(message.payload)
         : message.kind === "documents.email"
         ? await (await import("@/lib/documents/email")).renderDocumentEmail(message.payload)
         : renderOutboxMessage(message.kind, message.payload);
@@ -223,7 +247,10 @@ export async function deliverOutboxBatch(limit = 20, scope: { ids?: string[] } =
         const { fundingReceiptAttachment } = await import("@/lib/funding/email");
         attachments = [await fundingReceiptAttachment(workspaceId, receipt, rendered.to)];
       }
-      await sendRenderedEmail(rendered.to, { ...rendered.email, attachments: [...(rendered.email.attachments ?? []), ...attachments] }, `<sww-${message.id}@outbox.invalid>`);
+      // Workspace-scoped mail (invoice, notification, calendar, funding, documents) uses the workspace SMTP when set.
+      // Account mail (invite, reset, verification) always stays on the instance transport.
+      const scopedWorkspaceId = INSTANCE_TRANSPORT_KINDS.has(message.kind) ? undefined : record(message.payload)?.workspaceId;
+      await sendRenderedEmail(rendered.to, { ...rendered.email, attachments: [...(rendered.email.attachments ?? []), ...attachments] }, `<sww-${message.id}@outbox.invalid>`, typeof scopedWorkspaceId === "string" ? scopedWorkspaceId : null);
       if (isCapability) {
         await prisma.outboxMessage.deleteMany({ where: mine });
       } else {

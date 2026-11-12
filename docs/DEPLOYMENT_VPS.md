@@ -340,6 +340,9 @@ release, its version in `.release-version`) and run
 `releases/` like any other update. For split hosting, deploy
 the identical commit to Netlify after the backend update.
 
+Read [Upgrading to 0.10.0](production-operations.md#upgrading-to-0100) before
+updating from 0.6.7 or earlier.
+
 For a checkout-based installation, follow the manual steps below.
 
 Back up first and record the current commit and image version. Review database

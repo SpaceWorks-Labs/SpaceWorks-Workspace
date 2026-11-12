@@ -6,11 +6,13 @@ import { recordAuditEvent } from "@/lib/audit";
 import { recordActivity } from "@/lib/activity";
 import { indexSearchDocument, removeSearchDocument } from "@/lib/search/documents";
 import { recordSchema, detailSchemas, object, path, isMarketing, calendarDays, dayInZone, type Kind } from "./schema";
-export type Actor = { user: { id: string }; workspace: { id: string; slug: string; timezone: string }; membership: { role: WorkspaceRole } };
+import { activeMemberOrSuperAdmin } from "@/lib/accessMember";
+export type Actor = { user: { id: string }; workspace: { id: string; slug: string; timezone: string }; membership: { role: WorkspaceRole; viaSuperAdmin?: boolean } };
 export class MarketingItError extends Error {}
 export const ensure: (value: unknown, message?: string) => asserts value = (value, message = "That record is unavailable. Refresh and try again.") => { if (!value) throw new MarketingItError(message); };
 export async function currentActor(actor: Actor, tx: Tx = prisma): Promise<Actor> {
- const membership = await tx.membership.findFirst({ where: { workspaceId: actor.workspace.id, userId: actor.user.id, status: "ACTIVE", user: { disabledAt: null }, workspace: { archivedAt: null } }, select: { role: true } });
+ const found = await activeMemberOrSuperAdmin(tx, actor);
+ const membership = found && { role: found.role, ...(found.viaSuperAdmin ? { viaSuperAdmin: true } : {}) };
  ensure(membership && canUseMarketingOperations(membership), "You don't have access to do that.");
  return { ...actor, membership };
 }

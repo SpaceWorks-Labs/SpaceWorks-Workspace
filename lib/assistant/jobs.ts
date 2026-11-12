@@ -6,11 +6,12 @@ import { dispatch } from "@/lib/notify";
 import { publish } from "@/lib/realtime";
 import { hasRoleAtLeast } from "@/lib/roles";
 import { runAgentLoop, systemBlocks } from "@/lib/assistant/agent";
-import { createAnthropicClient, getAssistantConfig, messageText } from "@/lib/assistant/client";
+import { createAnthropicClient, getAssistantConfig, messageText, usageTotals } from "@/lib/assistant/client";
 import { digestFrequency, nextRunAt } from "@/lib/assistant/cron";
 import { effectiveJobRole, type Principal } from "@/lib/assistant/principal";
 import { buildRequestContext, buildStableSystemPrompt } from "@/lib/assistant/prompt";
-import { toolsFor } from "@/lib/assistant/tools";
+import { toolsForWorkspace } from "@/lib/assistant/tools";
+import { assertAssistantAllowed, recordAssistantUsage } from "@/lib/assistant/usage";
 
 /**
  * Scheduled assistant jobs (ScheduledJob). Each due job is claimed with a
@@ -41,15 +42,17 @@ export async function runScheduledJob(jobId: string, now = new Date()): Promise<
       prompt: true,
       channelId: true,
       createdById: true,
-      workspace: { select: { id: true, slug: true, name: true, timezone: true, currency: true, financeVisibleToMembers: true, archivedAt: true } },
+      workspace: { select: { id: true, slug: true, name: true, timezone: true, currency: true, financeVisibleToMembers: true, archivedAt: true, status: true } },
     },
   });
-  if (!job || job.workspace.archivedAt) return { status: "skipped", detail: "Job not found." };
+  if (!job || job.workspace.archivedAt || job.workspace.status !== "ACTIVE") return { status: "skipped", detail: "Job not found." };
   const finish = (result: JobRunResult) =>
     prisma.scheduledJob.update({ where: { id: job.id }, data: { lastStatus: result.status === "ok" ? "ok" : `${result.status}: ${result.detail ?? ""}`.slice(0, 200), lastRunAt: now } }).then(() => result);
 
   const config = await getAssistantConfig();
   if (!config) return finish({ status: "skipped", detail: "The assistant is not configured." });
+  const allowed = await assertAssistantAllowed(job.workspace.id);
+  if (!allowed.ok) return finish({ status: "skipped", detail: allowed.error });
   const membership = job.createdById
     ? await prisma.membership.findUnique({
         where: { userId_workspaceId: { userId: job.createdById, workspaceId: job.workspace.id } },
@@ -67,6 +70,7 @@ export async function runScheduledJob(jobId: string, now = new Date()): Promise<
   const skills = await prisma.assistantSkill.findMany({ where: { workspaceId: workspace.id, enabled: true }, orderBy: { name: "asc" }, select: { name: true, description: true, body: true } });
 
   let text = "";
+  const usage = { tokensIn: 0, tokensOut: 0 };
   try {
     const outcome = await runAgentLoop({
       client: createAnthropicClient(config.apiKey),
@@ -77,17 +81,23 @@ export async function runScheduledJob(jobId: string, now = new Date()): Promise<
         buildStableSystemPrompt({ workspaceName: workspace.name, mode: "job", skills }),
         buildRequestContext({ userName: principal.userName, role: principal.role, now, timeZone: workspace.timezone }),
       ),
-      tools: toolsFor(principal, { includeWrites: false }),
+      tools: await toolsForWorkspace(principal, { includeWrites: false }),
       messages: [{ role: "user", content: job.prompt }],
       principal,
       via: "job",
       confirmWrites: false,
       maxRounds: 6,
+      onAssistant: async (message) => {
+        const totals = usageTotals(message);
+        usage.tokensIn += totals.tokensIn;
+        usage.tokensOut += totals.tokensOut;
+      },
     });
     text = outcome.last ? messageText(outcome.last) : "";
     if (outcome.stop !== "done" || !text) throw new Error(outcome.stop);
   } catch {
     console.error("[assistant] scheduled job failed");
+    await recordAssistantUsage({ workspaceId: workspace.id, userId: job.createdById, label: `Scheduled: ${job.name}`, ...usage }).catch(() => undefined);
     await dispatch(workspace.id, {
       type: "assistant.job.completed",
       title: `Scheduled job failed: ${job.name}`.slice(0, 150),
@@ -107,7 +117,7 @@ export async function runScheduledJob(jobId: string, now = new Date()): Promise<
   await prisma.assistantMessage.createMany({
     data: [
       { conversationId: conversation.id, role: "USER", content: [{ type: "text", text: job.prompt }] as Prisma.InputJsonValue, createdAt: now },
-      { conversationId: conversation.id, role: "ASSISTANT", content: [{ type: "text", text }] as Prisma.InputJsonValue, createdAt: new Date(now.getTime() + 1) },
+      { conversationId: conversation.id, role: "ASSISTANT", content: [{ type: "text", text }] as Prisma.InputJsonValue, tokensIn: usage.tokensIn, tokensOut: usage.tokensOut, createdAt: new Date(now.getTime() + 1) },
     ],
   });
   await prisma.assistantConversation.update({ where: { id: conversation.id }, data: { updatedAt: new Date() } });

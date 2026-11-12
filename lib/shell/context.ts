@@ -1,6 +1,7 @@
 import "server-only";
 import type { WorkspaceRole } from "@prisma/client";
 import { getWorkspaceForAction } from "@/lib/permissions";
+import type { ModuleKey } from "@/lib/modules";
 import { canManageWorkspace, canContribute } from "@/lib/roles";
 import { isActionRateLimited } from "@/lib/actionRateLimit";
 
@@ -8,8 +9,9 @@ export async function shellContext(
   slug: string,
   minRole: WorkspaceRole = "GUEST",
   bucket: "apiWrite" | "search" = "apiWrite",
+  module: ModuleKey = "core",
 ) {
-  const ctx = await getWorkspaceForAction(slug, minRole);
+  const ctx = await getWorkspaceForAction(slug, minRole, { module });
   if (
     !ctx ||
     (minRole === "ADMIN" && !canManageWorkspace(ctx.membership)) ||

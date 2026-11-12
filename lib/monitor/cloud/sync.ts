@@ -68,7 +68,7 @@ export async function syncConnection(connection: CloudConnection, now: Date, ada
 }
 export async function syncDueConnections(now: Date, budgetMs = 40000) {
   const signal = AbortSignal.timeout(budgetMs);
-  const rows = await prisma.cloudConnection.findMany({ where: { enabled: true, nextSyncAt: { lte: now }, workspace: { archivedAt: null } }, take: 10, orderBy: { nextSyncAt: "asc" } });
+  const rows = await prisma.cloudConnection.findMany({ where: { enabled: true, nextSyncAt: { lte: now }, workspace: { status: "ACTIVE", archivedAt: null } }, take: 10, orderBy: { nextSyncAt: "asc" } });
   for (const row of rows) {
     if (signal.aborted) break;
     const claimed = await prisma.cloudConnection.updateMany({ where: { id: row.id, workspaceId: row.workspaceId, nextSyncAt: row.nextSyncAt }, data: { nextSyncAt: new Date(now.getTime() + 900000) } });
@@ -76,7 +76,7 @@ export async function syncDueConnections(now: Date, budgetMs = 40000) {
   }
 }
 export async function checkCostBudgets(now: Date) {
-  for (const budget of await prisma.costBudget.findMany({ where: { workspace: { archivedAt: null } } })) {
+  for (const budget of await prisma.costBudget.findMany({ where: { workspace: { status: "ACTIVE", archivedAt: null } } })) {
     const rows = await prisma.costSnapshot.findMany({ where: { workspaceId: budget.workspaceId, ...(budget.connectionId ? { connectionId: budget.connectionId } : {}), currency: budget.currency, periodStart: { gte: monthStartUtc(now), lte: now } } });
     const spentMinor = aggregateCosts(rows.map(r => ({ ...r, amount: Number(r.amount) }))).reduce((s, r) => s + r.spentMinor, 0);
     for (const threshold of budget.thresholdsPct) if (spentMinor * 100 >= budget.monthlyLimitMinor * threshold) {

@@ -87,6 +87,17 @@ template for provider-specific details.
 | `NEXT_PUBLIC_BASE_URL` | `http://localhost:3000` |
 | `AUTH_GOOGLE_ID` | `unset` |
 | `AUTH_GOOGLE_SECRET` | `unset` |
+| `AUTH_GOOGLE_ENABLED` | `unset` (Google is on whenever its keys exist; `false` turns it off) |
+| `AUTH_GITHUB_ENABLED` | `unset` (`true` to offer GitHub sign-in) |
+| `AUTH_GITHUB_ID` | `unset` |
+| `AUTH_GITHUB_SECRET` | `unset` |
+| `AUTH_APPLE_ENABLED` | `unset` (`true` to offer Apple sign-in; needs an HTTPS domain) |
+| `AUTH_APPLE_ID` | `unset` (the Services ID) |
+| `AUTH_APPLE_TEAM_ID` | `unset` |
+| `AUTH_APPLE_KEY_ID` | `unset` |
+| `AUTH_APPLE_PRIVATE_KEY` | `unset` (the .p8 file; literal `\n` is accepted) |
+| `AUTH_ALLOW_SELF_SIGNUP` | `unset` (off: sign-in is invite-only) |
+| `AUTH_ALLOWED_EMAIL_DOMAINS` | `unset` (comma separated; empty allows any domain when sign-up is on) |
 | `SUPER_ADMIN_EMAIL` | `owner@example.org` |
 | `MFA_ENCRYPTION_KEY` | `unset` |
 | `INTEGRATION_ENCRYPTION_KEY` | `unset` |
@@ -138,6 +149,87 @@ template for provider-specific details.
 | `QUEUE_MONITOR_CONCURRENCY` | `1` |
 | `QUEUE_DOCUMENTS_CONCURRENCY` | `1` |
 | `DEMO_PASSWORD` | `unset` |
+
+## Instance settings and their environment fallbacks
+
+These values are edited in `/admin/settings`, `/admin/sign-in` and
+`/admin/observability` (stored per instance, secrets encrypted) and fall back to
+the environment variable in the second column when no setting is saved. A saved
+setting always wins. Nothing below is required; every feature is off or
+unlimited by default. Key lists: `lib/instanceSettings/keys-auth.ts`,
+`keys-limits.ts` and `keys-observability.ts`.
+
+### Organisations and sign-in
+
+| Setting key | Environment variable | Meaning |
+| --- | --- | --- |
+| `workspaces.requireApproval` | `WORKSPACES_REQUIRE_APPROVAL` | Default on: a new organisation waits for super-admin approval. `false` creates it straight away |
+| `auth.allowSelfSignup` | `AUTH_ALLOW_SELF_SIGNUP` | Turns on `/signup`; off keeps sign-in invite-only |
+| `auth.allowedEmailDomains` | `AUTH_ALLOWED_EMAIL_DOMAINS` | Comma-separated domain allow-list for self sign-up |
+| `github.enabled`, `github.clientId`, `github.clientSecret` | `AUTH_GITHUB_ENABLED`, `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET` | GitHub sign-in (OAuth app) |
+| `apple.enabled`, `apple.clientId`, `apple.teamId`, `apple.keyId`, `apple.privateKey` | `AUTH_APPLE_ENABLED`, `AUTH_APPLE_ID`, `AUTH_APPLE_TEAM_ID`, `AUTH_APPLE_KEY_ID`, `AUTH_APPLE_PRIVATE_KEY` | Sign in with Apple (needs an HTTPS domain) |
+| `google.enabled` | `AUTH_GOOGLE_ENABLED` | Google sign-in switch |
+
+Email verification uses the normal SMTP settings. See
+[Organisation governance](areas/org-governance.md) for requests and approvals.
+
+Self sign-up cannot be used to claim someone else's address. The confirmation
+link only works together with the password chosen at sign-up, so a person who
+registers your email with their own password cannot get it confirmed by you:
+the page asks for that password and a wrong one leaves the link unused. Signing
+up again before confirming replaces the pending password and sends a new link,
+and sign-up and resend requests are rate limited separately. A password reset
+from the mailbox also confirms the address. Still keep `auth.allowSelfSignup`
+off unless your community needs it, and pair it with `auth.allowedEmailDomains`
+where you can.
+
+### Default limits and modules
+
+Instance-wide defaults; a super admin overrides each one per organisation in
+`/admin/organisations/<id>`. Empty means unlimited. Counts are whole numbers and
+byte values are bytes. `limits.maxFileBytes` is capped by `UPLOAD_MAX_BYTES`.
+
+| Setting key | Environment variable |
+| --- | --- |
+| `limits.maxMembers`, `limits.maxGuests`, `limits.maxProjects` | `LIMITS_MAX_MEMBERS`, `LIMITS_MAX_GUESTS`, `LIMITS_MAX_PROJECTS` |
+| `limits.maxStorageBytes`, `limits.maxFileBytes` | `LIMITS_MAX_STORAGE_BYTES`, `LIMITS_MAX_FILE_BYTES` |
+| `limits.maxApiTokens`, `limits.maxWebhooks` | `LIMITS_MAX_API_TOKENS`, `LIMITS_MAX_WEBHOOKS` |
+| `limits.assistantMonthlyTokens` | `LIMITS_ASSISTANT_MONTHLY_TOKENS` |
+| `limits.monthlyEmailCap` | `LIMITS_MONTHLY_EMAIL_CAP` |
+| `limits.maxWorkspacesPerOwner` | `LIMITS_MAX_WORKSPACES_PER_OWNER` |
+| `modules.disabledByDefault` | `MODULES_DISABLED_BY_DEFAULT` (comma list or JSON array of module keys, for example `finance,campaigns`) |
+
+### Observability
+
+All providers are off until enabled. Details, consent behaviour and privacy
+rules are in [OBSERVABILITY-CLIENT.md](OBSERVABILITY-CLIENT.md) (Sentry, PostHog,
+Clarity, Firebase) and [OBSERVABILITY.md](OBSERVABILITY.md) (`/api/metrics`,
+Grafana, Metabase).
+
+| Setting key | Environment variable | Notes |
+| --- | --- | --- |
+| `obs.sentry.enabled`, `.dsn`, `.environment`, `.tracesSampleRate` | `SENTRY_ENABLED`, `SENTRY_DSN`, `SENTRY_ENVIRONMENT`, `SENTRY_TRACES_SAMPLE_RATE` | A DSN change needs a restart |
+| `obs.posthog.enabled`, `.key`, `.host` | `POSTHOG_ENABLED`, `POSTHOG_KEY`, `POSTHOG_HOST` | Same-origin tunnel |
+| `obs.clarity.enabled`, `.projectId` | `CLARITY_ENABLED`, `CLARITY_PROJECT_ID` | |
+| `obs.firebase.enabled`, `.measurementId`, `.config` | `FIREBASE_ENABLED`, `FIREBASE_MEASUREMENT_ID`, `FIREBASE_CONFIG` | Google Analytics |
+| `obs.metrics.enabled`, `.token` | `METRICS_ENABLED`, `METRICS_TOKEN` | Bearer token for `GET /api/metrics` (32 characters or more) |
+| `obs.grafana.url`, `.dashboardPath` | `GRAFANA_URL`, `GRAFANA_DASHBOARD_PATH` | Link-out only |
+| `obs.metabase.enabled`, `.siteUrl`, `.secretKey`, `.adminDashboardIds` | `METABASE_ENABLED`, `METABASE_SITE_URL`, `METABASE_SECRET_KEY`, `METABASE_ADMIN_DASHBOARD_IDS` | Signed embeds |
+| `obs.consentMode` | `OBS_CONSENT_MODE` | `opt-in` (default), `opt-out` or `none`; Do Not Track always wins |
+| `obs.workspaceOverrides.allowed`, `.providers`, `.hostAllowlist` | `OBS_WORKSPACE_OVERRIDES_ALLOWED`, `OBS_WORKSPACE_OVERRIDES_PROVIDERS`, `OBS_WORKSPACE_OVERRIDES_HOSTS` | Per-workspace connected analytics |
+
+Environment only (not instance settings): `OBS_CSP_PROVIDERS`,
+`OBS_CSP_CONNECT_ORIGINS` and `OBS_CSP_FRAME_ORIGINS` add extra origins
+(space or comma separated) to the Content Security Policy for self-hosted
+analytics and Metabase frames.
+
+### Per-workspace settings
+
+Email sending (own SMTP), payment providers (Stripe, Razorpay), connected
+analytics and the plan page are configured per workspace under
+`/w/<slug>/settings/...`, not in the environment. See
+[Integrations and messaging](areas/integrations-messaging.md),
+[Payments](areas/payments.md) and [Organisation governance](areas/org-governance.md).
 
 `MIGRATE_ON_START=1` enables start-time migrations on platforms without release
 jobs; otherwise run the backend image's `migrate` role once per rollout.

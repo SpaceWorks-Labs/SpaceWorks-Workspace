@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma, type DbClient } from "@/lib/db";
+import { activeMemberOrSuperAdmin } from "@/lib/accessMember";
 import { lockFinance } from "@/lib/finance/tools/access";
 import { canIssueFinancialDocuments, canIssueLetters } from "@/lib/roles";
 import type { FinanceActor } from "@/lib/finance/tools/access";
@@ -12,15 +13,7 @@ export async function documentsAccess(
   type?: string,
   tx: DbClient = prisma,
 ) {
-  const membership = await tx.membership.findFirst({
-    where: {
-      workspaceId: actor.workspace.id,
-      userId: actor.user.id,
-      status: "ACTIVE",
-      user: { disabledAt: null },
-      workspace: { archivedAt: null },
-    },
-  });
+  const membership = await activeMemberOrSuperAdmin(tx, actor);
   if (
     !membership ||
     !(type &&

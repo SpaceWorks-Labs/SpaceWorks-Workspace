@@ -8,13 +8,20 @@ import { sendTest } from "@/lib/notify";
 import { recordAuditEvent } from "@/lib/audit";
 import type { ActionResult } from "@/lib/actionResult";
 import { canManageNotificationRouting } from "@/lib/roles";
+import { assertWithinLimit } from "@/lib/limits/enforce";
 export async function updateRouting(slug: string, raw: unknown): Promise<ActionResult> {
   try {
-    const { workspace, user, membership } = await integrationAccess(slug);
+    const { workspace, user, membership } = await integrationAccess(slug, "ADMIN", "core");
     if (!canManageNotificationRouting(membership)) return { ok: false, error: "You don't have access to do that." };
     const input = z.object({ operation: z.enum(["destination", "rule", "deleteDestination", "deleteRule", "test", "retry"]), id: z.string().min(1).max(64).optional(), data: z.unknown().optional() }).parse(raw);
-    if (input.operation === "destination") await saveDestination(workspace.id, user.id, input.data);
-    else if (input.operation === "rule") await saveRule(workspace.id, user.id, input.data);
+    if (input.operation === "destination") {
+      const draft = (input.data ?? {}) as { id?: unknown; kind?: unknown };
+      if (draft.kind === "WEBHOOK" && !draft.id) {
+        const limit = await assertWithinLimit("webhooks", workspace.id);
+        if (!limit.ok) return { ok: false, error: limit.error };
+      }
+      await saveDestination(workspace.id, user.id, input.data);
+    } else if (input.operation === "rule") await saveRule(workspace.id, user.id, input.data);
     else {
       const id = z.string().min(1).max(64).parse(input.id);
       if (input.operation === "deleteDestination") await prisma.notificationDestination.deleteMany({ where: { workspaceId: workspace.id, id } });

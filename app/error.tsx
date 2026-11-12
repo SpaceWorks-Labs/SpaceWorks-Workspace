@@ -3,9 +3,11 @@
 import { useEffect } from "react";
 import { Patch } from "@/components/brand/Patch";
 import { Button } from "@/components/ui/button";
+import { captureClientException } from "@/lib/observability/sentry/client";
 
 export default function ErrorBoundary({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
+    captureClientException(error);
     if (process.env.NODE_ENV === "development") console.error("[ui] route error", error);
     else console.error("[ui] route error");
   }, [error]);

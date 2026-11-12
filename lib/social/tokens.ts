@@ -9,7 +9,7 @@ export async function socialToken(account: Pick<SocialAccount, "id" | "workspace
   // Row lock serialises refresh-token rotation between sync and interactive replies.
   return prisma.$transaction(async tx => {
     await tx.$queryRaw`SELECT id FROM "SocialAccount" WHERE "workspaceId"=${account.workspaceId} AND id=${account.id} FOR UPDATE`;
-    const current = await tx.socialAccount.findFirst({ where: { workspaceId: account.workspaceId, id: account.id, status: { notIn: ["DISCONNECTED", "DEMO"] }, workspace: { archivedAt: null } } });
+    const current = await tx.socialAccount.findFirst({ where: { workspaceId: account.workspaceId, id: account.id, status: { notIn: ["DISCONNECTED", "DEMO"] }, workspace: { status: "ACTIVE", archivedAt: null } } });
     if (!current?.accessTokenEnc) throw new SocialApiError("This account is disconnected. Connect it in Social settings.", "TOKEN");
     if (!current.expiresAt || current.expiresAt.getTime() > Date.now() + 60000) return decryptSecret("social-access", current.accessTokenEnc);
     if (!current.refreshTokenEnc || current.platform === "FACEBOOK" || current.platform === "INSTAGRAM") throw new SocialApiError("Account access is expiring. Reconnect the account in Social settings.", "TOKEN");

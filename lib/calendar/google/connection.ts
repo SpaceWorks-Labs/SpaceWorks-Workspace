@@ -14,7 +14,7 @@ export async function memberGoogle(workspaceId: string, userId: string) {
       connectedById: userId,
       provider: "GOOGLE",
       status: "ACTIVE",
-      workspace: { archivedAt: null },
+      workspace: { status: "ACTIVE", archivedAt: null },
       connectedBy: {
         disabledAt: null,
         memberships: { some: { workspaceId, status: "ACTIVE" } },

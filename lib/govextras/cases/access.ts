@@ -1,19 +1,12 @@
 import "server-only";
 import { prisma, type Tx } from "@/lib/db";
+import { activeMemberOrSuperAdmin } from "@/lib/accessMember";
 import { canContribute, canHandleSafeguarding } from "@/lib/roles";
 import { GovernanceError, type Actor } from "@/lib/governance/service";
 import { dayInZone } from "@/lib/governance/schemas";
 
 export async function liveCaseMember(actor: Actor, tx: Tx = prisma) {
-  const member = await tx.membership.findFirst({
-    where: {
-      workspaceId: actor.workspace.id,
-      userId: actor.user.id,
-      status: "ACTIVE",
-      user: { disabledAt: null },
-      workspace: { archivedAt: null },
-    },
-  });
+  const member = await activeMemberOrSuperAdmin(tx, actor);
   if (!member || !canContribute(member))
     throw new GovernanceError("You don't have access to do that.");
   return member;

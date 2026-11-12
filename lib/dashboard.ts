@@ -1,13 +1,9 @@
 import "server-only";
 import type { Prisma, Workspace } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import {
-  canViewFinance,
-  canViewAppReviews,
-  canViewServices,
-  canContribute,
-  type RoleHolder,
-} from "@/lib/roles";
+import { canContribute, type RoleHolder } from "@/lib/roles";
+import { getWorkspaceModules } from "@/lib/limits/modules";
+import { navForMember } from "@/lib/nav";
 import { hiddenTeamIds, teamScopeFilter, userTeamIds } from "@/lib/teamAccess";
 import { latestAnnouncements } from "@/lib/community/summary";
 import { listActivity } from "@/lib/search/query";
@@ -18,10 +14,25 @@ export async function getDashboardData(
 ) {
   const now = new Date();
   const actor = { workspaceId: workspace.id, userId, role: membership!.role };
-  const [hidden, teams] = await Promise.all([
+  const [hidden, teams, enabledModules] = await Promise.all([
     hiddenTeamIds(workspace.id, actor),
     userTeamIds(workspace.id, userId),
+    getWorkspaceModules(workspace.id),
   ]);
+  // Widgets follow the sidebar: a card shows only when its area's nav item is visible (role + module).
+  const nav = new Set(navForMember(workspace.slug, { role: actor.role, workspace, enabledModules }).flatMap((group) => group.items.map((item) => item.key)));
+  const show = {
+    myTasks: canContribute(membership) && nav.has("my-tasks"),
+    meetings: nav.has("meetings"),
+    shifts: nav.has("rota"),
+    announcements: nav.has("announcements"),
+    activity: nav.has("activity"),
+    finance: nav.has("finance"),
+    services: nav.has("services"),
+    appReviews: nav.has("app-reviews"),
+    projects: nav.has("projects"),
+    links: nav.has("links"),
+  };
   const project: Prisma.TaskWhereInput = {
     OR: [
       { projectId: null },
@@ -54,8 +65,8 @@ export async function getDashboardData(
     services,
     unrepliedLowRatings,
   ] = await Promise.all([
-    canContribute(membership) ? prisma.task.count({ where: mine }) : 0,
-    canContribute(membership)
+    show.myTasks ? prisma.task.count({ where: mine }) : 0,
+    show.myTasks
       ? prisma.task.findMany({
           where: mine,
           orderBy: [
@@ -75,9 +86,9 @@ export async function getDashboardData(
     prisma.membership.count({
       where: { workspaceId: workspace.id, status: "ACTIVE" },
     }),
-    latestAnnouncements(workspace.id, { take: 3, now }),
-    listActivity(actor),
-    canViewFinance(membership, workspace)
+    show.announcements ? latestAnnouncements(workspace.id, { take: 3, now }) : [],
+    show.activity ? listActivity(actor) : [],
+    show.finance
       ? prisma.ledgerEntry.groupBy({
           by: ["kind"],
           where: {
@@ -88,7 +99,7 @@ export async function getDashboardData(
           _sum: { amountMinor: true },
         })
       : null,
-    canContribute(membership)
+    show.shifts
       ? prisma.shift.findMany({
           where: {
             workspaceId: workspace.id,
@@ -110,7 +121,7 @@ export async function getDashboardData(
           },
         })
       : [],
-    prisma.meeting.findMany({
+    show.meetings ? prisma.meeting.findMany({
       where: {
         workspaceId: workspace.id,
         status: { in: ["SCHEDULED", "IN_PROGRESS"] },
@@ -130,7 +141,7 @@ export async function getDashboardData(
       orderBy: { startsAt: "asc" },
       take: 4,
       select: { id: true, title: true, startsAt: true },
-    }),
+    }) : [],
     prisma.notification.findMany({
       where: {
         workspaceId: workspace.id,
@@ -143,7 +154,7 @@ export async function getDashboardData(
       take: 4,
       select: { id: true, title: true, url: true },
     }),
-    canViewServices(membership)
+    show.services
       ? prisma.monitor.groupBy({
           by: ["lastStatus"],
           where: {
@@ -161,7 +172,7 @@ export async function getDashboardData(
           _count: true,
         })
       : [],
-    canViewAppReviews(membership) ? prisma.appReview.count({ where: { workspaceId: workspace.id, rating: { lte: 2 }, replyStatus: { not: "SENT" } } }) : null,
+    show.appReviews ? prisma.appReview.count({ where: { workspaceId: workspace.id, rating: { lte: 2 }, replyStatus: { not: "SENT" } } }) : null,
   ]);
   const kittyMinor = ledger
     ? ledger.reduce(
@@ -183,6 +194,7 @@ export async function getDashboardData(
     mentions,
     services,
     unrepliedLowRatings,
+    show,
     now,
   };
 }

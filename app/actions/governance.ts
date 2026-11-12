@@ -27,7 +27,7 @@ async function run<T>(
   fn: (actor: Actor) => Promise<T>,
   bucket: "action" | "upload" = "action",
 ): Promise<ActionResult<T>> {
-  const actor = await getWorkspaceForAction(slug, "ADMIN");
+  const actor = await getWorkspaceForAction(slug, "ADMIN", { module: "operations" });
   if (!actor || !canManageGovernance(actor.membership))
     return { ok: false, error: NOT_ALLOWED };
   if (await isActionRateLimited(bucket, actor.user.id))

@@ -42,9 +42,9 @@ export async function attachOrgFiles(actor: OpsActor, kind: OrgFileKind, recordI
     await audit(actor, "files", recordId, tx);
   }); } catch (error) { await deleteObjects(keys).catch(() => undefined); throw error; }
 }
-export async function canDownloadOrgFile(file: { id: string; workspaceId: string; folder: string }, userId: string, role: WorkspaceRole) {
+export async function canDownloadOrgFile(file: { id: string; workspaceId: string; folder: string }, userId: string, role: WorkspaceRole, viaSuperAdmin = false) {
   const attachment = await prisma.orgPeopleAttachment.findFirst({ where: { workspaceId: file.workspaceId, fileId: file.id } });
   if (!attachment) return file.folder !== ORG_FILE_FOLDER && !file.folder.startsWith(`${ORG_FILE_FOLDER}/`);
   const kind = fileKind.safeParse(attachment.kind); if (!kind.success) return false;
-  try { return await canReadOrgRecord({ workspace: { id: file.workspaceId, slug: "", name: "", timezone: "UTC" }, user: { id: userId, name: null }, membership: { role } }, kind.data, attachment.recordId); } catch { return false; }
+  try { return await canReadOrgRecord({ workspace: { id: file.workspaceId, slug: "", name: "", timezone: "UTC" }, user: { id: userId, name: null }, membership: { role, ...(viaSuperAdmin ? { viaSuperAdmin: true } : {}) } }, kind.data, attachment.recordId); } catch { return false; }
 }

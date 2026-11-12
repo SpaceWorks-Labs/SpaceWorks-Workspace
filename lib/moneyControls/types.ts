@@ -126,7 +126,7 @@ export type ControlSummary = {
 };
 export type ControlViewActor = {
   user: { id: string; name: string | null };
-  membership: { role: "OWNER" | "ADMIN" | "MEMBER" | "GUEST" };
+  membership: { role: "OWNER" | "ADMIN" | "MEMBER" | "GUEST"; viaSuperAdmin?: boolean };
   workspace: {
     id: string;
     slug: string;

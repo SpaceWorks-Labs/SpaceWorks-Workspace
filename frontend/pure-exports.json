@@ -36,5 +36,8 @@
   ],
   "lib/opsGaps/context": [
     "admin"
+  ],
+  "lib/campaigns/limits": [
+    "SHARED_SMTP_WARNING"
   ]
 }

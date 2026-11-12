@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { WorkspaceRole } from "@prisma/client";
+import type { WorkspaceRole, WorkspaceStatus } from "@prisma/client";
 import { prisma, type DbClient } from "@/lib/db";
 import { DEFAULT_BOARD_COLUMNS, DEFAULT_CHANNELS, DEFAULT_FINANCE_CATEGORIES, DEFAULT_LABELS } from "@/lib/workspaceDefaults";
 
@@ -64,13 +64,25 @@ export async function joinDefaultChannels(tx: DbClient, workspaceId: string, use
   await tx.channelMember.createMany({ data: channels.map((channel) => ({ channelId: channel.id, userId })), skipDuplicates: true });
 }
 
-export type UserWorkspace = { id: string; slug: string; name: string; role: WorkspaceRole };
+export type UserWorkspace = { id: string; slug: string; name: string; role: WorkspaceRole; status: WorkspaceStatus };
 
-/** Active, non-archived workspaces a user belongs to, alphabetically. */
-export async function listUserWorkspaces(userId: string): Promise<UserWorkspace[]> {
+/**
+ * Workspaces a user can open, alphabetically: ACTIVE and not archived. With
+ * `includeSuspended`, also SUSPENDED ones where the user is an owner or admin,
+ * who can still reach Settings and Plan & limits.
+ */
+export async function listUserWorkspaces(userId: string, options: { includeSuspended?: boolean } = {}): Promise<UserWorkspace[]> {
   const memberships = await prisma.membership.findMany({
-    where: { userId, status: "ACTIVE", workspace: { archivedAt: null } },
-    select: { role: true, workspace: { select: { id: true, slug: true, name: true } } },
+    where: {
+      userId,
+      status: "ACTIVE",
+      workspace: { archivedAt: null },
+      OR: [
+        { workspace: { status: "ACTIVE" } },
+        ...(options.includeSuspended ? [{ workspace: { status: "SUSPENDED" as const }, role: { in: ["OWNER", "ADMIN"] as WorkspaceRole[] } }] : []),
+      ],
+    },
+    select: { role: true, workspace: { select: { id: true, slug: true, name: true, status: true } } },
     orderBy: { workspace: { name: "asc" } },
     take: 100,
   });

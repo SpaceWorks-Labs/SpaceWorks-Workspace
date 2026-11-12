@@ -29,7 +29,7 @@ export async function ingestReview(app: ReviewedApp, slug: string, remote: Store
 /** Atomic DB lease works across replicas without relying on process-local locks. */
 export async function pollApp(workspaceId: string, appId: string, now = new Date()) {
   const token = randomUUID();
-  const app = await prisma.reviewedApp.findFirst({ where: { workspaceId, id: appId, active: true, account: { active: true }, workspace: { archivedAt: null } }, include: { account: true, workspace: { select: { slug: true } } } });
+  const app = await prisma.reviewedApp.findFirst({ where: { workspaceId, id: appId, active: true, account: { active: true }, workspace: { status: "ACTIVE", archivedAt: null } }, include: { account: true, workspace: { select: { slug: true } } } });
   if (!app) return { polled: false, created: 0 };
   const claim = await prisma.reviewedApp.updateMany({ where: { workspaceId, id: appId, active: true, nextPollAt: { lte: now }, OR: [{ pollLeaseUntil: null }, { pollLeaseUntil: { lte: now } }] }, data: { pollLeaseToken: token, pollLeaseUntil: new Date(now.getTime() + 300_000), nextPollAt: new Date(now.getTime() + app.pollIntervalMinutes * 60_000) } });
   if (!claim.count) return { polled: false, created: 0 };
@@ -37,7 +37,7 @@ export async function pollApp(workspaceId: string, appId: string, now = new Date
   try {
     const client = storeFor(app, app.account);
     const heartbeat = async () => {
-      const renewed = await prisma.reviewedApp.updateMany({ where: { workspaceId, id: appId, pollLeaseToken: token, active: true, account: { active: true }, workspace: { archivedAt: null } }, data: { pollLeaseUntil: new Date(Date.now() + 300_000) } });
+      const renewed = await prisma.reviewedApp.updateMany({ where: { workspaceId, id: appId, pollLeaseToken: token, active: true, account: { active: true }, workspace: { status: "ACTIVE", archivedAt: null } }, data: { pollLeaseUntil: new Date(Date.now() + 300_000) } });
       if (!renewed.count) throw new StoreError("STORE", "Polling stopped because this app was paused or another worker took over.");
     };
     // Only a completed earlier sync supplies a stopping boundary. Rows from a

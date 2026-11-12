@@ -7,6 +7,7 @@ import { DeleteObjectsCommand, GetObjectCommand, PutObjectCommand, S3Client } fr
 import sharp from "sharp";
 import type { FileObject } from "@prisma/client";
 import { prisma, type DbClient } from "@/lib/db";
+import { assertWithinLimit } from "@/lib/limits/enforce";
 import { buildStorageKey, checkUpload, contentDisposition, INLINE_SAFE_TYPES, RASTER_IMAGE_TYPES, sanitizeFilename } from "./policy";
 
 export * from "./policy";
@@ -135,8 +136,13 @@ export function normalizeFolder(folder: string | undefined): string {
  * the uploader's membership/role in `workspaceId`.
  */
 export async function uploadWorkspaceFile(input: UploadWorkspaceFileInput): Promise<{ ok: true; file: FileObject } | { ok: false; error: string }> {
+  // The per-file cap is the tighter of the caller's and the workspace's; storage counts the new bytes.
+  const fileLimit = await assertWithinLimit("fileBytes", input.workspaceId, input.file.size);
+  if (!fileLimit.ok) return fileLimit;
   const check = checkUpload({ size: input.file.size, type: input.file.type }, input.maxBytes);
   if (!check.ok) return check;
+  const storage = await assertWithinLimit("storageBytes", input.workspaceId, input.file.size, input.client);
+  if (!storage.ok) return storage;
   if (input.allowedTypes && !input.allowedTypes.has(check.contentType)) return { ok: false, error: "That file type isn't allowed here." };
   const body = Buffer.from(await input.file.arrayBuffer());
   const imageError = await checkImageSanity(body, check.contentType);

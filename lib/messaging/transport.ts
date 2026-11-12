@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { DESTINATION_ADAPTERS } from "@/lib/notify/adapters";
 import type { AdapterSendInput } from "@/lib/notify/adapters/types";
 export async function sendTransport(connection: MessagingConnection, channelId: string, text: string) {
-  const workspace = await prisma.workspace.findFirst({ where: { id: connection.workspaceId, archivedAt: null }, select: { id: true, name: true, slug: true } });
+  const workspace = await prisma.workspace.findFirst({ where: { id: connection.workspaceId, status: "ACTIVE", archivedAt: null }, select: { id: true, name: true, slug: true } });
   if (!workspace) return { ok: false, retryable: false, error: "Workspace unavailable." } as const;
   const kind = connection.provider;
   const config = kind === "TELEGRAM" ? { chatId: channelId } : kind === "WHATSAPP" ? { to: `+${channelId.replace(/\D/g, "")}` } : { mode: "bot", channelId };

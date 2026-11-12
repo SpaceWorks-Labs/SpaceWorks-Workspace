@@ -5,7 +5,7 @@
 </picture>
 
 <p align="center">
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-0.6.7-006E63?style=flat-square&amp;labelColor=142C2A" alt="Version 0.6.7" /></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-0.10.0-006E63?style=flat-square&amp;labelColor=142C2A" alt="Version 0.10.0" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/licence-AGPL--3.0--or--later-006E63?style=flat-square&amp;labelColor=142C2A" alt="Licence: AGPL-3.0-or-later" /></a>
   <a href="docs/DEVELOPMENT.md"><img src="https://img.shields.io/badge/Node-%E2%89%A522.18-DFFF8F?style=flat-square&amp;labelColor=142C2A" alt="Node 22.18 or newer" /></a>
   <a href="https://nextjs.org"><img src="https://img.shields.io/badge/Next.js-16-B5CDFF?style=flat-square&amp;labelColor=142C2A" alt="Next.js 16" /></a>
@@ -50,14 +50,21 @@ Kochi. Member-facing work lives in sibling apps:
   - A **list view** with inline editing and bulk edit of up to 50 tasks.
   - A per-project **Restrict task edits** switch limits edits to the creator, assignees, project owner and admins.
   - An accessible drag-and-drop board (keyboard and touch) with a **Move to...** menu, and notifications when you are assigned or unassigned.
+  - Board column colours and WIP limits, swimlanes, saved views, a creator filter, an archived tab with permanent delete, `/` and `j`/`k` shortcuts and images in descriptions.
 - **Docs** with revisions, review reminders and controlled access; private **files** with versions.
 - **Chat** with channels, direct messages, threads, reactions and mentions, plus a team calendar, meetings, goals, polls and ideas.
 
 ### Operations
 
 - **Finance**: income and expenses, funds, budgets, supplier bills, purchase requests with approvals, reimbursements, rent and recurring costs, remittances, payroll records, funding and donor receipts.
+  - Bank statement import (CSV, OFX) with matching, and Tally, Xero, QuickBooks and journal exports ([guide](docs/areas/finance-bank-export.md)).
+  - Receipts and Payments, Income and Expenditure and fund statements by financial year, donations posted to the ledger, and FCRA checks ([guide](docs/areas/finance-statements.md)).
+  - Invoice payment links through your own Stripe or Razorpay account, with signed webhooks and refunds ([guide](docs/areas/payments.md)).
+  - In-kind gifts recorded as assets, and your own accounting codes on accounts and categories for the exports.
+- **Makerspace operations**: machine downtime, maintenance reminders, required inductions with a sign-off matrix, and consumables stock with reorder alerts ([guide](docs/areas/makerspace-ops.md)).
+- **Email campaigns**: native lists, double opt-in, templates, throttled sending, bounce handling and one-click unsubscribe, with tracking off by default ([guide](docs/areas/email-campaigns.md)).
 - **People**: profiles, org chart, onboarding, skills, leave, attendance, hiring, rota and a confidential help desk. **Governance**: compliance calendar, board packs, registers and safeguarding cases.
-- **Analytics**: one report desk across money, people, work and operations, with drill-down, CSV export and printable packs.
+- **Analytics**: one report desk across money, people, work and operations, with drill-down, CSV export and printable packs. Each workspace can also connect its own analytics accounts or use the instance's ([client guide](docs/OBSERVABILITY-CLIENT.md)).
 - **Monitoring**: HTTP, TCP, DNS, TLS and heartbeat checks, incidents, on-call and public status pages.
 - **Social** analytics and comments, app store reviews, and **SEO** (Search Console metrics and page audits).
 
@@ -70,8 +77,16 @@ Kochi. Member-facing work lives in sibling apps:
 ### Platform
 
 - OWNER, ADMIN, MEMBER and GUEST roles, strict workspace isolation and **private teams** that hide their projects, channels and files from non-members.
-- **Notification channels**: in-app, email, WhatsApp, Telegram, Slack, Discord and Mattermost, sent by the background worker.
-- Audit log, rate limits, CSP nonces, MFA, session revocation and optional Google/OIDC sign-in.
+- **Organisation governance**: one account can belong to several organisations with a role in each. New organisations are requested and, by default, approved by the instance super admin.
+  - A super-admin console (`/admin/organisations`, `/admin/requests`) to approve, suspend and reactivate organisations, transfer ownership and open any organisation with audited access.
+  - Per-organisation limits: members, guests, projects, storage, file size, API tokens, webhooks, assistant tokens and a monthly email cap.
+  - 18 feature modules that can be switched on or off per organisation, enforced on pages, Server Actions and API routes.
+  - Owners see usage on a **Plan & limits** page and can request more or ask for a module ([guide](docs/areas/org-governance.md)).
+- **Sign-in**: username or email with a password, email verification, GitHub, Google and Apple, connected accounts, and an optional self sign-up flag.
+- **Observability**, all off by default: Sentry, PostHog, Clarity and Firebase Analytics with a consent banner, Prometheus metrics with a Grafana dashboard, and Metabase reporting views ([server](docs/OBSERVABILITY.md), [client](docs/OBSERVABILITY-CLIENT.md)).
+- **Notification channels**: in-app, email, WhatsApp, Telegram, Slack, Discord, Mattermost and webhooks, sent by the background worker, with per-destination rate limits and an alert to admins when a destination keeps failing.
+- **Per-workspace SMTP**: each organisation can send from its own mail server, with encrypted credentials and a fixed list of SMTP ports ([guide](docs/areas/integrations-messaging.md)).
+- Audit log, rate limits, CSP nonces, MFA, session revocation and optional OIDC sign-in.
 - **Secrets**: envelope encryption, version history, audited reveal and machine identities, with the `sww` command line ([Secrets CLI](#secrets-cli)).
 
 See the [area guides](docs/README.md#feature-areas) for contracts and limits.
@@ -154,6 +169,10 @@ Prefer to read it first: download `install.sh`, review it, then run
 | DigitalOcean App Platform | [.do/app.yaml](.do/app.yaml) |
 | Isolated staging | [DEPLOYMENT_STAGING.md](docs/DEPLOYMENT_STAGING.md) |
 
+Sign-in providers, default limits, observability and metrics are optional and
+off by default; their environment variables and instance settings are listed in
+[Configuration](docs/CONFIGURATION.md#instance-settings-and-their-environment-fallbacks).
+
 Images and versions are explained in [CONTAINER_IMAGES.md](docs/CONTAINER_IMAGES.md);
 shipping and running a release in [PRODUCTION_RELEASE.md](docs/PRODUCTION_RELEASE.md)
 and [production-operations.md](docs/production-operations.md).
@@ -211,16 +230,21 @@ The website can also render on Netlify through a private gateway. See
 | --- | --- |
 | [Documentation index](docs/README.md) | Find area guides and engineering references |
 | [Development](docs/DEVELOPMENT.md) and [Configuration](docs/CONFIGURATION.md) | Run it locally and look up settings |
+| [Organisation governance](docs/areas/org-governance.md) and [Observability](docs/OBSERVABILITY.md) | Run several organisations, set limits and add metrics |
 | [MCP](docs/MCP.md) and [REST API](docs/API.md) | Connect AI clients and scripts |
 | [Design](docs/DESIGN.md) | Follow the brand and UI rules |
 | [Audit, November 2026](docs/AUDIT-2026-11.md) | See findings and open work |
 
 ## Codebase size
 
-About 214,000 lines of hand-written source, tests, SQL and docs across about
-2,600 tracked files. Run `npm run loc` for the current breakdown by language and
-area; the [November 2026 audit](docs/AUDIT-2026-11.md#codebase-size) records the
-numbers at that date.
+About 243,000 lines of hand-written source, tests, SQL and docs across about
+3,060 files (0.10.0). That covers 244 pages, 89 route handlers, 427 Server
+Actions, 288 Prisma models in 38 migrations and 19 feature modules. The suite
+has 162 unit test files (about 4,500 tests), 96 PostgreSQL integration test
+files (950 tests) and 8 Playwright specs. Run `npm run loc` for the current
+breakdown by language and area; the
+[November 2026 audit](docs/AUDIT-2026-11.md#codebase-size) records the numbers
+at that date.
 
 ## Contributing
 

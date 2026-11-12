@@ -4,10 +4,12 @@ import { useEffect } from "react";
 import { Patch } from "@/components/brand/Patch";
 import { SpaceWorksLogo } from "@/components/brand/SpaceWorksLogo";
 import { Button } from "@/components/ui/button";
+import { captureClientException } from "@/lib/observability/sentry/client";
 import "./globals.css";
 
 export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
+    captureClientException(error);
     if (process.env.NODE_ENV === "development") console.error("[ui] global error", error);
     else console.error("[ui] global error");
   }, [error]);

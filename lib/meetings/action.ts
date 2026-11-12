@@ -4,6 +4,7 @@ import { revalidatePath } from "@/lib/frontend/cache";
 import { getWorkspaceForAction } from "@/lib/permissions";
 import { isActionRateLimited } from "@/lib/actionRateLimit";
 import { canContribute } from "@/lib/roles";
+import { moduleForArea } from "@/lib/modules";
 import {
   type ActionResult,
   actionError,
@@ -22,7 +23,7 @@ export async function collaborationAction<T>(
 ): Promise<ActionResult<T>> {
   if (typeof slug !== "string" || !/^[a-z0-9-]{1,64}$/.test(slug))
     return actionError(NOT_ALLOWED);
-  const actor = await getWorkspaceForAction(slug, guest ? "GUEST" : "MEMBER");
+  const actor = await getWorkspaceForAction(slug, guest ? "GUEST" : "MEMBER", { module: moduleForArea(area) });
   if (!actor || (!guest && !canContribute(actor.membership)))
     return actionError(NOT_ALLOWED);
   if (await isActionRateLimited("action", actor.user.id))

@@ -8,7 +8,7 @@ import { type ActionResult, NOT_ALLOWED, RATE_LIMITED, SAVE_FAILED, validationEr
 import { saveRecord, operate, attachFile, detachFile, FundingError, type Actor } from "@/lib/funding/service";
 import { id } from "@/lib/funding/schema";
 async function run<T>(slug: string, fn: (actor: Actor) => Promise<T>, bucket: "action" | "upload" = "action"): Promise<ActionResult<T>> {
-  const actor = await getWorkspaceForAction(slug, "ADMIN");
+  const actor = await getWorkspaceForAction(slug, "ADMIN", { module: "finance" });
   if (!actor || !canManageFunding(actor.membership)) return { ok: false, error: NOT_ALLOWED };
   if (await isActionRateLimited(bucket, actor.user.id)) return { ok: false, error: RATE_LIMITED };
   try { const data = await fn(actor); revalidatePath(`/w/${actor.workspace.slug}/funding`, "layout"); revalidatePath(`/w/${actor.workspace.slug}/documents`,"layout"); return { ok: true, data }; }

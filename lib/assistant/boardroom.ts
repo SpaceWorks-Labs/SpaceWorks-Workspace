@@ -3,7 +3,8 @@ import "server-only";
 import { prisma } from "@/lib/db";
 import { dispatch } from "@/lib/notify";
 import { publish } from "@/lib/realtime";
-import { createAnthropicClient, getAssistantConfig, messageText, modelOptions, streamTurn } from "@/lib/assistant/client";
+import { createAnthropicClient, getAssistantConfig, messageText, modelOptions, streamTurn, usageTotals } from "@/lib/assistant/client";
+import { assertAssistantAllowed, recordAssistantUsage } from "@/lib/assistant/usage";
 import { moderatorMessage, moderatorSystemPrompt, seatSystemPrompt, seatTurnMessage, type SeatInfo, type TurnInfo } from "@/lib/assistant/boardroomPrompts";
 
 /**
@@ -40,7 +41,15 @@ export async function runBoardroomSession(sessionId: string): Promise<"done" | "
   });
   const workspaceId = session.workspace.id;
   await announce(workspaceId, session.id, "boardroom.started");
+  const usage = { tokensIn: 0, tokensOut: 0 };
+  const count = (reply: Parameters<typeof usageTotals>[0]) => {
+    const totals = usageTotals(reply);
+    usage.tokensIn += totals.tokensIn;
+    usage.tokensOut += totals.tokensOut;
+  };
   try {
+    const allowed = await assertAssistantAllowed(workspaceId);
+    if (!allowed.ok) throw new Error(allowed.error);
     const config = await getAssistantConfig();
     if (!config) throw new Error("not configured");
     const client = createAnthropicClient(config.apiKey);
@@ -58,6 +67,7 @@ export async function runBoardroomSession(sessionId: string): Promise<"done" | "
           messages: [{ role: "user", content: seatTurnMessage({ question: session.question, round, rounds: session.rounds, transcript }) }],
           ...modelOptions(model),
         });
+        count(reply);
         const content = messageText(reply) || "(No answer this round.)";
         await prisma.$transaction([
           prisma.boardroomTurn.create({ data: { sessionId: session.id, seatId: seat.id, round, role: "SEAT", content } }),
@@ -77,11 +87,13 @@ export async function runBoardroomSession(sessionId: string): Promise<"done" | "
       messages: [{ role: "user", content: moderatorMessage({ question: session.question, seats, transcript }) }],
       ...modelOptions(config.model),
     });
+    count(summaryReply);
     const summary = messageText(summaryReply) || "The moderator could not write a summary.";
     await prisma.$transaction([
       prisma.boardroomTurn.create({ data: { sessionId: session.id, seatId: null, round: session.rounds, role: "MODERATOR", content: summary } }),
       prisma.boardroomSession.update({ where: { id: session.id }, data: { status: "DONE", summary } }),
     ]);
+    await recordAssistantUsage({ workspaceId, userId: session.createdById, label: "Boardroom", ...usage }).catch(() => undefined);
     await announce(workspaceId, session.id, "boardroom.done");
     if (session.createdById) {
       await dispatch(workspaceId, {
@@ -98,6 +110,7 @@ export async function runBoardroomSession(sessionId: string): Promise<"done" | "
     return "done";
   } catch {
     console.error("[boardroom] session failed");
+    await recordAssistantUsage({ workspaceId, userId: session.createdById, label: "Boardroom", ...usage }).catch(() => undefined);
     await prisma.boardroomSession.update({ where: { id: session.id }, data: { status: "FAILED" } });
     await announce(workspaceId, session.id, "boardroom.failed");
     return "failed";

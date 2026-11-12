@@ -13,7 +13,7 @@ describe("internal operations action boundary", () => {
   it("resolves tenant from slug and invalidates only its guarded area", async () => {
     const work = vi.fn(async a => { expect(a.workspace.id).toBe("tenant"); return "Saved."; });
     expect((await action("staff","helpdesk",false,work)).ok).toBe(true);
-    expect(getWorkspaceForAction).toHaveBeenCalledWith("staff","MEMBER");
+    expect(getWorkspaceForAction).toHaveBeenCalledWith("staff","MEMBER",{ module: "helpdesk" });
     expect(isActionRateLimited).toHaveBeenCalledWith("apiWrite","user");
     expect(revalidatePath).toHaveBeenCalledWith("/w/staff/helpdesk","layout");
   });

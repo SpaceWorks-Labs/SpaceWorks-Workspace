@@ -1,5 +1,6 @@
 import "server-only";
 
+import { withMetrics } from "@/lib/observability/metrics/http";
 import { checkRateLimitById } from "@/lib/rateLimit";
 import { authenticateApiToken, type AuthenticatedToken } from "@/lib/apiTokens";
 import { executeTool, type ExecuteOutcome } from "@/lib/assistant/tools";
@@ -70,25 +71,25 @@ async function readOptionalJson(request: Request): Promise<unknown> {
 }
 
 /** GET list endpoint: run a list tool and answer `{ data: [...], nextCursor }`. */
-export async function listEndpoint(request: Request, tool: string, key: string, numeric: readonly string[] = ["limit"]) {
+export const listEndpoint = withMetrics(async (request: Request, tool: string, key: string, numeric: readonly string[] = ["limit"]) => {
   const token = await requireApiToken(request, "read");
   if (token instanceof Response) return token;
   const result = await runApiTool(token, tool, queryParams(request, numeric));
   if (!result.ok) return result.response;
   const body = result.data as Record<string, unknown>;
   return apiJson({ data: body[key] ?? [], nextCursor: (body.nextCursor as string | null | undefined) ?? null });
-}
+});
 
 /** GET single-record endpoint: `{ data: {...} }`. */
-export async function getEndpoint(request: Request, tool: string, input: Record<string, unknown>) {
+export const getEndpoint = withMetrics(async (request: Request, tool: string, input: Record<string, unknown>) => {
   const token = await requireApiToken(request, "read");
   if (token instanceof Response) return token;
   const result = await runApiTool(token, tool, input);
   return result.ok ? apiJson({ data: result.data }) : result.response;
-}
+});
 
 /** POST/PATCH endpoint: JSON body merged with the path input; `{ data }` (201 for creates). */
-export async function writeEndpoint(request: Request, tool: string, pathInput: Record<string, unknown>, status = 200, options: { bodyOptional?: boolean; requiredStrings?: readonly string[] } = {}) {
+export const writeEndpoint = withMetrics(async (request: Request, tool: string, pathInput: Record<string, unknown>, status: number = 200, options: { bodyOptional?: boolean; requiredStrings?: readonly string[] } = {}) => {
   const token = await requireApiToken(request, "write");
   if (token instanceof Response) return token;
   const body = options.bodyOptional ? await readOptionalJson(request) : await readJson(request);
@@ -99,4 +100,4 @@ export async function writeEndpoint(request: Request, tool: string, pathInput: R
   }
   const result = await runApiTool(token, tool, { ...(body as Record<string, unknown>), ...pathInput });
   return result.ok ? apiJson({ data: result.data }, status) : result.response;
-}
+});

@@ -36,7 +36,7 @@ export async function run(now: Date) {
           corrections: { where: { type: "CREDIT_NOTE", status: "ISSUED" } },
         },
       });
-      if (!row || !row.dueOn || row.workspace.archivedAt) return null;
+      if (!row || !row.dueOn || row.workspace.archivedAt || row.workspace.status !== "ACTIVE") return null;
       const today = localDate(now, row.workspace.timezone);
       if (row.dueOn.toISOString().slice(0, 10) >= today) return null;
       if (

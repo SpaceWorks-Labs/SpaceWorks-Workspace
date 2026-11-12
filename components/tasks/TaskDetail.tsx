@@ -20,7 +20,7 @@ import type { TaskDetailDTO } from "@/lib/tasks/types";
 import { BlockedChip, DueChip, TypeChip } from "./bits";
 import { MoveToProjectDialog } from "./MoveToProjectDialog";
 import { effectiveType } from "@/lib/tasks/taskTypes";
-import { RichTextEditor, RichTextView } from "./RichTextEditor";
+import { TaskDescription } from "./TaskDescription";
 import { TaskPlan } from "@/components/projects/TaskPlan";
 import { TaskAttachments } from "./TaskAttachments";
 import { TaskComments } from "./TaskComments";
@@ -42,8 +42,6 @@ import { useTaskRunner } from "./useTaskRunner";
 export function TaskDetail({ slug, initial, variant, onChanged }: { slug: string; initial: TaskDetailDTO; variant: "page" | "drawer"; onChanged?: () => void }) {
   const [task, setTask] = useState(initial);
   const [moving, setMoving] = useState(false);
-  const [editingDescription, setEditingDescription] = useState(false);
-  const [descriptionDraft, setDescriptionDraft] = useState("");
   const { showToast } = useToast();
   const [seen, setSeen] = useState(initial);
   if (seen !== initial) {
@@ -115,7 +113,25 @@ export function TaskDetail({ slug, initial, variant, onChanged }: { slug: string
           <span aria-hidden>/</span>
           <span className="font-semibold tabular-nums">{reference}</span>
         </div>
-        <TitleEditor value={task.title} as={isPage ? "h1" : "h2"} editable={canEdit} onSave={(title) => run(() => updateTaskAction(slug, { taskId: task.id, title }))} />
+        <TitleEditor
+          value={task.title}
+          as={isPage ? "h1" : "h2"}
+          editable={canEdit}
+          onSave={async (title) => {
+            try {
+              const result = await updateTaskAction(slug, { taskId: task.id, title, expectedTitle: task.title });
+              if (result.ok) {
+                await reload();
+                return true;
+              }
+              if (result.fieldErrors?.conflict) return "conflict";
+              showToast(result.error, "error");
+            } catch {
+              showToast("Couldn't save. Check your connection and try again.", "error");
+            }
+            return false;
+          }}
+        />
         <div className="flex flex-wrap items-center gap-2">
           {task.completedAt ? (
             <Chip tone="success" icon={null}>
@@ -146,6 +162,9 @@ export function TaskDetail({ slug, initial, variant, onChanged }: { slug: string
                 {task.completedAt ? "Reopen" : "Mark done"}
               </Button>
             ) : null}
+            <Button variant="secondary" size="sm" onClick={() => void copyLink()}>
+              Copy link
+            </Button>
             {variant === "drawer" ? (
               <Button asChild variant="secondary" size="sm">
                 <Link href={url}>
@@ -161,9 +180,6 @@ export function TaskDetail({ slug, initial, variant, onChanged }: { slug: string
                 </IconButton>
               </MenuTrigger>
               <MenuContent>
-                <MenuItem icon={null} onSelect={() => void copyLink()}>
-                  Copy link
-                </MenuItem>
                 {canEdit && !task.parent ? (
                   <MenuItem icon={null} onSelect={() => setMoving(true)}>
                     Move to project…
@@ -201,50 +217,7 @@ export function TaskDetail({ slug, initial, variant, onChanged }: { slug: string
         ) : null}
         <div className={cn("flex min-w-0 flex-col gap-8", isPage && "lg:order-1")}>
           {!isPage ? <section aria-label="Details" className="rounded-xl border border-line bg-panel px-4 py-1">{properties}</section> : null}
-          <section aria-labelledby={`desc-${task.id}`} className="flex flex-col gap-3">
-            <div className="flex items-center justify-between gap-3">
-              <h3 id={`desc-${task.id}`} className="text-title text-ink">
-                Description
-              </h3>
-              {canEdit && !editingDescription ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setDescriptionDraft(task.description ?? "");
-                    setEditingDescription(true);
-                  }}
-                >
-                  {task.description ? "Edit" : "Add description"}
-                </Button>
-              ) : null}
-            </div>
-            {editingDescription ? (
-              <div className="flex flex-col gap-2">
-                <RichTextEditor initialHtml={task.description ?? ""} onChange={setDescriptionDraft} autoFocus />
-                <div className="flex justify-end gap-2">
-                  <Button variant="secondary" size="sm" onClick={() => setEditingDescription(false)}>
-                    Cancel
-                  </Button>
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={() =>
-                      void run(() => updateTaskAction(slug, { taskId: task.id, description: descriptionDraft || null })).then((ok) => {
-                        if (ok) setEditingDescription(false);
-                      })
-                    }
-                  >
-                    Save description
-                  </Button>
-                </div>
-              </div>
-            ) : task.description ? (
-              <RichTextView html={task.description} />
-            ) : (
-              <p className="text-body-ui text-ink-muted">{canEdit ? "Add the details someone needs to pick this up." : "No description."}</p>
-            )}
-          </section>
+          <TaskDescription slug={slug} task={task} canEdit={canEdit} reload={reload} />
           <TaskPlan key={`${task.id}-${task.updatedAt}`} slug={slug} task={task} reload={reload} />
           <TaskSubtasks slug={slug} task={task} run={run} />
           <TaskDependencies slug={slug} task={task} run={run} />

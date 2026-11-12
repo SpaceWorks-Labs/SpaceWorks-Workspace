@@ -31,7 +31,7 @@ async function run<T>(
   fn: (actor: Actor) => Promise<T>,
   upload = false,
 ): Promise<ActionResult<T>> {
-  const actor = await getWorkspaceForAction(slug, "MEMBER");
+  const actor = await getWorkspaceForAction(slug, "MEMBER", { module: "operations" });
   if (!actor) return { ok: false, error: NOT_ALLOWED };
   if (await isActionRateLimited(upload ? "upload" : "action", actor.user.id))
     return { ok: false, error: RATE_LIMITED };

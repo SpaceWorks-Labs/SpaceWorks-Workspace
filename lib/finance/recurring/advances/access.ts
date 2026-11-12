@@ -6,6 +6,7 @@ import {
   FinanceError,
   type FinanceActor,
 } from "@/lib/finance/tools/access";
+import { activeMemberOrSuperAdmin } from "@/lib/accessMember";
 import { canReadStaffAdvance } from "@/lib/roles";
 
 export async function readAdvance(
@@ -14,15 +15,7 @@ export async function readAdvance(
   write = false,
   tx: DbClient = prisma,
 ) {
-  const member = await tx.membership.findFirst({
-    where: {
-      workspaceId: actor.workspace.id,
-      userId: actor.user.id,
-      status: "ACTIVE",
-      user: { disabledAt: null },
-      workspace: { archivedAt: null },
-    },
-  });
+  const member = await activeMemberOrSuperAdmin(tx, actor);
   const grant = await tx.financePayrollGrant.findUnique({
     where: {
       workspaceId_userId: {

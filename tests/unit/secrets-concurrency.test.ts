@@ -49,7 +49,7 @@ describe("Secrets locked state", () => {
 
   it("allows only one of two renewals that found the same bearer before locking", async () => {
     const raw = "swwu_" + "a".repeat(43), now = new Date();
-    const identity = { id: "identity", workspaceId: "workspace", projectId: "project", createdById: "owner", accessTtl: 7200, tokenIps: [], workspace: { archivedAt: null }, permissions: [] };
+    const identity = { id: "identity", workspaceId: "workspace", projectId: "project", createdById: "owner", accessTtl: 7200, tokenIps: [], workspace: { archivedAt: null, status: "ACTIVE" }, permissions: [] };
     let token = { id: "token", workspaceId: "workspace", tokenHash: sha256Hex(raw), revokedAt: null, expiresAt: new Date(+now + 60000), maxExpiresAt: new Date(+now + 86400000), remainingUses: 5, credential: { revokedAt: null, expiresAt: null }, identity };
     let readers = 0, ready!: () => void;
     const bothRead = new Promise<void>(resolve => { ready = resolve; });

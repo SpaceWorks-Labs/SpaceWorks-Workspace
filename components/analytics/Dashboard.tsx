@@ -65,6 +65,12 @@ export function Dashboard({
             {SECTION_LABELS[section]}
           </a>
         ))}
+        <a
+          className="inline-flex min-h-11 shrink-0 items-center border-b-2 border-transparent px-1 py-3 text-body-sm text-ink-muted"
+          href={`${base}/reports`}
+        >
+          Metabase reports
+        </a>
       </nav>
       <Card padding="none" className="print:hidden">
         <form

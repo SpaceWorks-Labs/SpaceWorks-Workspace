@@ -120,7 +120,7 @@ export interface EventPayloads {
   "shift.swap_accepted": { swapRequestId: Id; shiftId: Id };
   // Operations
   "renewal.due": { subscriptionId: Id; renewsAt: Iso; daysLeft: number };
-  "asset.maintenance_due": { assetId: Id; dueAt: Iso };
+  "asset.maintenance_due": { assetId: Id; dueAt: Iso; maintenanceLogId?: Id };
   "form.submitted": { formId: Id; submissionId: Id };
   "vault.access.requested": { accessRequestId: Id; itemId: Id };
   "vault.item_revealed": { itemId: Id; byUserId: Id };
@@ -148,6 +148,15 @@ export interface EventPayloads {
   "import.finished": { importJobId: Id; created: number; updated: number; skipped: number; errors: number };
   "security.new_login": { userId: Id };
   "destination.failing": { destinationId: Id; error: string };
+  "org.request_decided": { requestId: Id; kind: string; status: "APPROVED" | "REJECTED"; workspaceId: Id | null };
+  "campaign.finished": { campaignId: Id; sent: number; failed: number; skipped: number };
+  "campaign.paused": { campaignId: Id; reason: string };
+  "finance.invoice.paid": { invoiceId: Id; paymentId: Id; amountMinor: number; currency: string; provider: string };
+  "finance.payment.failed": { invoiceId: Id; paymentId: Id | null; provider: string; reason: string };
+  "finance.payment.refunded": { invoiceId: Id; paymentId: Id; refundedMinor: number; currency: string; provider: string };
+  "system.destination_failed": { destinationId: Id; channel: string; error: string };
+  "asset.downtime_started": { assetId: Id; downtimeId: Id; reason: string };
+  "stock.reorder": { itemId: Id; onHand: string; reorderLevel: string };
   "notification.test": { destinationId: Id };
 }
 

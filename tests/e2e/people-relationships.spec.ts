@@ -13,7 +13,7 @@ let memberId: string;
 let privateTeamSlug: string;
 async function login(page: Page, who: string) {
   await page.goto(`/login?callbackUrl=/w/${slug}/members`);
-  await page.getByLabel("Email", { exact: true }).fill(`${who}${domain}`);
+  await page.getByLabel("Username or email", { exact: true }).fill(`${who}${domain}`);
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Members", exact: true })).toBeVisible();

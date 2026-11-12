@@ -10,11 +10,11 @@ async function mayReceive(workspaceId: string, userId: string, eventType: string
     where: { userId_workspaceId: { userId, workspaceId } },
     select: {
       role: true, status: true, user: { select: { disabledAt: true, email: true } },
-      workspace: { select: { archivedAt: true } },
+      workspace: { select: { archivedAt: true, status: true } },
     },
   });
   const spec = EVENT_CATALOG[eventType as EventType];
-  return Boolean(spec && membership?.status === "ACTIVE" && !membership.user.disabledAt && !membership.workspace.archivedAt
+  return Boolean(spec && membership?.status === "ACTIVE" && !membership.user.disabledAt && !membership.workspace.archivedAt && membership.workspace.status === "ACTIVE"
     && (!spec.minRole || hasRoleAtLeast(membership.role, spec.minRole))
     && (!recipientEmail || membership.user.email.toLowerCase() === recipientEmail.toLowerCase()));
 }
@@ -30,13 +30,13 @@ export async function mayDeliverNotification(deliveryId: string, recipientEmail?
     where: { id: deliveryId },
     select: {
       workspaceId: true, userId: true, destinationId: true, status: true,
-      workspace: { select: { archivedAt: true } },
+      workspace: { select: { archivedAt: true, status: true } },
       event: { select: { type: true } },
       destination: { select: { workspaceId: true, enabled: true, kind: true, config: true } },
       isTest: true,
     },
   });
-  if (!delivery || delivery.workspace.archivedAt || delivery.status === "CANCELLED" || delivery.status === "FAILED") return false;
+  if (!delivery || delivery.workspace.archivedAt || delivery.workspace.status !== "ACTIVE" || delivery.status === "CANCELLED" || delivery.status === "FAILED") return false;
   if (delivery.destinationId) {
     const destination = delivery.destination;
     if (!destination || destination.workspaceId !== delivery.workspaceId || (!destination.enabled && !delivery.isTest)) return false;

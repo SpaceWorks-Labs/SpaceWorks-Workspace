@@ -2,6 +2,7 @@ import "server-only";
 import { z } from "zod";
 import type { Prisma } from "@prisma/client";
 import { prisma, type DbClient } from "@/lib/db";
+import { activeMemberOrSuperAdmin } from "@/lib/accessMember";
 import { canManageInternalOperations, canUseInternalOperations } from "@/lib/roles";
 import type { OpsActor } from "@/lib/approvals/context";
 import { recordAuditEvent } from "@/lib/audit";
@@ -26,7 +27,7 @@ export function parse<T>(schema: z.ZodType<T>, input: unknown): T {
 }
 /** Recheck live membership for reads and inside every write transaction. */
 export async function guard(actor: OpsActor, manager = false, client: DbClient = prisma) {
-  const m = await client.membership.findFirst({ where: { workspaceId: actor.workspace.id, userId: actor.user.id, status: "ACTIVE", workspace: { archivedAt: null }, user: { disabledAt: null } }, select: { role: true } });
+  const m = await activeMemberOrSuperAdmin(client, actor);
   if (!m || m.role !== actor.membership.role || !(manager ? canManageInternalOperations(m) : canUseInternalOperations(m))) throw new OperationsError("You do not have access to this action.");
 }
 export async function requireKeyholder(actor: OpsActor, client: DbClient = prisma) {

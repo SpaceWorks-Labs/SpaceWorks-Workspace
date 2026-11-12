@@ -24,9 +24,10 @@ export default async function SsoPage() {
         title="Single sign-on"
         description="OpenID Connect for existing, active invited members. New accounts are never created through SSO."
       />
-      <Callout tone="warning" title="Sign-in integration is pending">
-        These settings are stored securely. OIDC sign-in will become available
-        after the shared authentication integration is connected.
+      <Callout tone="info" title="OpenID Connect is live">
+        Enabled providers appear as &ldquo;Continue with&rdquo; buttons on the
+        sign-in page. Google, GitHub and Apple are configured on the{" "}
+        <Link className="font-semibold underline underline-offset-4" href="/admin/sign-in">Sign-in</Link> tab.
       </Callout>
       <Link
         className="inline-flex min-h-11 items-center underline"

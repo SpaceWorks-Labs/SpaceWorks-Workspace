@@ -7,6 +7,8 @@ import { recordAuditEvent } from "@/lib/audit";
 import { actionError, NOT_ALLOWED, validationError, type ActionResult } from "@/lib/actionResult";
 import { hasRoleAtLeast } from "@/lib/roles";
 import { hiddenTeamIds } from "@/lib/teamAccess";
+import { assertWithinLimit } from "@/lib/limits/enforce";
+import { lockWorkspace } from "@/lib/seatLimits";
 import { COLUMN_TEMPLATES } from "@/lib/projects/keys";
 import { canEditTasks, canManageProject, visibleProjectWhere, type TaskActor } from "@/lib/tasks/access";
 import { POSITION_GAP } from "@/lib/tasks/position";
@@ -67,7 +69,10 @@ export async function createProject(actor: TaskActor, input: unknown): Promise<A
     return actionError("That key is already used by another project.", { key: ["Pick a different key."] });
   }
   try {
-    const project = await prisma.$transaction(async (tx) => {
+    const created = await prisma.$transaction(async (tx) => {
+      await lockWorkspace(tx, actor.workspace.id);
+      const limit = await assertWithinLimit("projects", actor.workspace.id, 1, tx);
+      if (!limit.ok) return limit;
       const project = await tx.project.create({
         data: {
           workspaceId: actor.workspace.id,
@@ -88,7 +93,8 @@ export async function createProject(actor: TaskActor, input: unknown): Promise<A
       await indexProject(tx, actor.workspace.slug, project);
       return project;
     });
-    return { ok: true, data: { id: project.id, key: project.key } };
+    if ("error" in created) return actionError(created.error);
+    return { ok: true, data: { id: created.id, key: created.key } };
   } catch (error) {
     if ((error as { code?: string }).code === "P2002") return actionError("That key is already used by another project.", { key: ["Pick a different key."] });
     throw error;
@@ -149,12 +155,20 @@ export async function setProjectArchived(actor: TaskActor, input: unknown, archi
   const project = await findVisibleProject(actor, { id: parsed.data.projectId });
   if (!project || !canManageProject(actor, project)) return actionError(NOT_ALLOWED);
   if (archived === (project.status === "ARCHIVED")) return { ok: true };
-  await prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
+    // Restoring brings a project back into the plan's project count, so it respects the limit like creating one.
+    if (!archived) {
+      await lockWorkspace(tx, actor.workspace.id);
+      const limit = await assertWithinLimit("projects", actor.workspace.id, 1, tx);
+      if (!limit.ok) return limit;
+    }
     const updated = await tx.project.update({ where: { id: project.id }, data: { status: archived ? "ARCHIVED" : "ACTIVE" } });
     await recordAuditEvent({ action: archived ? "project.archived" : "project.restored", workspaceId: actor.workspace.id, actorId: actor.user.id, targetType: "Project", targetId: project.id, metadata: { key: project.key }, client: tx });
     await recordActivity({ workspaceId: actor.workspace.id, actorId: actor.user.id, verb: archived ? "archived" : "restored", entityType: "project", entityId: project.id, summary: `${archived ? "archived" : "restored"} the project ${project.name}`, projectId: project.id, teamId: project.teamId }, tx);
     await indexProject(tx, actor.workspace.slug, updated);
+    return { ok: true as const };
   });
+  if (!result.ok) return actionError(result.error);
   await publishTaskChange({ workspaceId: actor.workspace.id, project, taskIds: [], type: "board.changed", actorId: actor.user.id });
   return { ok: true };
 }
@@ -200,9 +214,12 @@ export async function updateColumn(actor: TaskActor, input: unknown): Promise<Ac
   const found = await projectForColumns(actor, column.projectId);
   if (found.error) return actionError(found.error);
   await prisma.$transaction(async (tx) => {
-    await tx.boardColumn.update({ where: { id: column.id }, data: { name: parsed.data.name, category: parsed.data.category } });
+    await tx.boardColumn.update({
+      where: { id: column.id },
+      data: { name: parsed.data.name, category: parsed.data.category, ...(parsed.data.color !== undefined ? { color: parsed.data.color } : {}), ...(parsed.data.wipLimit !== undefined ? { wipLimit: parsed.data.wipLimit } : {}) },
+    });
     if ((column.category === "DONE") !== (parsed.data.category === "DONE")) await syncCompletion(tx, column.id, parsed.data.category);
-    await recordAuditEvent({ action: "project.column_updated", workspaceId: actor.workspace.id, actorId: actor.user.id, targetType: "Project", targetId: column.projectId, metadata: { columnId: column.id, category: parsed.data.category }, client: tx });
+    await recordAuditEvent({ action: "project.column_updated", workspaceId: actor.workspace.id, actorId: actor.user.id, targetType: "Project", targetId: column.projectId, metadata: { columnId: column.id, category: parsed.data.category, color: parsed.data.color ?? null, wipLimit: parsed.data.wipLimit ?? null }, client: tx });
   });
   await publishTaskChange({ workspaceId: actor.workspace.id, project: found.project, taskIds: [], type: "board.changed", actorId: actor.user.id });
   return { ok: true };

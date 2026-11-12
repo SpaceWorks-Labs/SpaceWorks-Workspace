@@ -1,17 +1,19 @@
 import "server-only";
+import { workspacesWithoutModule } from "@/lib/modules-server";
 import { prisma } from "@/lib/db";
 import { dispatch } from "@/lib/notify";
 import { hiddenTeamIds } from "@/lib/teamAccess";
 import { sectionFor } from "@/lib/productOps/schema";
 export async function run(now = new Date()) {
+  const off = await workspacesWithoutModule("projects");
  let cursor: string | undefined;
  for (;;) {
-  const workspaces = await prisma.workspace.findMany({ where: { archivedAt: null }, select: { id: true, slug: true, timezone: true }, orderBy: { id: "asc" }, take: 50, ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}) });
+  const workspaces = await prisma.workspace.findMany({ where: { status: "ACTIVE", archivedAt: null, id: { notIn: off } }, select: { id: true, slug: true, timezone: true }, orderBy: { id: "asc" }, take: 50, ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}) });
   if (!workspaces.length) break;
   for (const workspace of workspaces) {
    const results = await prisma.$transaction(async tx => {
     await tx.$queryRaw`SELECT id FROM "Workspace" WHERE id=${workspace.id} FOR NO KEY UPDATE`;
-    if (!await tx.workspace.findFirst({ where: { id: workspace.id, archivedAt: null } })) return [];
+    if (!await tx.workspace.findFirst({ where: { id: workspace.id, status: "ACTIVE", archivedAt: null } })) return [];
     const today = new Intl.DateTimeFormat("en-CA", { timeZone: workspace.timezone, year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
     const records = await tx.productRecord.findMany({ where: { workspaceId: workspace.id, archivedAt: null, dueOn: { not: null }, status: { notIn: ["DONE", "SHIPPED", "CLOSED", "RESOLVED", "PASSED", "PASS", "FAIL", "COMPLETE", "APPLIED", "ROLLED_BACK", "READY"] } }, orderBy: { id: "asc" } });
     const members = await tx.membership.findMany({ where: { workspaceId: workspace.id, status: "ACTIVE", role: { not: "GUEST" }, user: { disabledAt: null } }, select: { userId: true, role: true } });

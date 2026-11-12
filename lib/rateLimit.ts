@@ -11,6 +11,7 @@ import Redis from "ioredis";
 export type Bucket =
   | "global"
   | "frontendAction"
+  | "frontendView"
   | "action"
   | "bulk"
   | "auth"
@@ -26,11 +27,23 @@ export type Bucket =
   | "apiWrite"
   | "webhook"
   | "dataExport"
-  | "realtime";
+  | "realtime"
+  | "subscribe"
+  | "emailSignup"
+  | "emailResend"
+  | "emailConfirm"
+  | "orgRequest"
+  | "paymentWebhook"
+  | "paymentRefund"
+  | "campaignPublic"
+  | "campaignTestSend"
+  | "campaignConfirmEmail"
+  | "campaignConfirmWorkspace";
 
 const limits: Record<Bucket, { max: number; windowMs: number; }> = {
   global: { max: 600, windowMs: 60_000 },
   frontendAction: { max: 240, windowMs: 60_000 },
+  frontendView: { max: 3000, windowMs: 60_000 },
   action: { max: 240, windowMs: 60_000 },
   // Bulk edits spend one unit per task (lib/tasks/bulkSchemas MAX_BULK = 50 per call).
   bulk: { max: 200, windowMs: 60_000 },
@@ -49,6 +62,19 @@ const limits: Record<Bucket, { max: number; windowMs: number; }> = {
   dataExport: { max: 5, windowMs: 60 * 60_000 },
   // SSE connections (one per open tab, reconnects after network blips).
   realtime: { max: 60, windowMs: 60_000 },
+  subscribe: { max: 5, windowMs: 60 * 60_000 },
+  emailSignup: { max: 5, windowMs: 60 * 60_000 },
+  emailResend: { max: 5, windowMs: 60 * 60_000 },
+  emailConfirm: { max: 10, windowMs: 60 * 60_000 },
+  // One refund request per payment per minute, so a double click cannot refund twice before the webhook lands.
+  paymentRefund: { max: 1, windowMs: 60_000 },
+  orgRequest: { max: 10, windowMs: 24 * 60 * 60_000 },
+  paymentWebhook: { max: 600, windowMs: 60_000 },
+  campaignPublic: { max: 120, windowMs: 60_000 },
+  // Test sends per user per day; confirmation emails per address (all workspaces) and per workspace per day.
+  campaignTestSend: { max: 20, windowMs: 24 * 60 * 60_000 },
+  campaignConfirmEmail: { max: 3, windowMs: 24 * 60 * 60_000 },
+  campaignConfirmWorkspace: { max: 500, windowMs: 24 * 60 * 60_000 },
 };
 
 // Local fallback store

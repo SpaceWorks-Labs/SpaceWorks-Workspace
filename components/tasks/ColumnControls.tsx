@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { ColumnCategory } from "@prisma/client";
+import type { ColumnCategory, LabelTone } from "@prisma/client";
 import { Ellipsis, Plus } from "lucide-react";
 import { addColumnAction, deleteColumnAction, reorderColumnsAction, updateColumnAction } from "@/app/actions/projects";
 import { Button, IconButton } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader } from "@
 import { Dropdown, Field, Input } from "@/components/ui/field";
 import { Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger } from "@/components/ui/menu";
 import { COLUMN_CATEGORY_LABELS } from "@/lib/projects/keys";
+import { LABEL_TONES } from "@/lib/labels";
 import type { ColumnDTO } from "@/lib/tasks/types";
 import type { RunAction } from "./useTaskRunner";
 
@@ -31,6 +32,8 @@ export function ColumnMenu({ slug, projectId, projectKey, column, columns, taskC
   const [dialog, setDialog] = useState<"rename" | "delete" | null>(null);
   const [name, setName] = useState(column.name);
   const [category, setCategory] = useState<ColumnCategory>(column.category);
+  const [color, setColor] = useState<LabelTone | "">(column.color ?? "");
+  const [limit, setLimit] = useState(column.wipLimit ? String(column.wipLimit) : "");
   const others = columns.filter((item) => item.id !== column.id);
   const [target, setTarget] = useState(others[0]?.id ?? "");
   const [busy, setBusy] = useState(false);
@@ -64,6 +67,8 @@ export function ColumnMenu({ slug, projectId, projectKey, column, columns, taskC
             onSelect={() => {
               setName(column.name);
               setCategory(column.category);
+              setColor(column.color ?? "");
+              setLimit(column.wipLimit ? String(column.wipLimit) : "");
               setDialog("rename");
             }}
           >
@@ -87,7 +92,7 @@ export function ColumnMenu({ slug, projectId, projectKey, column, columns, taskC
           <form
             onSubmit={(event) => {
               event.preventDefault();
-              void act(() => updateColumnAction(slug, { columnId: column.id, name, category }, projectKey), "Column saved.");
+              void act(() => updateColumnAction(slug, { columnId: column.id, name, category, color: color || null, wipLimit: limit.trim() ? Number(limit) : null }, projectKey), "Column saved.");
             }}
           >
             <DialogBody className="flex flex-col gap-4">
@@ -96,6 +101,19 @@ export function ColumnMenu({ slug, projectId, projectKey, column, columns, taskC
               </Field>
               <Field label="Counts as">
                 <CategorySelect value={category} onChange={setCategory} />
+              </Field>
+              <Field label="Colour" helperText="Tints the dot in the column header.">
+                <Dropdown value={color} onChange={(event) => setColor(event.target.value as LabelTone | "")}>
+                  <option value="">Default</option>
+                  {LABEL_TONES.map((tone) => (
+                    <option key={tone.value} value={tone.value}>
+                      {tone.label}
+                    </option>
+                  ))}
+                </Dropdown>
+              </Field>
+              <Field label="WIP limit" helperText="A soft limit: the header shows tasks/limit and turns amber when it is passed. Leave empty for none.">
+                <Input type="number" inputMode="numeric" min={1} max={999} value={limit} onChange={(event) => setLimit(event.target.value)} />
               </Field>
             </DialogBody>
             <DialogFooter>

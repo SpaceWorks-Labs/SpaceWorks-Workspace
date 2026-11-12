@@ -1,4 +1,5 @@
 import { HomeActivity } from "./HomeActivity";
+import { HomeAnnouncements, HomeServices } from "./HomeCards";
 import { DashboardLayout } from "@/components/ui/layouts";
 import Link from "next/link";
 import { QuickCreateButtons } from "@/components/command-palette/QuickCreate";
@@ -17,7 +18,7 @@ import {
 } from "@/lib/format/datetime";
 import { formatMoney } from "@/lib/format/money";
 import { requireWorkspace } from "@/lib/permissions";
-import { canContribute, canViewServices } from "@/lib/roles";
+import { canContribute } from "@/lib/roles";
 import { taskUrl } from "@/lib/tasks/links";
 import { shellMessage } from "@/lib/shell/messages";
 export const metadata = { title: "My day" };
@@ -59,7 +60,7 @@ export default async function WorkspaceHome({
         <StatTile
           label="My open tasks"
           value={d.myOpenTasks}
-          href={canContribute(membership) ? `${base}/my-tasks` : undefined}
+          href={d.show.myTasks ? `${base}/my-tasks` : undefined}
         />
         <StatTile
           label="Members"
@@ -69,7 +70,7 @@ export default async function WorkspaceHome({
         <StatTile
           label="Coming up"
           value={upcoming.length}
-          href={`${base}/meetings`}
+          href={d.show.meetings ? `${base}/meetings` : undefined}
         />
         {d.kittyMinor !== null ? (
           <StatTile
@@ -95,19 +96,19 @@ export default async function WorkspaceHome({
         >
           Search workspace
         </Link>
-        <Link
+        {d.show.links ? <Link
           className="inline-flex min-h-11 items-center px-3 underline"
           href={`${base}/links`}
         >
           Links
-        </Link>
+        </Link> : null}
       </nav>}
-      rail={<HomeActivity activity={d.activity} base={base} tz={tz} />}
+      rail={d.show.activity ? <HomeActivity activity={d.activity} base={base} tz={tz} /> : null}
     >
       {!d.myTasks.length && !upcoming.length && !d.announcements.length && !d.activity.length ? (
-        <EmptyState patch title="No plans yet. Find a project for the next build night." action={<Link href={`${base}/projects`} className="inline-flex min-h-11 items-center font-semibold text-accent-text underline">Browse projects →</Link>} />
+        <EmptyState patch title={d.show.projects ? "No plans yet. Find a project for the next build night." : "Nothing new yet."} action={d.show.projects ? <Link href={`${base}/projects`} className="inline-flex min-h-11 items-center font-semibold text-accent-text underline">Browse projects →</Link> : undefined} />
       ) : null}
-      {canContribute(membership) ? (
+      {d.show.myTasks ? (
             <Card>
               <CardHeader
                 title="My tasks"
@@ -151,24 +152,24 @@ export default async function WorkspaceHome({
               ) : (
                 <p>
                   No tasks assigned.{" "}
-                  <Link className="underline" href={`${base}/projects`}>
+                  {d.show.projects ? <Link className="underline" href={`${base}/projects`}>
                     Browse projects
-                  </Link>
+                  </Link> : null}
                 </p>
               )}
             </Card>
           ) : null}
-          <Card>
+          {d.show.meetings || d.show.shifts ? <Card>
             <CardHeader
               title="Upcoming"
               description={`Times in ${formatTimeZoneName(d.now, tz)}`}
-              action={
+              action={d.show.meetings ?
                 <Link
                   className="inline-flex min-h-11 items-center underline"
                   href={`${base}/meetings`}
                 >
                   Meetings
-                </Link>
+                </Link> : undefined
               }
             />
             {upcoming.length ? (
@@ -194,54 +195,13 @@ export default async function WorkspaceHome({
             ) : (
               <p>
                 Nothing planned.{" "}
-                <Link className="underline" href={`${base}/meetings`}>
+                {d.show.meetings && canContribute(membership) ? <Link className="underline" href={`${base}/meetings`}>
                   Schedule a meeting
-                </Link>
+                </Link> : null}
               </p>
             )}
-          </Card>
-          <Card>
-            <CardHeader
-              title="Announcements"
-              action={
-                <Link
-                  className="inline-flex min-h-11 items-center underline"
-                  href={`${base}/announcements`}
-                >
-                  See all
-                </Link>
-              }
-            />
-            {d.announcements.length ? (
-              <ul className="divide-y divide-line">
-                {d.announcements.map((a) => (
-                  <li className="py-3" key={a.id}>
-                    <Link
-                      href={`${base}/announcements/${a.id}`}
-                      className="text-title hover:underline"
-                    >
-                      {a.title}
-                    </Link>
-                    {a.pinned ? (
-                      <span className="ml-2">
-                        <Chip>Pinned</Chip>
-                      </span>
-                    ) : null}
-                    <p className="mt-1 line-clamp-2 text-body-ui text-ink-secondary">
-                      {a.preview}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p>
-                No announcements yet.{" "}
-                <Link className="underline" href={`${base}/announcements`}>
-                  Visit announcements
-                </Link>
-              </p>
-            )}
-          </Card>
+          </Card> : null}
+          {d.show.announcements ? <HomeAnnouncements announcements={d.announcements} base={base} /> : null}
           {d.mentions.length ? (
             <Card>
               <CardHeader title="Mentions" />
@@ -260,38 +220,7 @@ export default async function WorkspaceHome({
             </Card>
           ) : null}
           {d.unrepliedLowRatings !== null ? <StatTile label="Unreplied low ratings" value={d.unrepliedLowRatings} href={`${base}/app-reviews?replied=no&sort=lowest`} /> : null}
-          {canViewServices(membership) ? (
-            <Card>
-              <CardHeader
-                title="Services status"
-                action={
-                  <Link
-                    className="inline-flex min-h-11 items-center underline"
-                    href={`${base}/services`}
-                  >
-                    Services
-                  </Link>
-                }
-              />
-              {!d.services.length ? <p>No monitors yet. <Link className="underline" href={`${base}/services`}>Open services</Link></p> : null}
-              <div className="flex flex-wrap gap-3">
-                {d.services.map((s) => (
-                  <Chip
-                    key={s.lastStatus}
-                    tone={
-                      s.lastStatus === "DOWN"
-                        ? "danger"
-                        : s.lastStatus === "UP"
-                          ? "success"
-                          : "neutral"
-                    }
-                  >
-                    {s._count} {s.lastStatus.toLowerCase().replaceAll("_", " ")}
-                  </Chip>
-                ))}
-              </div>
-            </Card>
-          ) : null}
+          {d.show.services ? <HomeServices services={d.services} base={base} /> : null}
     </DashboardLayout>
   );
 }

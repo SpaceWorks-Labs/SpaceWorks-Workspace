@@ -21,6 +21,7 @@ import {
   linked,
   PARENTS,
 } from "./record-links";
+import { voidDonationLedgerEntry } from "./ledger-link";
 
 export async function operate(actor: Actor, raw: unknown) {
   const input = operationSchema.parse(raw);
@@ -131,6 +132,7 @@ export async function operate(actor: Actor, raw: unknown) {
           data: { status: "VOID" },
         });
         await sync(actor, tx, changed, "voided");
+        await voidDonationLedgerEntry(tx, workspaceId, row.id, actor.user.id);
         return { id: row.id };
       }
       if (input.op === "donorPreferences") {

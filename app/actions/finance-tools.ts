@@ -28,6 +28,7 @@ import { extractReceipt } from "@/lib/finance/tools/extract";
 import { generatePayslip } from "@/lib/finance/tools/pdf";
 import { handlers } from "@/lib/finance/tools/action-handlers";
 import { revealPayDetails } from "@/lib/finance/tools/payroll";
+import { PAYROLL_OPERATIONS, payrollDisabled } from "@/lib/finance/tools/payrollGate";
 
 const bools = new Set([
   "restricted",
@@ -63,8 +64,9 @@ export async function financeToolAction(
   operation: string,
   form: FormData,
 ): Promise<ActionResult<{ id: string; warnings?: string[] }>> {
-  const actor = await getWorkspaceForAction(slug, "MEMBER");
+  const actor = await getWorkspaceForAction(slug, "MEMBER", { module: "finance" });
   if (!actor) return actionError(NOT_ALLOWED);
+  if (PAYROLL_OPERATIONS.has(operation) && (await payrollDisabled(actor.workspace.id))) return actionError(NOT_ALLOWED);
   if (await isActionRateLimited("apiWrite", `finance-tools:${actor.user.id}`))
     return actionError(RATE_LIMITED);
   if (!Object.hasOwn(toolSchemas, operation))
@@ -171,7 +173,7 @@ export async function financeToolAction(
   }
 }
 export async function uploadFinanceFilesAction(slug: string, form: FormData) {
-  const actor = await getWorkspaceForAction(slug, "MEMBER");
+  const actor = await getWorkspaceForAction(slug, "MEMBER", { module: "finance" });
   if (!actor) return actionError(NOT_ALLOWED);
   if (await isActionRateLimited("upload", `finance-tools:${actor.user.id}`))
     return actionError(RATE_LIMITED);
@@ -192,7 +194,7 @@ export async function uploadFinanceFilesAction(slug: string, form: FormData) {
   }
 }
 export async function removeFinanceFileAction(slug: string, id: string) {
-  const actor = await getWorkspaceForAction(slug, "MEMBER");
+  const actor = await getWorkspaceForAction(slug, "MEMBER", { module: "finance" });
   if (!actor) return actionError(NOT_ALLOWED);
   if (await isActionRateLimited("apiWrite", `finance-tools:${actor.user.id}`))
     return actionError(RATE_LIMITED);
@@ -205,7 +207,7 @@ export async function removeFinanceFileAction(slug: string, id: string) {
   }
 }
 export async function extractReceiptAction(slug: string, fileId: string) {
-  const actor = await getWorkspaceForAction(slug, "MEMBER");
+  const actor = await getWorkspaceForAction(slug, "MEMBER", { module: "finance" });
   if (!actor) return actionError(NOT_ALLOWED);
   if (
     await isActionRateLimited("assistant", `finance-receipt:${actor.user.id}`)
@@ -224,7 +226,7 @@ export async function extractReceiptAction(slug: string, fileId: string) {
   }
 }
 export async function generatePayslipAction(slug: string, runId: string) {
-  const actor = await getWorkspaceForAction(slug, "MEMBER");
+  const actor = await getWorkspaceForAction(slug, "MEMBER", { module: "finance" });
   if (!actor) return actionError(NOT_ALLOWED);
   if (await isActionRateLimited("apiRead", `finance-payslip:${actor.user.id}`))
     return actionError(RATE_LIMITED);
@@ -240,8 +242,8 @@ export async function generatePayslipAction(slug: string, runId: string) {
   }
 }
 export async function revealPayDetailsAction(slug: string, profileId: string) {
-  const actor = await getWorkspaceForAction(slug, "MEMBER");
-  if (!actor) return actionError(NOT_ALLOWED);
+  const actor = await getWorkspaceForAction(slug, "MEMBER", { module: "finance" });
+  if (!actor || (await payrollDisabled(actor.workspace.id))) return actionError(NOT_ALLOWED);
   if (
     await isActionRateLimited("apiRead", `finance-pay-details:${actor.user.id}`)
   )
@@ -260,7 +262,7 @@ export async function revealPayDetailsAction(slug: string, profileId: string) {
 }
 
 export async function generateReportPdfAction(slug: string, input: unknown) {
-  const actor = await getWorkspaceForAction(slug, "MEMBER");
+  const actor = await getWorkspaceForAction(slug, "MEMBER", { module: "finance" });
   if (!actor) return actionError(NOT_ALLOWED);
   if (
     await isActionRateLimited("apiRead", `finance-report-pdf:${actor.user.id}`)

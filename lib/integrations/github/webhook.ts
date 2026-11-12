@@ -20,7 +20,7 @@ export async function receiveGithub(request: Request) {
     await prisma.integrationConnection.updateMany({ where: { provider: "GITHUB", externalId: installationId }, data: { status: p.action === "deleted" ? "REVOKED" : p.action === "suspend" ? "ERROR" : "ACTIVE", lastError: p.action === "unsuspend" ? null : "GitHub installation access changed. Check the App installation." } });
     return Response.json({ ok: true });
   }
-  const connections = await prisma.integrationConnection.findMany({ where: { provider: "GITHUB", externalId: installationId, status: "ACTIVE", workspace: { archivedAt: null } }, select: { id: true, workspaceId: true } });
+  const connections = await prisma.integrationConnection.findMany({ where: { provider: "GITHUB", externalId: installationId, status: "ACTIVE", workspace: { status: "ACTIVE", archivedAt: null } }, select: { id: true, workspaceId: true } });
   for (const connection of connections) {
     const fullName = text(obj(p.repository).full_name, 256);
     const repo = fullName ? await prisma.githubRepo.findFirst({ where: { workspaceId: connection.workspaceId, connectionId: connection.id, fullName } }) : null;
@@ -34,7 +34,7 @@ export async function receiveGithub(request: Request) {
   return Response.json({ ok: true });
 }
 export async function dispatchGithubEvents() {
-  const events = await prisma.githubEvent.findMany({ where: { payload: { path: ["notified"], equals: false }, workspace: { archivedAt: null } }, include: { repo: true, workspace: { select: { slug: true } } }, take: 100, orderBy: { receivedAt: "asc" } });
+  const events = await prisma.githubEvent.findMany({ where: { payload: { path: ["notified"], equals: false }, workspace: { status: "ACTIVE", archivedAt: null } }, include: { repo: true, workspace: { select: { slug: true } } }, take: 100, orderBy: { receivedAt: "asc" } });
   for (const event of events) {
     const delivered = await prisma.$transaction(async tx => {
       await tx.$queryRaw`SELECT id FROM "GithubEvent" WHERE id = ${event.id} AND "workspaceId" = ${event.workspaceId} FOR UPDATE`;

@@ -22,7 +22,7 @@ const slugSchema = z.string().min(1).max(64);
 async function managerContext(slug: unknown): Promise<WorkspaceContext | null> {
   const parsed = slugSchema.safeParse(slug);
   if (!parsed.success) return null;
-  const ctx = await getWorkspaceForAction(parsed.data, "MEMBER");
+  const ctx = await getWorkspaceForAction(parsed.data, "MEMBER", { module: "finance" });
   return ctx && canManageFinance(ctx.membership) ? ctx : null;
 }
 

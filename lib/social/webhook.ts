@@ -11,5 +11,5 @@ export async function receiveMetaWebhook(raw: unknown, now = new Date()) {
   const ids = [...new Set(array(object(raw).entry).map(v => string(object(v).id)).filter(Boolean))].slice(0, 100);
   if (!ids.length) return;
   // Only wake the existing polling job; never trust comment bodies from an unsolicited event.
-  await prisma.socialAccount.updateMany({ where: { platform: { in: ["FACEBOOK", "INSTAGRAM"] }, status: { in: ["ACTIVE", "DEGRADED"] }, failures: 0, leaseToken: null, workspace: { archivedAt: null }, OR: [{ externalId: { in: ids } }, { parentExternalId: { in: ids } }] }, data: { nextSyncAt: now } });
+  await prisma.socialAccount.updateMany({ where: { platform: { in: ["FACEBOOK", "INSTAGRAM"] }, status: { in: ["ACTIVE", "DEGRADED"] }, failures: 0, leaseToken: null, workspace: { status: "ACTIVE", archivedAt: null }, OR: [{ externalId: { in: ids } }, { parentExternalId: { in: ids } }] }, data: { nextSyncAt: now } });
 }

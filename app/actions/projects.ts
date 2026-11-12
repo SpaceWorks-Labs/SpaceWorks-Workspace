@@ -18,7 +18,7 @@ const slugSchema = z.string().min(1).max(64);
 async function actor(slug: unknown) {
   const parsed = slugSchema.safeParse(slug);
   if (!parsed.success) return null;
-  return getWorkspaceForAction(parsed.data, "GUEST");
+  return getWorkspaceForAction(parsed.data, "GUEST", { module: "projects" });
 }
 
 function revalidateProjects(slug: string, key?: string) {

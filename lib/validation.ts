@@ -3,10 +3,22 @@ import { newPasswordSchema } from "@/lib/passwordPolicy";
 import { isValidWorkspaceSlug } from "@/lib/slug";
 import { isValidTimeZone } from "@/lib/timeZone";
 import { isValidCurrency } from "@/lib/format/money";
+import { checkUsername } from "@/lib/username";
 
 export const emailSchema = z.string().trim().toLowerCase().email("Enter a valid email address.").max(254);
 export const nameSchema = z.string().trim().min(1, "Enter a name.").max(80, "Keep the name under 80 characters.");
 export { newPasswordSchema };
+
+/** Lowercased sign-in handle (see lib/username.ts). */
+export const usernameSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .superRefine((value, ctx) => {
+    const result = checkUsername(value);
+    if (!result.ok) ctx.addIssue({ code: "custom", message: result.error });
+  });
+
 
 export const workspaceSlugSchema = z
   .string()

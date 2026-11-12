@@ -6,6 +6,7 @@ import { requireWorkspace } from "@/lib/permissions";
 import { canViewFunding } from "@/lib/roles";
 import { loadFunding, type Filters } from "@/lib/funding/service";
 import { SECTIONS, SECTION_KINDS, type Kind, type Section } from "@/lib/funding/schema";
+import { loadLedgerChoices } from "@/lib/funding/service/ledger-link-queries";
 
 export async function loadPage({ params, searchParams }: PageProps<"/w/[workspaceSlug]/funding/[section]">) {
 const { workspaceSlug, section: sectionParam } = await params;
@@ -18,5 +19,6 @@ const edit = typeof query.edit === "string" ? query.edit : undefined;
 const create = typeof query.new === "string" && SECTION_KINDS[section].includes(query.new as Kind) ? query.new as Kind : undefined;
 const data = await loadFunding(actor, section, filters, edit);
 if (edit && !data.selected) notFound();
-return viewDto({ actor, section, filters, create, data } as const);
+const ledger = section === "donations" ? await loadLedgerChoices(actor) : undefined;
+return viewDto({ actor, section, filters, create, data, ledger } as const);
 }

@@ -3,13 +3,21 @@ import "server-only";
 import { Prisma, type WorkspaceRole } from "@prisma/client";
 import { prisma, type DbClient } from "@/lib/db";
 import { findDownloadableFile } from "@/lib/files";
+import { getWorkspaceModules } from "@/lib/limits/modules";
 import { hasRoleAtLeast } from "@/lib/roles";
+import { disabledEntityTypes } from "@/lib/search/entityModules";
 
 export type SearchActor = {
   workspaceId: string;
   userId: string;
   role: WorkspaceRole;
+  /** Entity types of modules the workspace has switched off; set by `withModuleFilter`. */
+  excludeTypes?: string[];
 };
+/** The actor plus the entity types its workspace's disabled modules own. */
+export async function withModuleFilter(actor: SearchActor): Promise<SearchActor> {
+  return { ...actor, excludeTypes: disabledEntityTypes(await getWorkspaceModules(actor.workspaceId)) };
+}
 export type SearchHit = {
   id: string;
   entityType: string;
@@ -167,6 +175,7 @@ export function accessSql(actor: SearchActor) {
   );
   return Prisma.sql`d."workspaceId"=${actor.workspaceId}
     AND EXISTS (SELECT 1 FROM "Membership" mem JOIN "Workspace" w ON w.id=mem."workspaceId" JOIN "User" u ON u.id=mem."userId" WHERE mem."workspaceId"=${actor.workspaceId} AND mem."userId"=${actor.userId} AND mem.status='ACTIVE' AND mem.role::text=${actor.role} AND w."archivedAt" IS NULL AND u."disabledAt" IS NULL)
+    AND (${actor.excludeTypes?.length ? Prisma.sql`d."entityType" NOT IN (${Prisma.join(actor.excludeTypes)})` : Prisma.sql`TRUE`})
     AND ${team(Prisma.sql`d."teamId"`)}
     AND (d."entityType"<>'note' OR d."ownerId"=${actor.userId})
     AND (d.visibility='WORKSPACE' OR (d."entityType"='app_review' AND ${member}) OR ${admin} OR (d.visibility='PRIVATE' AND d."ownerId"=${actor.userId}) OR (d.visibility='TEAM' AND EXISTS (SELECT 1 FROM "TeamMember" tm JOIN "Team" t ON t.id=tm."teamId" WHERE t."workspaceId"=${actor.workspaceId} AND tm."teamId"=d."teamId" AND tm."userId"=${actor.userId})))
@@ -182,6 +191,7 @@ export function buildSearchQuery(
   offset = 0,
 ) {
   const query = normaliseSearch(input);
+  // A task key typed in full ("BOT-1") ranks its own task first, ahead of BOT-10 and BOT-12.
   const pattern = `%${query.replace(/[\\%_]/g, "\\$&")}%`;
   // Match text first, then authorise only the matches: the per-type access
   // checks are correlated subqueries and must not run over the whole index.
@@ -193,7 +203,7 @@ export function buildSearchQuery(
     SELECT d.id, d."entityType", d."entityId", d.title, d.url,
     (ts_rank(d."searchVector", websearch_to_tsquery('simple', ${query})) + similarity(d.title, ${query}))::float8 AS rank
     FROM matches d WHERE ${accessSql(actor)}
-    ORDER BY rank DESC, d."updatedAt" DESC, d.id LIMIT 50 OFFSET ${Math.max(0, Math.min(offset, 500))}`;
+    ORDER BY (CASE WHEN d."entityType"='task' AND upper(split_part(d.title, ' ', 1)) = ${query.toUpperCase()} THEN 0 ELSE 1 END), rank DESC, d."updatedAt" DESC, d.id LIMIT 50 OFFSET ${Math.max(0, Math.min(offset, 500))}`;
 }
 async function readableFile(actor: SearchActor, id: string) {
   return (await findDownloadableFile(id, actor.userId))?.workspaceId === actor.workspaceId;
@@ -208,7 +218,7 @@ export async function searchDocuments(
 ): Promise<SearchHit[]> {
   if (!normaliseSearch(query)) return [];
   const rows = await client.$queryRaw<SearchHit[]>(
-    buildSearchQuery(actor, query, type, offset),
+    buildSearchQuery(await withModuleFilter(actor), query, type, offset),
   );
   const readable = await Promise.all(rows.map(async (row) => row.entityType !== "file" || await readableFile(actor, row.entityId)));
   return rows.filter(
@@ -222,7 +232,7 @@ export async function listActivity(
 ) {
   const rows = await prisma.$queryRaw<
     Array<{ id: string; summary: string; entityType: string; entityId: string; createdAt: Date }>
-  >`SELECT d.id, d.summary, d."entityType", d."entityId", d."createdAt" FROM (SELECT a.*, a."actorId" AS "ownerId", NULL::text AS "channelId" FROM "ActivityEvent" a) d WHERE ${accessSql(actor)} AND ${before ? Prisma.sql`d."createdAt" < ${before}` : Prisma.sql`TRUE`} AND ${type ? Prisma.sql`d."entityType"=${type}` : Prisma.sql`TRUE`} ORDER BY d."createdAt" DESC, d.id DESC LIMIT 40`;
+  >`SELECT d.id, d.summary, d."entityType", d."entityId", d."createdAt" FROM (SELECT a.*, a."actorId" AS "ownerId", NULL::text AS "channelId" FROM "ActivityEvent" a) d WHERE ${accessSql(await withModuleFilter(actor))} AND ${before ? Prisma.sql`d."createdAt" < ${before}` : Prisma.sql`TRUE`} AND ${type ? Prisma.sql`d."entityType"=${type}` : Prisma.sql`TRUE`} ORDER BY d."createdAt" DESC, d.id DESC LIMIT 40`;
   const readable = await Promise.all(rows.map(async (row) => row.entityType !== "file" || await readableFile(actor, row.entityId)));
   return rows.filter((_, index) => readable[index]).map(({ entityId, ...row }) => { void entityId; return row; });
 }
@@ -236,6 +246,6 @@ export async function canAccessResource(
 ) {
   const rows = await client.$queryRaw<
     Array<{ ok: number }>
-  >`SELECT 1 AS ok FROM (SELECT ${actor.workspaceId}::text AS "workspaceId",${type}::text AS "entityType",${id}::text AS "entityId",'WORKSPACE'::"Visibility" AS visibility,NULL::text AS "teamId",NULL::text AS "projectId",NULL::text AS "channelId",NULL::text AS "ownerId") d WHERE ${accessSql(actor)}`;
+  >`SELECT 1 AS ok FROM (SELECT ${actor.workspaceId}::text AS "workspaceId",${type}::text AS "entityType",${id}::text AS "entityId",'WORKSPACE'::"Visibility" AS visibility,NULL::text AS "teamId",NULL::text AS "projectId",NULL::text AS "channelId",NULL::text AS "ownerId") d WHERE ${accessSql(await withModuleFilter(actor))}`;
   return rows.length > 0 && (type !== "file" || await readableFile(actor, id));
 }

@@ -50,7 +50,7 @@ describe("selection logic", () => {
 });
 
 describe("remembered task query", () => {
-  const query: TaskQuery = { view: "list", sort: "due", group: "assignee", filters: { ...EMPTY_FILTERS, assignees: ["me"], priorities: ["HIGH"], due: "overdue", q: "motor" } };
+  const query: TaskQuery = { view: "list", sort: "due", dir: "asc", group: "assignee", filters: { ...EMPTY_FILTERS, assignees: ["me"], priorities: ["HIGH"], due: "overdue", q: "motor" } };
 
   it("round-trips through storage", () => {
     const back = deserializeQuery(serializeQuery(query));

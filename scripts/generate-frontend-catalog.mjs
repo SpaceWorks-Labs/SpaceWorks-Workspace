@@ -63,7 +63,7 @@ for(const file of walk('app/actions').filter(f=>f.endsWith('.ts')).sort()){
  const sf=ts.createSourceFile(file,readSource(file),99,true);
  for(const n of sf.statements){if(ts.isFunctionDeclaration(n)&&n.name&&n.modifiers?.some(m=>m.kind===ts.SyntaxKind.ExportKeyword)&&n.modifiers.some(m=>m.kind===ts.SyntaxKind.AsyncKeyword))actions.push({module:file.slice(0,-3),name:n.name.text,id:`${path.basename(file,'.ts')}:${n.name.text}`});}
 }
-for (const name of ['loadApprovalInbox', 'loadGithubPullRequests']) readers.push({module:'lib/views/components',name,id:`components:${name}`});
+for (const name of ['loadApprovalInbox', 'loadGithubPullRequests', 'loadObservabilityConfig']) readers.push({module:'lib/views/components',name,id:`components:${name}`});
 const all=[...readers,...actions];
 outputs['lib/frontend/registry.ts']=`// Generated fixed endpoint allowlist.\nimport "server-only";\n${all.map((x,i)=>`import { ${x.name} as endpoint${i} } from "@/${x.module}";`).join('\n')}\nexport const viewReaders = Object.freeze({\n${readers.map(x=>`${JSON.stringify(x.id)}: endpoint${all.indexOf(x)},`).join('\n')}\n});\nexport const backendActions = Object.freeze({\n${actions.map(x=>`${JSON.stringify(x.id)}: endpoint${all.indexOf(x)},`).join('\n')}\n});\n`;
 const escapeSegment = segment => [...segment].map(char => '.+*?^$()[]{}|\\'.includes(char) ? '\\' + char : char).join('');

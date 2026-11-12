@@ -35,6 +35,7 @@ export const TaskCard = memo(function TaskCard({
   labels,
   taskTypes,
   timeZone,
+  compact = false,
   canEdit,
   canClaim,
   locked = false,
@@ -52,6 +53,8 @@ export const TaskCard = memo(function TaskCard({
   labels: LabelRef[];
   taskTypes: TaskTypeRef[];
   timeZone: string;
+  /** Dense card: reference, title, priority, due date and people only. */
+  compact?: boolean;
   canEdit: boolean;
   /** Show the hover "Assign to me" button (unassigned and the viewer may take it). */
   canClaim: boolean;
@@ -109,7 +112,7 @@ export const TaskCard = memo(function TaskCard({
           onOpen(task.number);
         }}
         aria-describedby={describedBy}
-        className="flex w-full touch-manipulation flex-col gap-2 rounded-lg p-3 pr-11 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--yy-focus)]"
+        className={cn("flex w-full touch-manipulation flex-col rounded-lg text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--yy-focus)]", compact ? "gap-1 p-2 pr-11" : "gap-2 p-3 pr-11")}
       >
         <span className="flex flex-wrap items-center gap-1.5 text-caption font-semibold tabular-nums text-ink-muted">
           {done ? (
@@ -128,14 +131,14 @@ export const TaskCard = memo(function TaskCard({
             {task.blocked && !done ? <BlockedChip /> : null}
             <PriorityChip priority={task.priority} />
             <DueChip dueAt={task.dueAt} completedAt={task.completedAt} timeZone={timeZone} />
-            <LabelChips labelIds={task.labelIds} labels={labels} max={2} />
+            {compact ? null : <LabelChips labelIds={task.labelIds} labels={labels} max={2} />}
           </span>
         ) : null}
-        {assignees.length || task.subtaskCount || task.commentCount || task.attachmentCount ? (
+        {assignees.length || (!compact && (task.subtaskCount || task.commentCount || task.attachmentCount)) ? (
           <span className="flex items-center gap-3 text-caption text-ink-muted">
-            <SubtaskProgress done={task.subtaskDone} total={task.subtaskCount} />
-            {task.commentCount ? <span className="tabular-nums">{task.commentCount} comments</span> : null}
-            {task.attachmentCount ? <span className="tabular-nums">{task.attachmentCount} attachments</span> : null}
+            {compact ? null : <SubtaskProgress done={task.subtaskDone} total={task.subtaskCount} />}
+            {!compact && task.commentCount ? <span className="tabular-nums">{task.commentCount} comments</span> : null}
+            {!compact && task.attachmentCount ? <span className="tabular-nums">{task.attachmentCount} attachments</span> : null}
             <AvatarStack people={assignees} className="ml-auto" />
           </span>
         ) : null}

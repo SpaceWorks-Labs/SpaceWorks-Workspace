@@ -43,7 +43,7 @@ export async function failMeetLink(bindingId: string) {
 }
 async function meetActor(bindingId: string) {
   const binding = await prisma.calendarMeetingSync.findUnique({ where: { id: bindingId }, include: { workspace: true, meeting: true } });
-  if (!binding || binding.workspace.archivedAt || binding.meeting.status === "CANCELLED") return null;
+  if (!binding || binding.workspace.archivedAt || binding.workspace.status !== "ACTIVE" || binding.meeting.status === "CANCELLED") return null;
   const membership = await prisma.membership.findFirst({ where: { workspaceId: binding.workspaceId, userId: binding.userId, status: "ACTIVE", user: { disabledAt: null } }, include: { user: true } });
   if (!membership || !canContribute(membership)) return null;
   const actor = { workspace: binding.workspace, membership, user: { id: membership.userId, name: membership.user.name } };

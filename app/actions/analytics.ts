@@ -19,7 +19,7 @@ async function run<T>(
 ): Promise<ActionResult<T>> {
   if (!/^[a-z0-9-]{1,64}$/.test(slug))
     return actionError("That workspace is unavailable.");
-  const actor = await getWorkspaceForAction(slug, "MEMBER");
+  const actor = await getWorkspaceForAction(slug, "MEMBER", { module: "analytics" });
   if (!actor) return actionError("That report is unavailable.");
   if (await isActionRateLimited("action", actor.user.id))
     return actionError("Please wait a moment and try again.");

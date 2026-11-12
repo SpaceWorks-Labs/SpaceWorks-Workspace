@@ -27,7 +27,7 @@ export async function flushDigest(now: Date) {
           userId: first.userId,
           status: "ACTIVE",
           user: { disabledAt: null },
-          workspace: { archivedAt: null },
+          workspace: { status: "ACTIVE", archivedAt: null },
         },
         include: {
           user: { select: { id: true, name: true, email: true } },

@@ -10,7 +10,8 @@ const mocks = vi.hoisted(() => ({
 vi.mock("next-auth", () => ({ CredentialsSignin: class extends Error {}, default: (config: typeof mocks.config) => { mocks.config = config; return { auth: mocks.auth }; } }));
 vi.mock("@/lib/authAdapter", () => ({ authAdapter: {} }));
 vi.mock("@/lib/db", () => ({ prisma: { user: { findUnique: mocks.user } } }));
-vi.mock("@/lib/instanceSettings", () => ({ getGoogleSsoSettings: async () => null }));
+vi.mock("@/lib/authSettings", () => ({ getAuthSettings: async () => ({ google: null, github: null, apple: null, allowSelfSignup: false, allowedEmailDomains: [] }) }));
+vi.mock("@/lib/audit", () => ({ recordAuditEvent: vi.fn() }));
 vi.mock("@/lib/shell/oidc", () => ({ enabledOidcProviders: mocks.oidc, existingOidcMember: mocks.member }));
 vi.mock("@/lib/actionRateLimit", () => ({ isActionRateLimited: mocks.limited }));
 vi.mock("@/lib/mfa", () => ({ consumeMfaCode: mocks.totp, consumeRecoveryCode: mocks.recovery, decryptMfaSecret: () => "seed" }));

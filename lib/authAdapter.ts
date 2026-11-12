@@ -2,19 +2,27 @@ import "server-only";
 
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import type { Adapter } from "next-auth/adapters";
+import { getAuthSettings } from "@/lib/authSettings";
 import { prisma } from "@/lib/db";
 
 const base = PrismaAdapter(prisma);
 
 /**
- * Auth.js adapter. The instance is invite-only, so the adapter never creates
- * users (the sign-in callbacks refuse unknown emails); it only
- * links a verified external identity to an existing member.
+ * Auth.js adapter. The instance is invite-only: it creates a user only when
+ * the instance's self sign-up flag is on, and only from an email the provider
+ * verified (lib/authOAuth.ts already refused anything else). The new user has
+ * no workspace and lands on the no-workspace screen.
  */
 export const authAdapter: Adapter = {
   ...base,
-  async createUser() {
-    throw new Error("Accounts are created by invitation only.");
+  async createUser(user) {
+    const email = user.email?.trim().toLowerCase();
+    if (!email || !(await getAuthSettings()).allowSelfSignup) throw new Error("Accounts are created by invitation only.");
+    const created = await prisma.user.create({
+      data: { email, name: user.name?.slice(0, 80) || null, image: user.image ?? null, emailVerified: new Date() },
+      select: { id: true, email: true, name: true, image: true, emailVerified: true },
+    });
+    return created;
   },
   async getUserByEmail(email) {
     const user = await prisma.user.findUnique({

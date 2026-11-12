@@ -7,8 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-12
+
+A large release: organisations with super-admin approval, limits and module switches; more sign-in options; payments, email campaigns, bank import, statements and accounting exports; makerspace stock and operations; connected analytics; and a board and task upgrade. Run the migrations before starting the new version. Every new feature is off until an admin turns it on. Operators: read [Upgrading to 0.10.0](docs/production-operations.md#upgrading-to-0100) first.
+
 ### Added
 
+- Organisations: users request a new organisation and the instance super admin approves or rejects it; a user can belong to several organisations with a role in each.
+- Super-admin console: `/admin/organisations` and `/admin/requests` with suspend and reactivate, ownership transfer, per-organisation limits and feature modules, and silent access that is recorded only in the instance audit log.
+- Limits per organisation: members, guests, projects, storage, file size, API tokens, webhooks, assistant on or off with monthly tokens, and a monthly email cap, with instance defaults (`LIMITS_*`, `MODULES_DISABLED_BY_DEFAULT`).
+- Owner **Plan & limits** page with usage bars, "Request more" and "Request access" for disabled modules.
+- Public landing page at `/` for signed-out visitors: product tour, install guide, docs, FAQ and GitHub links. Signed-in people still go straight to their workspace.
+- Super-admin dashboard at `/admin`, showing:
+  - organisations by status, people and active people, sign-ups and invitations, with trends;
+  - growth charts;
+  - top organisations by usage and those near their limits;
+  - module adoption;
+  - system health;
+  - the status of every analytics platform;
+  - recent activity.
+- Roles defined in one place (`docs/ROLES.md`). The sidebar, settings tabs, command palette and home widgets come from the same role and module map as the page guards, and a test keeps them in step. The super admin lands on the `/admin` console.
+- Sign-in to workspace journey:
+  - a prompt to turn on two-step verification after first-run setup;
+  - sign-in returns you to the page you asked for;
+  - confirming your email signs you in;
+  - clear messages for used, withdrawn or expired invitation links;
+  - guided "no workspace yet" screen;
+  - organisation requests with a live address check, editing while pending, and a "request received" email.
+- Sign-in with username or email and password, email verification, GitHub, Google and Apple providers, connected accounts, and an optional self sign-up flag.
+- Observability, all off by default: Sentry, PostHog, Clarity and Firebase Analytics with a consent banner, `/api/metrics` for Prometheus and Grafana, Metabase reporting views and signed embeds, and per-workspace connected analytics (`/admin/observability`).
+- Per-workspace SMTP, per-destination notification rate limits and destination failure alerts.
+- Online payment for invoices through your own Stripe or Razorpay account, with payment links and webhooks.
+- Email campaigns: subscriber lists, double opt-in, campaigns and templates, throttled sending, bounce handling and one-click unsubscribe. Open and click tracking is off by default.
+- Finance: bank statement import (CSV and OFX) with matching; Tally, Xero, QuickBooks and journal exports; Receipts and Payments, Income and Expenditure and fund statements by financial year; donations posted to the ledger; FCRA fund checks and a quarterly report; in-kind gifts recorded as assets.
+- Makerspace operations: machine downtime with a cost report, maintenance reminders, required inductions with a sign-off matrix, and consumables stock with reorder alerts.
+- Tasks: an archived tab with permanent delete, column colours and WIP limits, a creator filter, a sortable list with sticky headers, swimlanes, saved views, density, due-date quick picks, `/` search and `j`/`k` shortcuts, copy link, a stale-edit warning, and images in descriptions. The MCP server and REST API match.
 - Tasks: one-click **Assign to me** / **Unassign me** on cards, the task drawer (`i`) and list rows; the assignee picker lists you first.
 - Tasks: per-project **Restrict task edits** (creator, assignees, project owner and admins edit; any member can still take an unassigned task; comments stay open).
 - Tasks: assignment history records who assigned whom; people removed from a task are notified (`task.unassigned`).
@@ -28,6 +61,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- A suspended organisation shows its owners and admins only the plan page and settings home, with the reason.
+- Workspace pages and Server Actions are gated by feature module automatically; API routes outside a workspace name their module.
 - Design tokens follow Design-Kit 0.12.0: solid-black dark palette, scrim overlay and motion tokens (durations, easing, reduced motion).
 - Typography follows Design-Kit: Outfit for body and UI, Gilroy ExtraBold for display headings, Unbounded for one accent phrase. PDFs use Gilroy Light and ExtraBold.
 - MCP/REST task writes now go through the same services as the app (archived projects reject writes, disabled members can't be assigned, tasks keep board order, dates use the workspace time zone, completing unblocks dependants).
@@ -39,6 +74,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Concurrent assignee edits no longer overwrite each other (assignments lock the task and apply only real changes).
+- Backups restore the `reporting` views together with the application schema, both on a VPS and with `npm run db:restore`.
+- The split website forwards payment webhooks, bounce webhooks, one-click unsubscribe and Sign in with Apple posts to the backend.
+- Grafana alerts for the database and Redis read only the web process, so worker and beat no longer raise false alerts.
+- Invitations can no longer be accepted into a suspended or pending organisation.
+- A person whose only organisation is suspended lands on its plan page (owners and admins) instead of a missing page; suspended and pending organisations no longer appear in the workspace switcher.
+- Calendar and Payroll navigation now match their page rules, and settings tabs follow role, module switches and organisation status.
+- The stock page passes quantities as plain values, so it renders once a workspace has stock items.
+- Form labels are linked to their controls when a form is rendered on the server.
+
+### Security
+
+- The super admin reaches organisations without a membership row; that access is audited in the instance log only and never written into an organisation's own log.
+- Payment keys, SMTP passwords, analytics secrets and provider secrets are encrypted at rest and write-only in every UI.
+- Reporting views expose aggregates only (no names, titles or emails) and exclude private teams.
+- Public campaign, payment and metrics endpoints use hashed bearer tokens or signatures, and `/api/metrics` returns an empty 404 without the token.
+- Server Actions check the module switches themselves, so a switched-off module can't be reached by posting from another page. The `finance.payroll` sub-area is enforced the same way.
+- A suspended, pending or rejected organisation is closed to API tokens, MCP, file downloads, public forms, webhooks, inbound messaging and scheduled jobs, not only to pages.
+- Confirming a self sign-up needs the password chosen at sign-up, so nobody can pre-register someone else's address. A password reset also confirms the email.
+- Workspace SMTP connects to the IP checked at resolve time, re-resolved every minute, only on ports 25, 465, 587 and 2525. Errors are reported by category, never with the server's text.
+- Campaigns: public sign-ups always use double opt-in and never undo an unsubscribe. Members can test-send only to workspace members. There are per-address and per-workspace limits on confirmation emails, and confirmation links are not kept in the outbox. The bounce webhook secret is accepted only in a header.
+- Payment webhooks are de-duplicated per organisation, and a refund can be requested once a minute per payment.
 
 ### Removed
 

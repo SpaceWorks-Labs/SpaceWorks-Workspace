@@ -1,0 +1,81 @@
+/*
+ * Public landing page (components/landing). Layout and motion follow the
+ * Space Works Labs website: a sticky hero scene where the product preview
+ * rises, zooms through its content surface and hands over to the first
+ * section; bands of cream, ink, teal and citron; hairline lists. Every colour
+ * and timing is a token; reduced motion keeps the static layout.
+ */
+.landing { --landing-header: 76px; --landing-band-line: color-mix(in srgb, currentColor 28%, transparent); scroll-padding-top: 28px; }
+.landing-wrap { width: min(100% - 32px, 1320px); margin-inline: auto; }
+@media (min-width: 640px) { .landing-wrap { width: min(100% - 64px, 1320px); } }
+@media (min-width: 1200px) { .landing-wrap { width: min(100% - 96px, 1320px); } .landing { --landing-header: 84px; } }
+.landing-wrap-narrow { max-width: 1160px; }
+.landing-section { min-height: 100dvh; display: grid; align-items: center; padding-block: 72px; }
+@media (min-width: 960px) { .landing-section { padding-block: 112px; } }
+.landing-band-line { border-color: var(--landing-band-line); }
+
+/* Tiled brand symbol behind the hero and the catalogue, faded towards the middle. */
+.landing-pattern { position: relative; isolation: isolate; }
+.landing-pattern::before {
+  content: ""; position: absolute; z-index: -1; inset: 0; pointer-events: none;
+  background: url("/brand/logo/symbol.svg") 0 0 / 120px 112px repeat; opacity: 0.035;
+  mask-image: linear-gradient(90deg, rgb(0 0 0), transparent 30%, transparent 70%, rgb(0 0 0));
+}
+@media (min-width: 960px) { .landing-pattern::before { background-size: 172px 160px; opacity: 0.055; } }
+.landing-pattern-corner::before { height: 400px; opacity: 0.045; mask-image: radial-gradient(ellipse 60% 100% at top left, rgb(0 0 0), transparent); }
+
+/* Hero sequence. Without script (or with reduced motion) it is a plain stack. */
+.landing-sequence { position: relative; }
+.landing-scene { position: relative; }
+.landing-backdrop { display: none; }
+.landing-hero { min-height: calc(100svh - var(--landing-header) - 120px); display: grid; align-items: center; padding: 36px 0; }
+.landing-product { position: relative; padding: 24px 0 56px; background: var(--landing-sky); }
+.landing-story { background: var(--yy-bg-panel); }
+.landing-sequence { --landing-sky: var(--sw-sky); }
+:root[data-color-mode="dark"] .landing-sequence { --landing-sky: var(--yy-bg-surface); }
+@media (prefers-color-scheme: dark) { :root:not([data-color-mode]) .landing-sequence { --landing-sky: var(--yy-bg-surface); } }
+
+.landing-sequence.is-animated { height: calc(300svh - var(--landing-header) - 1px); }
+.is-animated .landing-scene { position: sticky; top: 0; height: 100svh; overflow: clip; }
+.is-animated .landing-backdrop { display: block; position: absolute; inset: 0; background: var(--landing-sky); opacity: 0; pointer-events: none; }
+.is-animated .landing-hero { position: absolute; inset: 0; display: block; min-height: 0; padding: var(--copy-top, 36px) 0 0; }
+.is-animated .landing-product { position: absolute; top: 0; left: 0; width: 100%; padding: 0; background: transparent; transform: translateY(var(--preview-start, 100svh)); }
+.is-animated .landing-viewport { transform-origin: center; }
+.is-animated .landing-story { position: absolute; inset: 0; z-index: 1; min-height: 0; padding-block: 56px; background: transparent; opacity: 0; }
+.is-animated .landing-hero-copy, .is-animated .landing-product, .is-animated .landing-viewport { will-change: transform; }
+@media (max-width: 959px) { .is-animated .landing-story { padding-block: 36px; } }
+
+/* Scroll reveals only enhance: content is visible until script marks it as waiting below the fold. */
+[data-reveal="waiting"] { opacity: 0; transform: translateY(calc(var(--sw-enter-y) * 3)); }
+[data-reveal="shown"] {
+  opacity: 1; transform: none;
+  transition: opacity calc(var(--sw-dur-slow) * 2) var(--sw-ease-enter), transform calc(var(--sw-dur-slow) * 2) var(--sw-ease-enter);
+  transition-delay: calc(var(--landing-i, 0) * var(--sw-dur-fast) / 2);
+}
+
+/* Disclosure rows (catalogue and FAQ): a plus that turns into a cross. */
+.landing-details summary { list-style: none; }
+.landing-details summary::-webkit-details-marker { display: none; }
+.landing-expand { margin-left: auto; transition: transform var(--sw-dur-base) var(--sw-ease-standard); }
+.landing-details[open] .landing-expand { transform: rotate(45deg); }
+
+/* Mobile menu panel: same pop as menus elsewhere. */
+.landing-menu[open] > div { animation: sw-pop-in var(--sw-dur-base) var(--sw-ease-enter) backwards; }
+.landing-menu summary { list-style: none; }
+.landing-menu summary::-webkit-details-marker { display: none; }
+
+/* Terminal: the cursor blinks only while motion is allowed. */
+.landing-cursor { display: inline-block; width: 8px; height: 1.1em; vertical-align: text-bottom; background: var(--sw-yellow); animation: landing-blink calc(var(--sw-dur-slow) * 4) step-end infinite; }
+@keyframes landing-blink { 50% { opacity: 0; } }
+
+/* The release number is the page's one Unbounded accent (docs/DESIGN.md §2.6). */
+.landing-accent { font-family: var(--font-accent); font-weight: 500; letter-spacing: -0.05em; line-height: 1.1; font-size: clamp(3.5rem, 8vw, 7rem); }
+
+@media (prefers-reduced-motion: reduce) {
+  .landing { scroll-behavior: auto; }
+  .landing-cursor { animation: none; }
+  [data-reveal] { opacity: 1; transform: none; transition: none; }
+}
+
+/* Focus rings stay visible on the teal band (Citron, as on dark surfaces). */
+.landing-teal { --yy-focus: var(--sw-citron); }

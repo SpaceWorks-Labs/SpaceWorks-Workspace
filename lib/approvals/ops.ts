@@ -6,6 +6,7 @@ import { recordAuditEvent } from "@/lib/audit";
 import { recordActivity } from "@/lib/activity";
 import { indexSearchDocument } from "@/lib/search/documents";
 import { hasRoleAtLeast } from "@/lib/roles";
+import { activeMemberOrSuperAdmin } from "@/lib/accessMember";
 import { hiddenTeamIds } from "@/lib/teamAccess";
 import type { OpsActor } from "./context";
 
@@ -23,7 +24,7 @@ export function parse<T>(schema: z.ZodType<T>, input: unknown): T {
  return result.data;
 }
 export async function guard(actor: OpsActor, admin = false, client: DbClient = prisma) {
- const m = await client.membership.findFirst({ where: { workspaceId: actor.workspace.id, userId: actor.user.id, status: "ACTIVE", workspace: { archivedAt: null }, user: { disabledAt: null } } });
+ const m = await activeMemberOrSuperAdmin(client, actor);
  if (!m || !hasRoleAtLeast(m.role, admin ? "ADMIN" : "MEMBER") || m.role !== actor.membership.role) throw new OpsError("You don't have access to this action.");
 }
 export async function memberRef(actor: OpsActor, userId?: string | null, client: DbClient = prisma) {

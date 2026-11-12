@@ -6,6 +6,11 @@
       "id": "a-tag-page:loadAssetLabel"
     },
     {
+      "module": "lib/views/generated/account-organisations-page-loadOrganisationRequestsPage",
+      "name": "loadOrganisationRequestsPage",
+      "id": "account-organisations-page:loadOrganisationRequestsPage"
+    },
+    {
       "module": "lib/views/generated/account-page-loadAccountPage",
       "name": "loadAccountPage",
       "id": "account-page:loadAccountPage"
@@ -31,6 +36,21 @@
       "id": "admin-layout:loadAdminLayout"
     },
     {
+      "module": "lib/views/generated/admin-observability-page-loadAdminObservabilityPage",
+      "name": "loadAdminObservabilityPage",
+      "id": "admin-observability-page:loadAdminObservabilityPage"
+    },
+    {
+      "module": "lib/views/generated/admin-organisations-id-page-loadAdminOrganisationPage",
+      "name": "loadAdminOrganisationPage",
+      "id": "admin-organisations-id-page:loadAdminOrganisationPage"
+    },
+    {
+      "module": "lib/views/generated/admin-organisations-page-loadAdminOrganisationsPage",
+      "name": "loadAdminOrganisationsPage",
+      "id": "admin-organisations-page:loadAdminOrganisationsPage"
+    },
+    {
       "module": "lib/views/generated/admin-outbox-page-loadAdminOutboxPage",
       "name": "loadAdminOutboxPage",
       "id": "admin-outbox-page:loadAdminOutboxPage"
@@ -41,9 +61,19 @@
       "id": "admin-page:loadAdminOverviewPage"
     },
     {
+      "module": "lib/views/generated/admin-requests-page-loadAdminRequestsPage",
+      "name": "loadAdminRequestsPage",
+      "id": "admin-requests-page:loadAdminRequestsPage"
+    },
+    {
       "module": "lib/views/generated/admin-settings-page-loadAdminSettingsPage",
       "name": "loadAdminSettingsPage",
       "id": "admin-settings-page:loadAdminSettingsPage"
+    },
+    {
+      "module": "lib/views/generated/admin-sign-in-page-loadAdminSignInPage",
+      "name": "loadAdminSignInPage",
+      "id": "admin-sign-in-page:loadAdminSignInPage"
     },
     {
       "module": "lib/views/generated/admin-sso-page-loadSsoPage",
@@ -81,6 +111,31 @@
       "id": "login-page:loadLoginPage"
     },
     {
+      "module": "lib/views/generated/m-workspaceSlug-subscribe-listSlug-page-loadPage",
+      "name": "loadPage",
+      "id": "m-workspaceSlug-subscribe-listSlug-page:loadPage"
+    },
+    {
+      "module": "lib/views/generated/m-confirm-token-page-loadPage",
+      "name": "loadPage",
+      "id": "m-confirm-token-page:loadPage"
+    },
+    {
+      "module": "lib/views/generated/m-done-kind-page-loadPage",
+      "name": "loadPage",
+      "id": "m-done-kind-page:loadPage"
+    },
+    {
+      "module": "lib/views/generated/m-preferences-token-page-loadPage",
+      "name": "loadPage",
+      "id": "m-preferences-token-page:loadPage"
+    },
+    {
+      "module": "lib/views/generated/m-unsubscribe-token-page-loadPage",
+      "name": "loadPage",
+      "id": "m-unsubscribe-token-page:loadPage"
+    },
+    {
       "module": "lib/views/generated/page-loadHomeRedirect",
       "name": "loadHomeRedirect",
       "id": "page:loadHomeRedirect"
@@ -96,6 +151,11 @@
       "id": "setup-page:loadSetupPage"
     },
     {
+      "module": "lib/views/generated/signup-page-loadSignUpPage",
+      "name": "loadSignUpPage",
+      "id": "signup-page:loadSignUpPage"
+    },
+    {
       "module": "lib/views/generated/status-workspaceSlug-page-loadgenerateMetadata",
       "name": "loadgenerateMetadata",
       "id": "status-workspaceSlug-page:loadgenerateMetadata"
@@ -104,6 +164,11 @@
       "module": "lib/views/generated/status-workspaceSlug-page-loadPage",
       "name": "loadPage",
       "id": "status-workspaceSlug-page:loadPage"
+    },
+    {
+      "module": "lib/views/generated/verify-email-token-page-loadVerifyEmailPage",
+      "name": "loadVerifyEmailPage",
+      "id": "verify-email-token-page:loadVerifyEmailPage"
     },
     {
       "module": "lib/views/generated/w-workspaceSlug-activity-page-loadActivityPage",
@@ -124,6 +189,11 @@
       "module": "lib/views/generated/w-workspaceSlug-analytics-print-page-loadAnalyticsPrintPage",
       "name": "loadAnalyticsPrintPage",
       "id": "w-workspaceSlug-analytics-print-page:loadAnalyticsPrintPage"
+    },
+    {
+      "module": "lib/views/generated/w-workspaceSlug-analytics-reports-page-loadReportsPage",
+      "name": "loadReportsPage",
+      "id": "w-workspaceSlug-analytics-reports-page:loadReportsPage"
     },
     {
       "module": "lib/views/generated/w-workspaceSlug-announcements-announcementId-edit-page-loadEditAnnouncementPage",
@@ -224,6 +294,56 @@
       "module": "lib/views/generated/w-workspaceSlug-calendar-subscribe-page-loadSubscribePage",
       "name": "loadSubscribePage",
       "id": "w-workspaceSlug-calendar-subscribe-page:loadSubscribePage"
+    },
+    {
+      "module": "lib/views/generated/w-workspaceSlug-campaigns-campaignId-page-loadPage",
+      "name": "loadPage",
+      "id": "w-workspaceSlug-campaigns-campaignId-page:loadPage"
+    },
+    {
+      "module": "lib/views/generated/w-workspaceSlug-campaigns-campaignId-stats-page-loadPage",
+      "name": "loadPage",
+      "id": "w-workspaceSlug-campaigns-campaignId-stats-page:loadPage"
+    },
+    {
+      "module": "lib/views/generated/w-workspaceSlug-campaigns-lists-listId-page-loadPage",
+      "name": "loadPage",
+      "id": "w-workspaceSlug-campaigns-lists-listId-page:loadPage"
+    },
+    {
+      "module": "lib/views/generated/w-workspaceSlug-campaigns-lists-page-loadPage",
+      "name": "loadPage",
+      "id": "w-workspaceSlug-campaigns-lists-page:loadPage"
+    },
+    {
+      "module": "lib/views/generated/w-workspaceSlug-campaigns-new-page-loadPage",
+      "name": "loadPage",
+      "id": "w-workspaceSlug-campaigns-new-page:loadPage"
+    },
+    {
+      "module": "lib/views/generated/w-workspaceSlug-campaigns-page-loadPage",
+      "name": "loadPage",
+      "id": "w-workspaceSlug-campaigns-page:loadPage"
+    },
+    {
+      "module": "lib/views/generated/w-workspaceSlug-campaigns-settings-page-loadPage",
+      "name": "loadPage",
+      "id": "w-workspaceSlug-campaigns-settings-page:loadPage"
+    },
+    {
+      "module": "lib/views/generated/w-workspaceSlug-campaigns-subscribers-import-page-loadPage",
+      "name": "loadPage",
+      "id": "w-workspaceSlug-campaigns-subscribers-import-page:loadPage"
+    },
+    {
+      "module": "lib/views/generated/w-workspaceSlug-campaigns-subscribers-page-loadPage",
+      "name": "loadPage",
+      "id": "w-workspaceSlug-campaigns-subscribers-page:loadPage"
+    },
+    {
+      "module": "lib/views/generated/w-workspaceSlug-campaigns-templates-page-loadPage",
+      "name": "loadPage",
+      "id": "w-workspaceSlug-campaigns-templates-page:loadPage"
     },
     {
       "module": "lib/views/generated/w-workspaceSlug-catalogue-page-loadCataloguePage",
@@ -396,6 +516,11 @@
       "id": "w-workspaceSlug-finance-advances-page:loadPage"
     },
     {
+      "module": "lib/views/generated/w-workspaceSlug-finance-bank-page-loadBankPage",
+      "name": "loadBankPage",
+      "id": "w-workspaceSlug-finance-bank-page:loadBankPage"
+    },
+    {
       "module": "lib/views/generated/w-workspaceSlug-finance-bills-page-loadPage",
       "name": "loadPage",
       "id": "w-workspaceSlug-finance-bills-page:loadPage"
@@ -424,6 +549,11 @@
       "module": "lib/views/generated/w-workspaceSlug-finance-dues-page-loadPage",
       "name": "loadPage",
       "id": "w-workspaceSlug-finance-dues-page:loadPage"
+    },
+    {
+      "module": "lib/views/generated/w-workspaceSlug-finance-export-accounting-page-loadAccountingExportPage",
+      "name": "loadAccountingExportPage",
+      "id": "w-workspaceSlug-finance-export-accounting-page:loadAccountingExportPage"
     },
     {
       "module": "lib/views/generated/w-workspaceSlug-finance-funds-page-loadPage",
@@ -514,6 +644,16 @@
       "module": "lib/views/generated/w-workspaceSlug-finance-spending-page-loadPage",
       "name": "loadPage",
       "id": "w-workspaceSlug-finance-spending-page:loadPage"
+    },
+    {
+      "module": "lib/views/generated/w-workspaceSlug-finance-statements-page-loadPage",
+      "name": "loadPage",
+      "id": "w-workspaceSlug-finance-statements-page:loadPage"
+    },
+    {
+      "module": "lib/views/generated/w-workspaceSlug-finance-statements-print-page-loadPage",
+      "name": "loadPage",
+      "id": "w-workspaceSlug-finance-statements-print-page:loadPage"
     },
     {
       "module": "lib/views/generated/w-workspaceSlug-forms-id-page-loadFormPage",
@@ -771,6 +911,11 @@
       "id": "w-workspaceSlug-product-ops-page:loadPage"
     },
     {
+      "module": "lib/views/generated/w-workspaceSlug-projects-key-project-archived-page-loadProjectArchivedPage",
+      "name": "loadProjectArchivedPage",
+      "id": "w-workspaceSlug-projects-key-project-archived-page:loadProjectArchivedPage"
+    },
+    {
       "module": "lib/views/generated/w-workspaceSlug-projects-key-project-layout-loadProjectLayout",
       "name": "loadProjectLayout",
       "id": "w-workspaceSlug-projects-key-project-layout:loadProjectLayout"
@@ -966,6 +1111,11 @@
       "id": "w-workspaceSlug-services-status-page-page:loadPage"
     },
     {
+      "module": "lib/views/generated/w-workspaceSlug-settings-analytics-page-loadPage",
+      "name": "loadPage",
+      "id": "w-workspaceSlug-settings-analytics-page:loadPage"
+    },
+    {
       "module": "lib/views/generated/w-workspaceSlug-settings-api-tokens-page-loadApiTokensPage",
       "name": "loadApiTokensPage",
       "id": "w-workspaceSlug-settings-api-tokens-page:loadApiTokensPage"
@@ -979,6 +1129,11 @@
       "module": "lib/views/generated/w-workspaceSlug-settings-cloud-accounts-page-loadPage",
       "name": "loadPage",
       "id": "w-workspaceSlug-settings-cloud-accounts-page:loadPage"
+    },
+    {
+      "module": "lib/views/generated/w-workspaceSlug-settings-email-page-loadPage",
+      "name": "loadPage",
+      "id": "w-workspaceSlug-settings-email-page:loadPage"
     },
     {
       "module": "lib/views/generated/w-workspaceSlug-settings-export-page-loadExportPage",
@@ -1036,6 +1191,16 @@
       "id": "w-workspaceSlug-settings-page:loadGeneralSettingsPage"
     },
     {
+      "module": "lib/views/generated/w-workspaceSlug-settings-payments-page-loadPaymentsSettingsPage",
+      "name": "loadPaymentsSettingsPage",
+      "id": "w-workspaceSlug-settings-payments-page:loadPaymentsSettingsPage"
+    },
+    {
+      "module": "lib/views/generated/w-workspaceSlug-settings-plan-page-loadPage",
+      "name": "loadPage",
+      "id": "w-workspaceSlug-settings-plan-page:loadPage"
+    },
+    {
       "module": "lib/views/generated/w-workspaceSlug-settings-retention-page-loadRetentionPage",
       "name": "loadRetentionPage",
       "id": "w-workspaceSlug-settings-retention-page:loadRetentionPage"
@@ -1074,6 +1239,11 @@
       "module": "lib/views/generated/w-workspaceSlug-social-page-loadSocialPage",
       "name": "loadSocialPage",
       "id": "w-workspaceSlug-social-page:loadSocialPage"
+    },
+    {
+      "module": "lib/views/generated/w-workspaceSlug-stock-page-loadStockPage",
+      "name": "loadStockPage",
+      "id": "w-workspaceSlug-stock-page:loadStockPage"
     },
     {
       "module": "lib/views/generated/w-workspaceSlug-subscriptions-page-loadSubscriptionsPage",
@@ -1134,6 +1304,11 @@
       "module": "lib/views/components",
       "name": "loadGithubPullRequests",
       "id": "components:loadGithubPullRequests"
+    },
+    {
+      "module": "lib/views/components",
+      "name": "loadObservabilityConfig",
+      "id": "components:loadObservabilityConfig"
     }
   ],
   "actions": [
@@ -1141,6 +1316,11 @@
       "module": "app/actions/account",
       "name": "updateProfile",
       "id": "account:updateProfile"
+    },
+    {
+      "module": "app/actions/account",
+      "name": "setUsername",
+      "id": "account:setUsername"
     },
     {
       "module": "app/actions/account",
@@ -1191,6 +1371,56 @@
       "module": "app/actions/admin",
       "name": "adminSetWorkspaceArchived",
       "id": "admin:adminSetWorkspaceArchived"
+    },
+    {
+      "module": "app/actions/adminOrgs",
+      "name": "suspendOrgAction",
+      "id": "adminOrgs:suspendOrgAction"
+    },
+    {
+      "module": "app/actions/adminOrgs",
+      "name": "reactivateOrgAction",
+      "id": "adminOrgs:reactivateOrgAction"
+    },
+    {
+      "module": "app/actions/adminOrgs",
+      "name": "transferOwnershipAction",
+      "id": "adminOrgs:transferOwnershipAction"
+    },
+    {
+      "module": "app/actions/adminOrgs",
+      "name": "adminChangeRoleAction",
+      "id": "adminOrgs:adminChangeRoleAction"
+    },
+    {
+      "module": "app/actions/adminOrgs",
+      "name": "adminSetMemberStatusAction",
+      "id": "adminOrgs:adminSetMemberStatusAction"
+    },
+    {
+      "module": "app/actions/adminOrgs",
+      "name": "adminRemoveMemberAction",
+      "id": "adminOrgs:adminRemoveMemberAction"
+    },
+    {
+      "module": "app/actions/adminOrgs",
+      "name": "saveOrgLimitsAction",
+      "id": "adminOrgs:saveOrgLimitsAction"
+    },
+    {
+      "module": "app/actions/adminOrgs",
+      "name": "updateOrgDefaultsAction",
+      "id": "adminOrgs:updateOrgDefaultsAction"
+    },
+    {
+      "module": "app/actions/adminRequests",
+      "name": "decideRequestAction",
+      "id": "adminRequests:decideRequestAction"
+    },
+    {
+      "module": "app/actions/adminSignIn",
+      "name": "saveSignInSettings",
+      "id": "adminSignIn:saveSignInSettings"
     },
     {
       "module": "app/actions/analytics",
@@ -1388,6 +1618,21 @@
       "id": "auth:acceptInviteAsCurrentUser"
     },
     {
+      "module": "app/actions/auth",
+      "name": "signUpWithPassword",
+      "id": "auth:signUpWithPassword"
+    },
+    {
+      "module": "app/actions/auth",
+      "name": "resendEmailVerification",
+      "id": "auth:resendEmailVerification"
+    },
+    {
+      "module": "app/actions/auth",
+      "name": "verifyEmail",
+      "id": "auth:verifyEmail"
+    },
+    {
       "module": "app/actions/boardroom",
       "name": "createBoardroomSessionAction",
       "id": "boardroom:createBoardroomSessionAction"
@@ -1446,6 +1691,126 @@
       "module": "app/actions/calendar",
       "name": "attachCalendarFileAction",
       "id": "calendar:attachCalendarFileAction"
+    },
+    {
+      "module": "app/actions/campaignLists",
+      "name": "createListAction",
+      "id": "campaignLists:createListAction"
+    },
+    {
+      "module": "app/actions/campaignLists",
+      "name": "updateListAction",
+      "id": "campaignLists:updateListAction"
+    },
+    {
+      "module": "app/actions/campaignLists",
+      "name": "archiveListAction",
+      "id": "campaignLists:archiveListAction"
+    },
+    {
+      "module": "app/actions/campaignLists",
+      "name": "deleteListAction",
+      "id": "campaignLists:deleteListAction"
+    },
+    {
+      "module": "app/actions/campaignPreferences",
+      "name": "savePreferencesAction",
+      "id": "campaignPreferences:savePreferencesAction"
+    },
+    {
+      "module": "app/actions/campaignPreferences",
+      "name": "unsubscribeAllAction",
+      "id": "campaignPreferences:unsubscribeAllAction"
+    },
+    {
+      "module": "app/actions/campaignSettings",
+      "name": "saveSettingsAction",
+      "id": "campaignSettings:saveSettingsAction"
+    },
+    {
+      "module": "app/actions/campaignSettings",
+      "name": "rotateBounceSecretAction",
+      "id": "campaignSettings:rotateBounceSecretAction"
+    },
+    {
+      "module": "app/actions/campaignSubscribers",
+      "name": "addSubscriberAction",
+      "id": "campaignSubscribers:addSubscriberAction"
+    },
+    {
+      "module": "app/actions/campaignSubscribers",
+      "name": "setBlocklistedAction",
+      "id": "campaignSubscribers:setBlocklistedAction"
+    },
+    {
+      "module": "app/actions/campaignSubscribers",
+      "name": "setListMembershipAction",
+      "id": "campaignSubscribers:setListMembershipAction"
+    },
+    {
+      "module": "app/actions/campaignSubscribers",
+      "name": "eraseSubscriberAction",
+      "id": "campaignSubscribers:eraseSubscriberAction"
+    },
+    {
+      "module": "app/actions/campaignSubscribers",
+      "name": "importCsvAction",
+      "id": "campaignSubscribers:importCsvAction"
+    },
+    {
+      "module": "app/actions/campaignSubscribers",
+      "name": "importContactsAction",
+      "id": "campaignSubscribers:importContactsAction"
+    },
+    {
+      "module": "app/actions/campaignSubscribers",
+      "name": "exportSubscribersAction",
+      "id": "campaignSubscribers:exportSubscribersAction"
+    },
+    {
+      "module": "app/actions/campaignTemplates",
+      "name": "saveTemplateAction",
+      "id": "campaignTemplates:saveTemplateAction"
+    },
+    {
+      "module": "app/actions/campaignTemplates",
+      "name": "deleteTemplateAction",
+      "id": "campaignTemplates:deleteTemplateAction"
+    },
+    {
+      "module": "app/actions/campaigns",
+      "name": "saveCampaignAction",
+      "id": "campaigns:saveCampaignAction"
+    },
+    {
+      "module": "app/actions/campaigns",
+      "name": "deleteCampaignAction",
+      "id": "campaigns:deleteCampaignAction"
+    },
+    {
+      "module": "app/actions/campaigns",
+      "name": "duplicateCampaignAction",
+      "id": "campaigns:duplicateCampaignAction"
+    },
+    {
+      "module": "app/actions/campaigns",
+      "name": "previewCampaignAction",
+      "id": "campaigns:previewCampaignAction"
+    },
+    {
+      "module": "app/actions/campaigns",
+      "name": "sendTestAction",
+      "id": "campaigns:sendTestAction"
+    },
+    {
+      "module": "app/actions/campaigns",
+      "name": "checklistAction",
+      "id": "campaigns:checklistAction"
+    },
+    {
+      "module": "app/actions/campaigns",
+      "name": "campaignLifecycleAction",
+      "id": "campaigns:campaignLifecycleAction"
     },
     {
       "module": "app/actions/catalogue",
@@ -1608,6 +1973,16 @@
       "id": "community:revokeFeedAction"
     },
     {
+      "module": "app/actions/connectedAccounts",
+      "name": "prepareProviderLink",
+      "id": "connectedAccounts:prepareProviderLink"
+    },
+    {
+      "module": "app/actions/connectedAccounts",
+      "name": "unlinkProvider",
+      "id": "connectedAccounts:unlinkProvider"
+    },
+    {
       "module": "app/actions/contacts",
       "name": "mutateContacts",
       "id": "contacts:mutateContacts"
@@ -1678,6 +2053,11 @@
       "id": "documents:documentAction"
     },
     {
+      "module": "app/actions/emailSettings",
+      "name": "updateEmailSettings",
+      "id": "emailSettings:updateEmailSettings"
+    },
+    {
       "module": "app/actions/exports",
       "name": "requestWorkspaceExport",
       "id": "exports:requestWorkspaceExport"
@@ -1731,6 +2111,51 @@
       "module": "app/actions/files",
       "name": "searchLinkTargetsAction",
       "id": "files:searchLinkTargetsAction"
+    },
+    {
+      "module": "app/actions/finance-bank",
+      "name": "previewBankImportAction",
+      "id": "finance-bank:previewBankImportAction"
+    },
+    {
+      "module": "app/actions/finance-bank",
+      "name": "commitBankImportAction",
+      "id": "finance-bank:commitBankImportAction"
+    },
+    {
+      "module": "app/actions/finance-bank",
+      "name": "matchBankLineAction",
+      "id": "finance-bank:matchBankLineAction"
+    },
+    {
+      "module": "app/actions/finance-bank",
+      "name": "unmatchBankLineAction",
+      "id": "finance-bank:unmatchBankLineAction"
+    },
+    {
+      "module": "app/actions/finance-bank",
+      "name": "ignoreBankLineAction",
+      "id": "finance-bank:ignoreBankLineAction"
+    },
+    {
+      "module": "app/actions/finance-bank",
+      "name": "createEntryFromBankLineAction",
+      "id": "finance-bank:createEntryFromBankLineAction"
+    },
+    {
+      "module": "app/actions/finance-mapping",
+      "name": "saveExternalCodesAction",
+      "id": "finance-mapping:saveExternalCodesAction"
+    },
+    {
+      "module": "app/actions/finance-statements",
+      "name": "setFiscalYearStart",
+      "id": "finance-statements:setFiscalYearStart"
+    },
+    {
+      "module": "app/actions/finance-statements",
+      "name": "setFundFcra",
+      "id": "finance-statements:setFundFcra"
     },
     {
       "module": "app/actions/finance-tools",
@@ -1868,6 +2293,21 @@
       "id": "forms:responseToTask"
     },
     {
+      "module": "app/actions/funding-ledger",
+      "name": "recordDonationLedger",
+      "id": "funding-ledger:recordDonationLedger"
+    },
+    {
+      "module": "app/actions/funding-ledger",
+      "name": "recordDonationsLedger",
+      "id": "funding-ledger:recordDonationsLedger"
+    },
+    {
+      "module": "app/actions/funding-ledger",
+      "name": "createInKindAsset",
+      "id": "funding-ledger:createInKindAsset"
+    },
+    {
       "module": "app/actions/funding",
       "name": "saveFunding",
       "id": "funding:saveFunding"
@@ -1986,6 +2426,21 @@
       "module": "app/actions/links",
       "name": "linkState",
       "id": "links:linkState"
+    },
+    {
+      "module": "app/actions/makerspace",
+      "name": "markOutOfService",
+      "id": "makerspace:markOutOfService"
+    },
+    {
+      "module": "app/actions/makerspace",
+      "name": "markBackInService",
+      "id": "makerspace:markBackInService"
+    },
+    {
+      "module": "app/actions/makerspace",
+      "name": "saveRequiredInductions",
+      "id": "makerspace:saveRequiredInductions"
     },
     {
       "module": "app/actions/marketingIt",
@@ -2161,6 +2616,21 @@
       "module": "app/actions/notifications",
       "name": "markNotificationsReadAction",
       "id": "notifications:markNotificationsReadAction"
+    },
+    {
+      "module": "app/actions/observability",
+      "name": "saveObservability",
+      "id": "observability:saveObservability"
+    },
+    {
+      "module": "app/actions/observability",
+      "name": "testObservability",
+      "id": "observability:testObservability"
+    },
+    {
+      "module": "app/actions/observability",
+      "name": "rotateMetricsToken",
+      "id": "observability:rotateMetricsToken"
     },
     {
       "module": "app/actions/opsGaps",
@@ -2341,6 +2811,66 @@
       "module": "app/actions/orgPeople",
       "name": "uploadOrgFiles",
       "id": "orgPeople:uploadOrgFiles"
+    },
+    {
+      "module": "app/actions/orgRequests",
+      "name": "requestNewOrganisation",
+      "id": "orgRequests:requestNewOrganisation"
+    },
+    {
+      "module": "app/actions/orgRequests",
+      "name": "updateOrganisationRequest",
+      "id": "orgRequests:updateOrganisationRequest"
+    },
+    {
+      "module": "app/actions/orgRequests",
+      "name": "checkOrganisationAddress",
+      "id": "orgRequests:checkOrganisationAddress"
+    },
+    {
+      "module": "app/actions/orgRequests",
+      "name": "requestMoreLimit",
+      "id": "orgRequests:requestMoreLimit"
+    },
+    {
+      "module": "app/actions/orgRequests",
+      "name": "requestFeature",
+      "id": "orgRequests:requestFeature"
+    },
+    {
+      "module": "app/actions/orgRequests",
+      "name": "cancelRequest",
+      "id": "orgRequests:cancelRequest"
+    },
+    {
+      "module": "app/actions/orgRequests",
+      "name": "listMyPendingRequests",
+      "id": "orgRequests:listMyPendingRequests"
+    },
+    {
+      "module": "app/actions/payments",
+      "name": "savePaymentAccountAction",
+      "id": "payments:savePaymentAccountAction"
+    },
+    {
+      "module": "app/actions/payments",
+      "name": "verifyPaymentAccountAction",
+      "id": "payments:verifyPaymentAccountAction"
+    },
+    {
+      "module": "app/actions/payments",
+      "name": "disconnectPaymentAccountAction",
+      "id": "payments:disconnectPaymentAccountAction"
+    },
+    {
+      "module": "app/actions/payments",
+      "name": "createInvoicePaymentLinkAction",
+      "id": "payments:createInvoicePaymentLinkAction"
+    },
+    {
+      "module": "app/actions/payments",
+      "name": "refundInvoicePaymentAction",
+      "id": "payments:refundInvoicePaymentAction"
     },
     {
       "module": "app/actions/people",
@@ -2568,6 +3098,21 @@
       "id": "social:reconcileCommentAction"
     },
     {
+      "module": "app/actions/stock",
+      "name": "saveStock",
+      "id": "stock:saveStock"
+    },
+    {
+      "module": "app/actions/stock",
+      "name": "archiveStock",
+      "id": "stock:archiveStock"
+    },
+    {
+      "module": "app/actions/stock",
+      "name": "moveStock",
+      "id": "stock:moveStock"
+    },
+    {
       "module": "app/actions/subscriptions",
       "name": "saveSubscriptionRecord",
       "id": "subscriptions:saveSubscriptionRecord"
@@ -2641,6 +3186,21 @@
       "module": "app/actions/taskTypes",
       "name": "deleteTaskTypeAction",
       "id": "taskTypes:deleteTaskTypeAction"
+    },
+    {
+      "module": "app/actions/taskViews",
+      "name": "loadTaskViewsAction",
+      "id": "taskViews:loadTaskViewsAction"
+    },
+    {
+      "module": "app/actions/taskViews",
+      "name": "saveTaskViewAction",
+      "id": "taskViews:saveTaskViewAction"
+    },
+    {
+      "module": "app/actions/taskViews",
+      "name": "deleteTaskViewAction",
+      "id": "taskViews:deleteTaskViewAction"
     },
     {
       "module": "app/actions/tasks",
@@ -2741,6 +3301,16 @@
       "module": "app/actions/tasks",
       "name": "removeTaskAttachmentAction",
       "id": "tasks:removeTaskAttachmentAction"
+    },
+    {
+      "module": "app/actions/tasks",
+      "name": "deleteTaskPermanentlyAction",
+      "id": "tasks:deleteTaskPermanentlyAction"
+    },
+    {
+      "module": "app/actions/tasks",
+      "name": "uploadDescriptionImageAction",
+      "id": "tasks:uploadDescriptionImageAction"
     },
     {
       "module": "app/actions/teams",
@@ -2876,6 +3446,16 @@
       "module": "app/actions/workspace-settings",
       "name": "deleteLabelAction",
       "id": "workspace-settings:deleteLabelAction"
+    },
+    {
+      "module": "app/actions/workspaceObservability",
+      "name": "saveWorkspaceAnalytics",
+      "id": "workspaceObservability:saveWorkspaceAnalytics"
+    },
+    {
+      "module": "app/actions/workspaceObservability",
+      "name": "getObservabilityClientConfig",
+      "id": "workspaceObservability:getObservabilityClientConfig"
     }
   ]
 }

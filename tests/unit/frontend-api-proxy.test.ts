@@ -37,6 +37,36 @@ describe("frontend API proxy", () => {
       expect(response.headers.get("www-authenticate")).toBe("Bearer realm=space-works");
     } finally { vi.unstubAllGlobals(); }
   });
+  it.each([
+    ["payments/stripe/tok", { "stripe-signature": "t=1,v1=fixture" }],
+    ["payments/razorpay/tok", { "x-razorpay-signature": "fixture", "x-razorpay-event-id": "evt" }],
+    ["public/campaigns/webhooks/postmark/ws1", { "x-webhook-secret": "fixture" }],
+    ["public/campaigns/webhooks/ses/ws1", {}],
+    ["public/campaigns/unsubscribe/tok", {}],
+    ["public/campaigns/subscribe", {}],
+  ])("forwards third-party POST %s without browser Origin or cookies", async (path, signed: Record<string, string>) => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    mocks.headers.mockResolvedValue(new Headers({ "x-sww-frontend-key": "test-peer", cookie: "session=value" }));
+    try {
+      const response = await proxyBackendApi(new Request(`https://workspace.example.test/api/${path}`, { method: "POST", headers: { origin: "https://mail.example.net", ...signed }, body: "{}" }));
+      expect(response.status).toBe(200);
+      const forwarded = fetchMock.mock.calls[0][1].headers as Headers;
+      expect(forwarded.has("cookie")).toBe(false);
+      for (const [name, value] of Object.entries(signed)) expect(forwarded.get(name)).toBe(value);
+    } finally { vi.unstubAllGlobals(); }
+  });
+  it("accepts Apple's cross-site form_post callback with its check cookies, and nothing else from Apple", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 302, headers: { location: "https://api.example.test/" } }));
+    vi.stubGlobal("fetch", fetchMock);
+    mocks.headers.mockResolvedValue(new Headers({ "x-sww-frontend-key": "test-peer", cookie: "__Secure-authjs.state=s" }));
+    try {
+      const init = { method: "POST", headers: { origin: "https://appleid.apple.com", "content-type": "application/x-www-form-urlencoded" }, body: "state=s&code=c" };
+      expect((await proxyBackendApi(new Request("https://workspace.example.test/api/auth/callback/apple", init))).status).toBe(302);
+      expect((fetchMock.mock.calls[0][1].headers as Headers).get("cookie")).toBe("__Secure-authjs.state=s");
+      expect((await proxyBackendApi(new Request("https://workspace.example.test/api/auth/callback/github", init))).status).toBe(404);
+    } finally { vi.unstubAllGlobals(); }
+  });
   it("proxies only exact non-API resources and retains private-file CSP", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response("file", { headers: { "content-security-policy": "sandbox" } }));
     vi.stubGlobal("fetch", fetchMock);

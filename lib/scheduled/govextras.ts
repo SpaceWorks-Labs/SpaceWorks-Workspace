@@ -60,7 +60,7 @@ export async function run(now: Date) {
                 archivedAt: null,
                 verifiedUntil: doc.verifiedUntil,
                 updatedAt: doc.updatedAt,
-                workspace: { archivedAt: null },
+                workspace: { status: "ACTIVE", archivedAt: null },
               },
             });
             if (!current) return null;
@@ -144,7 +144,7 @@ export async function run(now: Date) {
                 id: row.id,
                 closedAt: null,
                 dueOn: row.dueOn,
-                workspace: { archivedAt: null },
+                workspace: { status: "ACTIVE", archivedAt: null },
               },
             });
             if (!current) return null;

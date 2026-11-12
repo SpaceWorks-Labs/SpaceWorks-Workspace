@@ -86,9 +86,9 @@ export async function resolveFeedToken(raw: string) {
   if (!TOKEN_PATTERN.test(raw)) return null;
   const token = await prisma.calendarFeedToken.findUnique({
     where: { tokenHash: sha256Hex(raw) },
-    select: { scope: true, revokedAt: true, userId: true, workspace: { select: { id: true, slug: true, name: true, timezone: true, archivedAt: true } } },
+    select: { scope: true, revokedAt: true, userId: true, workspace: { select: { id: true, slug: true, name: true, timezone: true, archivedAt: true, status: true } } },
   });
-  if (!token || token.revokedAt || !token.userId || token.workspace.archivedAt) return null;
+  if (!token || token.revokedAt || !token.userId || token.workspace.archivedAt || token.workspace.status !== "ACTIVE") return null;
   if (token.scope !== "PERSONAL") return null;
   const membership = await prisma.membership.findUnique({
     where: { userId_workspaceId: { userId: token.userId, workspaceId: token.workspace.id } },

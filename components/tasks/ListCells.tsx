@@ -9,6 +9,7 @@ import { PRIORITIES, PRIORITY_LABELS } from "@/lib/tasks/filters";
 import { toDateInputValue } from "@/lib/tasks/localDate";
 import type { BoardData, BoardTask, ColumnDTO } from "@/lib/tasks/types";
 import { AvatarStack, DueChip, PriorityChip } from "./bits";
+import { DueQuickPicks } from "./DueQuickPicks";
 import { MultiSelect, type MultiSelectItem } from "./MultiSelect";
 
 /** Inline-edit cells of the list view. Each trigger is a plain button; none of them opens the task drawer. */
@@ -134,7 +135,8 @@ export function DueCell({ task, editable, hint, timeZone, now, onPick }: { task:
       <PopoverTrigger className={cn(trigger, "whitespace-nowrap")} aria-label={`Due date: ${task.dueAt ? toDateInputValue(new Date(task.dueAt), timeZone) : "none"}. Change`}>
         {task.dueAt ? chip : <span className="text-ink-muted">Set date</span>}
       </PopoverTrigger>
-      <PopoverContent className="flex w-auto items-center gap-2">
+      <PopoverContent className="flex w-auto flex-col gap-2">
+        <DueQuickPicks timeZone={timeZone} hasDate={Boolean(task.dueAt)} onPick={onPick} />
         <input
           type="date"
           aria-label="Due date"
@@ -142,11 +144,6 @@ export function DueCell({ task, editable, hint, timeZone, now, onPick }: { task:
           value={task.dueAt ? toDateInputValue(new Date(task.dueAt), timeZone) : ""}
           onChange={(event) => event.target.value && onPick(event.target.value)}
         />
-        {task.dueAt ? (
-          <Button variant="quiet" size="sm" onClick={() => onPick("")}>
-            Clear
-          </Button>
-        ) : null}
       </PopoverContent>
     </Popover>
   );

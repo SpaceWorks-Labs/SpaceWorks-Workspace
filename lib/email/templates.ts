@@ -7,15 +7,16 @@ export function escapeHtml(value: string) {
   return value.replace(/[&<>'"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[char]!);
 }
 
-function paragraph(text: string) {
+export function paragraph(text: string) {
   return `<p style="font-size:16px;line-height:1.5;color:${EMAIL_COLORS.inkMuted};margin:0 0 16px">${text}</p>`;
 }
 
-function heading(text: string) {
+export function heading(text: string) {
   return `<h2 style="margin-top:0;color:${EMAIL_COLORS.ink};font-size:20px;font-weight:600">${text}</h2>`;
 }
 
-function actionButton(url: string, label: string) {
+/** Button plus the plain link underneath, for mail clients that hide buttons. */
+export function actionButton(url: string, label: string) {
   const safe = escapeHtml(url);
   return `<p style="text-align:center;margin:32px 0"><a href="${safe}" style="${EMAIL_BUTTON_STYLE}">${escapeHtml(label)}</a></p>
 <p style="font-size:13px;color:${EMAIL_COLORS.inkMuted};overflow-wrap:anywhere">Or open this link: <a href="${safe}" style="color:${EMAIL_COLORS.teal}">${safe}</a></p>`;
@@ -55,11 +56,11 @@ export function renderEmailVerificationEmail(input: { verificationUrl: string })
   const subject = "Confirm your email for Space Works";
   const html = emailLayout(subject, [
     heading("Confirm your email"),
-    paragraph("Confirm that this address belongs to you. The link expires in 1 hour."),
+    paragraph("Confirm that this address belongs to you. Open the link and enter the password you chose when you signed up; you'll be signed in straight away. The link expires in 1 hour."),
     actionButton(input.verificationUrl, "Confirm email"),
-    paragraph("If you didn't change your email on Space Works, you can ignore this email."),
+    paragraph("If you didn't create a Space Works account, you can ignore this email. Nothing happens without that password."),
   ].join(""));
-  const text = `Confirm your email for Space Works\n\n${input.verificationUrl}\n\nThe link expires in 1 hour.`;
+  const text = `Confirm your email for Space Works\n\nOpen this link and enter the password you chose when you signed up (expires in 1 hour):\n${input.verificationUrl}\n\nIf you didn't create a Space Works account, ignore this email.`;
   return { subject, html, text };
 }
 

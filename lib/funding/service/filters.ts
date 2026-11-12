@@ -21,6 +21,8 @@ export type Filters = {
   segment?: string;
   major?: string;
   currency?: string;
+  /** "pending": received money gifts not yet posted to the ledger. */
+  ledger?: string;
 };
 export function recordsWhere(
   actor: Actor,
@@ -39,6 +41,9 @@ export function recordsWhere(
     ...(filters.status ? { status: filters.status.slice(0, 30) } : {}),
     ...(filters.owner ? { ownerId: filters.owner.slice(0, 64) } : {}),
     ...(filters.contact ? { contactId: filters.contact.slice(0, 64) } : {}),
+    ...(filters.ledger === "pending" && section === "donations"
+      ? { kind: "DONATION" as const, status: "RECEIVED", ledgerEntryId: null, details: { path: ["mode"], not: "IN_KIND" } }
+      : {}),
     ...(filters.person && section === "access"
       ? {
           kind: "TOOL_ACCOUNT",

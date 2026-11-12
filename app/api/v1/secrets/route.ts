@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
+import { workspaceHasModule } from "@/lib/modules-server";
 import {
   apiActor,
   privateHeaders,
@@ -14,11 +15,13 @@ import {
   SecretsError,
   KEY_PATTERN,
 } from "@/lib/secrets/values";
+const moduleOff = () => Response.json({ error: "Not found" }, { status: 404, headers: privateHeaders });
 export async function GET(request: NextRequest) {
   try {
     const q = request.nextUrl.searchParams,
       projectId = q.get("project") ?? "";
     const actor = await apiActor(request, projectId);
+    if (!(await workspaceHasModule(actor.workspace.id, "secrets"))) return moduleOff();
     const environment = q.get("environment") ?? "dev",
       path = normalisePath(q.get("path") ?? "/");
     const env = await prisma.secretEnvironment.findFirst({
@@ -73,6 +76,7 @@ export async function POST(request: NextRequest) {
     const body = await jsonBody(request);
     const projectId = String(body.project ?? "");
     const actor = await apiActor(request, projectId, true);
+    if (!(await workspaceHasModule(actor.workspace.id, "secrets"))) return moduleOff();
     const environment = String(body.environment ?? "dev");
     const env = await prisma.secretEnvironment.findFirst({
       where: {

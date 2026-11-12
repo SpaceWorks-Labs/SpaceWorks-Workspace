@@ -10,6 +10,7 @@ import { canManageApiTokens } from "@/lib/roles";
 import { actionError, NOT_ALLOWED, RATE_LIMITED, validationError, type ActionResult } from "@/lib/actionResult";
 import { idSchema } from "@/lib/validation";
 import { generateTokenSecret } from "@/lib/apiTokens";
+import { assertWithinLimit } from "@/lib/limits/enforce";
 import { isApiScope, normalizeScopes } from "@/lib/apiTokens/scopes";
 
 /**
@@ -18,7 +19,8 @@ import { isApiScope, normalizeScopes } from "@/lib/apiTokens/scopes";
  */
 
 const slugSchema = z.string().min(1).max(64);
-const MAX_ACTIVE_TOKENS = 50;
+/** Hard safety ceiling when the workspace limit is unlimited (null). */
+const MAX_ACTIVE_TOKENS = 200;
 
 async function context(slug: unknown) {
   const parsed = slugSchema.safeParse(slug);
@@ -41,6 +43,8 @@ export async function createApiTokenAction(slug: string, input: unknown): Promis
   if (!parsed.success) return validationError(parsed.error);
   const active = await prisma.apiToken.count({ where: { workspaceId: ctx.workspace.id, revokedAt: null } });
   if (active >= MAX_ACTIVE_TOKENS) return actionError("This workspace has too many active tokens. Revoke unused ones first.");
+  const limit = await assertWithinLimit("apiTokens", ctx.workspace.id);
+  if (!limit.ok) return actionError(limit.error);
   const scopes = normalizeScopes(parsed.data.scopes);
   const secret = generateTokenSecret();
   const expiresAt = parsed.data.expiresInDays ? new Date(Date.now() + parsed.data.expiresInDays * 86_400_000) : null;

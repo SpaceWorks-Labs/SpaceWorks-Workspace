@@ -173,8 +173,9 @@ describe("platform extension capabilities", () => {
     expect(canViewEmergencyContact(null, true)).toBe(false);
   });
 
-  it("reserves workspace export to owners", () => {
+  it("allows workspace export to admins and owners, as the export page and actions do", () => {
     expect(canExportWorkspace(owner)).toBe(true);
-    expect(canExportWorkspace(admin)).toBe(false);
+    expect(canExportWorkspace(admin)).toBe(true);
+    expect(canExportWorkspace(member)).toBe(false);
   });
 });

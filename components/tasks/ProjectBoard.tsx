@@ -15,6 +15,8 @@ import { ListView } from "./ListView";
 import type { CardMove } from "./TaskCard";
 import { BoardView } from "./board/BoardView";
 import { TaskDrawer } from "./TaskDrawer";
+import { useDensity } from "./useDensity";
+import { useTaskShortcuts } from "./useTaskShortcuts";
 import { useBoardAssignment } from "./useAssignment";
 import { useTaskRunner } from "./useTaskRunner";
 
@@ -38,6 +40,9 @@ export function ProjectBoard({ slug, initial, viewerId, timeZone }: { slug: stri
   const query = useMemo(() => parseTaskQuery(new URLSearchParams(searchParams.toString())), [searchParams]);
   const openNumber = Number(searchParams.get("task")) || null;
   const [focusId, setFocusId] = useState<string | null>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const [density, setDensity] = useDensity();
+  useTaskShortcuts({ searchRef, board: query.view === "board" });
   const dragging = useRef(false);
   const stale = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -164,7 +169,19 @@ export function ProjectBoard({ slug, initial, viewerId, timeZone }: { slug: stri
 
   return (
     <div className="flex flex-col gap-5">
-      <FilterBar query={query} onChange={(next) => writeUrl(next, openNumber)} members={data.members} labels={data.labels} taskTypes={data.taskTypes} />
+      <FilterBar
+        query={query}
+        onChange={(next) => writeUrl(next, openNumber)}
+        members={data.members}
+        labels={data.labels}
+        taskTypes={data.taskTypes}
+        slug={slug}
+        projectKey={key}
+        canShareViews={data.permissions.canEdit}
+        density={density}
+        onDensityChange={setDensity}
+        searchRef={searchRef}
+      />
       {data.project.status === "ARCHIVED" ? (
         <Callout tone="info" title="This project is archived.">
           The board is read-only until someone restores it in the project settings.
@@ -181,7 +198,10 @@ export function ProjectBoard({ slug, initial, viewerId, timeZone }: { slug: stri
           data={data}
           tasks={visible}
           sort={query.sort}
+          dir={query.dir}
           group={query.group}
+          query={query}
+          onQueryChange={(next) => writeUrl(next, openNumber)}
           timeZone={timeZone}
           slug={slug}
           viewerId={viewerId}
@@ -194,7 +214,9 @@ export function ProjectBoard({ slug, initial, viewerId, timeZone }: { slug: stri
           slug={slug}
           data={data}
           visible={visible}
+          group={query.group}
           filtered={filtered}
+          compact={density === "compact"}
           timeZone={timeZone}
           run={run}
           onOpen={openTask}

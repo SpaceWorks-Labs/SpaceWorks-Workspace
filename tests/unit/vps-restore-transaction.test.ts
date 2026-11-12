@@ -21,7 +21,7 @@ stopped=0
 serving=(app worker beat)
 pg_restore() {
   if [[ "$1" == --list ]]; then
-    printf '3; 2615 2200 SCHEMA - public sww\\n4; 0 0 COMMENT - SCHEMA public sww\\n5; 0 0 ACL - SCHEMA public sww\\n6; 1259 1 TABLE public recovered sww\\n'
+    printf '3; 2615 2200 SCHEMA - public sww\\n4; 0 0 COMMENT - SCHEMA public sww\\n5; 0 0 ACL - SCHEMA public sww\\n6; 1259 1 TABLE public recovered sww\\n7; 2615 9 SCHEMA - reporting sww\\n8; 0 0 ACL - SCHEMA reporting sww\\n9; 0 0 ACL reporting TABLE v_tasks sww\\n10; 826 11 DEFAULT ACL reporting DEFAULT PRIVILEGES FOR TABLES sww\\n'
     return
   fi
   printf 'generate\\n' >> "$RESTORE_FIXTURE_DIR/trace"
@@ -34,6 +34,8 @@ pg_restore() {
   if grep -q '^4;' "$list"; then printf "COMMENT ON SCHEMA public IS 'Recovered schema comment';\\n"; fi
   if grep -q '^5;' "$list"; then printf 'GRANT USAGE ON SCHEMA public TO synthetic_reader;\\n'; fi
   printf 'CREATE TABLE public.recovered (id integer);\\n'
+  if grep -q '^7;' "$list"; then printf 'CREATE SCHEMA reporting;\\n'; fi
+  if grep -Eq '^(8|9|10);' "$list"; then printf 'GRANT SELECT ON reporting.v_tasks TO sww_reporting;\\n'; fi
   [[ "$FAIL_GENERATION" != 1 ]] || return 7
 }
 export -f pg_restore
@@ -73,6 +75,11 @@ describe("VPS custom archive restore transaction", () => {
     expect(result.applied).toContain("GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO sww_app;");
     expect(result.applied).toContain("GRANT USAGE, SELECT ON SEQUENCES TO sww_app;");
     expect(result.applied).not.toContain("GRANT ALL");
+    // Reporting views are replaced; their optional role's grants are reapplied only when it exists.
+    expect(result.applied).toContain("DROP SCHEMA IF EXISTS reporting CASCADE;\nDROP SCHEMA IF EXISTS public CASCADE;");
+    expect(result.applied).toContain("CREATE SCHEMA reporting;");
+    expect(result.applied).not.toContain("GRANT SELECT ON reporting.v_tasks TO sww_reporting;");
+    expect(result.applied).toContain("IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'sww_reporting')");
   });
 
   it("does not stop services or execute a valid partial SQL prefix when archive generation fails", () => {

@@ -194,7 +194,7 @@ EVENT_CATALOG / EventPayloads / NOTIFY_CATEGORIES (lib/notify/events.ts, client-
   WhatsApp and webhook are "not configured" placeholders replaced file by
   file). Retries back off 30 s → 6 h for six attempts; a shared destination
   that fails for good turns `ERROR` and admins get one
-  `destination.failing` alert a day.
+  `system.destination_failed` alert, once per flip to `ERROR`.
 - With `{ tx }` the event commits with the caller's change; call
   `result.afterCommit()` after the transaction for realtime nudges.
 
@@ -253,16 +253,64 @@ delivery or terminal failure.
 | --- | --- |
 | `/setup` | Only while the instance has no users |
 | `/login`, `/forgot-password`, `/reset-password/[token]`, `/invite/[token]` | Public |
+| `/signup` | Public, only when `auth.allowSelfSignup` is on |
+| `/verify-email/[token]` | Public bearer link (hash-stored token) |
 | `/` | Redirects: setup → login → last workspace → "no workspace yet" |
-| `/w/[workspaceSlug]/…` | Members (per-page minimum role) |
-| `/account` | Signed in |
+| `/w/[workspaceSlug]/…` | Members (per-page minimum role), module gate and status gate apply |
+| `/w/[slug]/settings/plan` | OWNER; also reachable while the organisation is suspended |
+| `/w/[slug]/settings/payments`, `/settings/email`, `/settings/analytics` | ADMIN (payments needs finance management; analytics module-gated) |
+| `/w/[slug]/finance/bank`, `/finance/statements`, `/finance/export/accounting` | Finance viewers (changes need `canManageFinance`) |
+| `/w/[slug]/stock` | MEMBER view, ADMIN manage (module `services`) |
+| `/w/[slug]/campaigns/…` | Campaign roles (module `campaigns`) |
+| `/account`, `/account/organisations` | Signed in (connected accounts, organisation requests) |
+| `/m/[workspaceSlug]/subscribe/[listSlug]`, `/m/confirm/[token]`, `/m/preferences/[token]`, `/m/unsubscribe/[token]`, `/m/done/[kind]` | Public campaign pages; tokens are bearer capabilities |
 | `/admin/…` | Super-admin + fresh TOTP (`/admin-mfa`) |
+| `/admin/organisations`, `/admin/organisations/[id]`, `/admin/requests` | Super-admin: lifecycle, limits, modules, approval queue |
+| `/admin/sign-in`, `/admin/observability` | Super-admin: providers and self sign-up; analytics, metrics, Metabase |
 | `/api/health` | Public liveness |
 | `/api/health/db` | `Bearer $HEALTHCHECK_SECRET` |
+| `/api/metrics` | `Bearer` metrics token; bodyless 404 otherwise |
+| `/api/obs/ph/[...path]`, `/api/obs/sentry` | Same-origin analytics tunnels (consent and route allow-list) |
+| `/api/payments/[provider]/[token]` | Stripe and Razorpay webhooks (signature checked per workspace) |
+| `/api/public/campaigns/subscribe`, `confirm/[token]`, `unsubscribe/[token]` (one-click), `o/[token]`, `c/[token]/[linkId]` | Public campaign endpoints (open and click tracking is off by default) |
+| `/api/public/campaigns/webhooks/postmark/[workspaceId]`, `…/ses/[workspaceId]` | Bounce webhooks, authenticated per workspace |
 | `/api/internal/outbox` | `Bearer $CRON_SECRET` (POST) |
 | `/api/files/[id]` | Members of the file's workspace |
 | `/api/realtime/[workspaceSlug]` | Members (SSE) |
 | `/api/account/export` | Signed in, own data only |
+
+## Organisation governance
+
+An organisation is a `Workspace`. Four gates sit in front of every workspace
+request, all resolved by `lib/permissions.ts` and `lib/workspaceGate.ts`:
+
+- **Status gate.** A workspace is PENDING, ACTIVE, SUSPENDED or REJECTED. Only
+  ACTIVE is served. A SUSPENDED organisation shows its owners and admins the plan
+  page and settings home with the reason; everyone else gets the usual
+  `notFound()`.
+- **Module gate.** `lib/modules.ts` is the registry of switchable modules
+  (route prefixes, nav keys, optional sub-areas such as `finance/payroll`).
+  `proxy.ts` sets `x-sw-path`; `requireWorkspace` and `getWorkspaceForAction`
+  read it, so every workspace page and Server Action is gated by its module
+  without per-page code. API routes outside `/w` pass `{ module }` explicitly.
+  Disabled modules also disappear from navigation.
+- **Limits.** `lib/limits` resolves workspace override, then instance default
+  (`limits.*`), then code default. `getEffectiveLimits`, `evaluateLimit` and
+  `assertWithinLimit(kind, workspaceId, delta, tx)` cover members, guests,
+  projects, storage, file size, API tokens, webhooks, assistant tokens per month
+  and the monthly email cap. Writers call the assert before they create.
+  `lib/seatLimits.ts` counts seats. Results are cached for 30 seconds and
+  cleared with `invalidateLimits`.
+- **Super-admin access.** The super admin (email plus a fresh TOTP proof) gets a
+  synthetic OWNER membership with `viaSuperAdmin: true` in any ACTIVE or
+  suspended workspace and never gains a `Membership` row. Per-area access
+  helpers call `activeMemberOrSuperAdmin` (`lib/accessMember.ts`) instead of
+  reading `Membership` themselves. Access is audited in the instance audit log
+  only, never in the organisation's own log.
+
+Organisation requests (`lib/orgRequests`) cover new organisations, "more of a
+limit" and "access to a module". The super admin decides them in
+`/admin/requests`. See [Organisation governance](areas/org-governance.md).
 
 ## Feature area index
 
@@ -281,6 +329,13 @@ The workspace navigation in `lib/nav.ts` is role-aware; every page and action in
 - [work-collaboration](areas/work-collaboration.md): Meetings, decisions, goals, key results, polls, ideas, templates, changelog and sign-offs.
 - [platform-shell](areas/platform-shell.md): My day, global search, activity, pinned links, command palette, notification centre, preferences, exports, imports, legal hold and retention.
 - [app-reviews](areas/app-reviews.md): App-store review inbox, replies, triage, insights, task links and notification routing.
+- [org-governance](areas/org-governance.md): Organisation requests and approval, plan and limits, modules, suspension and super-admin access.
+- [payments](areas/payments.md): Stripe and Razorpay invoice payment links and webhooks.
+- [email-campaigns](areas/email-campaigns.md): Native lists, double opt-in, campaigns, templates, throttled sending, bounces and unsubscribe.
+- [finance-bank-export](areas/finance-bank-export.md): Bank statement import and matching, Tally, Xero, QuickBooks and journal exports.
+- [finance-statements](areas/finance-statements.md): Receipts and Payments, Income and Expenditure and fund statements, donations in the ledger, FCRA.
+- [makerspace-ops](areas/makerspace-ops.md): Machine downtime, maintenance reminders, required inductions and consumables stock.
+- [Observability](OBSERVABILITY.md) and [client observability](OBSERVABILITY-CLIENT.md): Metrics, Grafana, Metabase and consent-aware client analytics.
 
 - [Integration finish](areas/integration-finish.md): OIDC/MFA, navigation, cross-area panels, retention, search and verification.
 
@@ -289,6 +344,14 @@ Public entry points include opted-in status pages, public forms, asset sign-in r
 ## Identity and retention integration
 
 `lib/auth.ts` loads enabled instance OIDC providers from `lib/shell/oidc.ts`. The sign-in callback requires an existing enabled user with active membership, a verified provider email, an allowed domain and a stable subject. The adapter refuses account creation and does not retain provider tokens. A user with MFA receives a five-minute signed challenge with no authenticated session user until TOTP or a recovery code succeeds. Session-version changes and disabled accounts invalidate both challenges and sessions.
+
+Sign-in is split across small modules so each stays testable. `lib/auth.ts` composes the Auth.js config lazily on every request: `lib/authSettings.ts` reads the instance settings (database first, then environment; cached for 30 seconds per process and cleared when `/admin/sign-in` saves), `lib/authProviders.ts` builds the Google, GitHub and Apple providers that are enabled and fully configured, and `lib/authCredentials.ts` is the username-or-email plus password provider.
+
+- **Username or email.** `User.username` is optional, stored lowercase and unique (`lib/username.ts`: 3-30 characters of `[a-z0-9_.-]`, no `@`, reserved words refused). The sign-in field accepts either (anything with `@` is an email); the older `email` key is still read. Unknown account, wrong password and disabled account all give the same refusal. Password reset accepts either and always answers the same way.
+- **Email verification.** Accounts made by invitation, setup or a verified provider are verified at creation. A self sign-up account has `emailVerified = null` and cannot sign in with its password (error code `email_not_verified`, only after the password is right) until it opens `/verify-email/[token]` and presses the button: the page only checks the token, the button posts, so mail scanners can't spend it. Tokens are one-hour, single-use and stored as hashes (`EmailVerificationToken`).
+- **Providers and linking.** `lib/oauthLinking.ts` (pure, unit-tested) decides every provider sign-in: an existing `(provider, subject)` account always wins; while signed in, a provider is linked to that user (fresh sign-in required, one account per provider); otherwise a verified provider email is auto-linked only to an existing user whose own email is verified (never an Apple private-relay address); an unknown email is refused (`not_invited`) unless `auth.allowSelfSignup` is on, in which case a user with no workspace is created, optionally limited by `auth.allowedEmailDomains`. GitHub's email is the primary address GitHub has verified, fetched from `/user/emails`. Apple's client secret is an ES256 JWT (`lib/appleClientSecret.ts`, 150-day lifetime, re-signed daily). A pending MFA challenge can never be used to attach another identity, and connecting a provider while signed in neither restarts MFA nor extends the re-authentication window.
+- **Connected accounts.** `/account` lists providers and links with `signIn(provider)` while signed in; `unlinkProvider` needs a recent sign-in and refuses to remove the last way in (a password or another account), under a row lock on the user.
+- **Admin.** `/admin/sign-in` (super admin plus TOTP step-up) holds the provider cards, write-only secrets, callback URLs (`<base>/api/auth/callback/<provider>`) and the self sign-up flag. It refuses to turn on a provider without credentials and refuses a change that would leave the acting super admin with no way to sign in. Sign in with Apple requires an HTTPS domain: its callback is a cross-site POST that needs secure `SameSite=None` cookies. The CSP `form-action` list gains `https://github.com` and `https://appleid.apple.com` (`AUTH_FORM_ACTIONS` in `lib/pageSecurity/extra.ts`).
 
 `lib/shell/retention.ts` locks the workspace row before invoking registered writers. Legal hold stops all writers. Audit has no default purge. Inbound events default to 14 days and completed tenant outbox jobs to the instance period (30 days by default); pending work remains. Monitor raw checks retain at least `monitorRetentionDays`, and longer policies take precedence. Monitor summary and metric cleanup uses the same workspace lock. Unscoped legacy email jobs are conservatively retained while any workspace has a legal hold.
 

@@ -21,7 +21,7 @@ export async function sendDueReminders(now: Date = new Date(), limit = 500): Pro
       archivedAt: null,
       dueAt: { gte: new Date(now.getTime() - 10 * DAY_MS), lte: new Date(now.getTime() + DAY_MS) },
       assignees: { some: {} },
-      workspace: { archivedAt: null },
+      workspace: { status: "ACTIVE", archivedAt: null },
       OR: [{ projectId: null }, { project: { status: { not: "ARCHIVED" } } }],
     },
     orderBy: { dueAt: "asc" },

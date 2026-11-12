@@ -6,273 +6,393 @@
     "value": false
   },
   {
+    "module": "lib/observability/admin/settings",
+    "name": "ConsoleData",
+    "id": "Shared1",
+    "value": false
+  },
+  {
+    "module": "lib/admin/limitsView",
+    "name": "OrgLimitsView",
+    "id": "Shared2",
+    "value": false
+  },
+  {
+    "module": "lib/admin/orgDetail",
+    "name": "loadOrgMembers",
+    "id": "Shared3",
+    "value": true
+  },
+  {
+    "module": "lib/admin/orgDetail",
+    "name": "loadOrgAudit",
+    "id": "Shared4",
+    "value": true
+  },
+  {
+    "module": "lib/admin/orgDetail",
+    "name": "loadOrgOverview",
+    "id": "Shared5",
+    "value": true
+  },
+  {
+    "module": "lib/admin/orgDetail",
+    "name": "loadOrgRequests",
+    "id": "Shared6",
+    "value": true
+  },
+  {
+    "module": "lib/limits/usage",
+    "name": "WorkspaceUsage",
+    "id": "Shared7",
+    "value": false
+  },
+  {
     "module": "lib/appReviews/queries",
     "name": "reviewSettings",
-    "id": "Shared1",
+    "id": "Shared8",
     "value": true
+  },
+  {
+    "module": "lib/makerspace/downtime",
+    "name": "CostRow",
+    "id": "Shared9",
+    "value": false
   },
   {
     "module": "lib/assistant/chat",
     "name": "ChatItem",
-    "id": "Shared2",
+    "id": "Shared10",
     "value": false
   },
   {
     "module": "lib/assistant/chat",
     "name": "ChatStreamEvent",
-    "id": "Shared3",
+    "id": "Shared11",
     "value": false
   },
   {
     "module": "lib/assistant/chat",
     "name": "PendingCall",
-    "id": "Shared4",
+    "id": "Shared12",
     "value": false
   },
   {
     "module": "lib/calendar/query",
     "name": "loadCalendar",
-    "id": "Shared5",
+    "id": "Shared13",
     "value": true
   },
   {
     "module": "lib/calendar/query",
     "name": "CalendarItem",
-    "id": "Shared6",
+    "id": "Shared14",
     "value": false
   },
   {
     "module": "lib/calendar/availability",
     "name": "availabilityFor",
-    "id": "Shared7",
+    "id": "Shared15",
     "value": true
+  },
+  {
+    "module": "lib/campaigns/settings",
+    "name": "CampaignSettingsView",
+    "id": "Shared16",
+    "value": false
+  },
+  {
+    "module": "lib/campaigns/import",
+    "name": "ImportSummary",
+    "id": "Shared17",
+    "value": false
   },
   {
     "module": "lib/chat/queries",
     "name": "ChannelMemberDTO",
-    "id": "Shared8",
+    "id": "Shared18",
     "value": false
   },
   {
     "module": "lib/appShell",
     "name": "ShellData",
-    "id": "Shared9",
+    "id": "Shared19",
     "value": false
   },
   {
     "module": "lib/search/query",
     "name": "SearchHit",
-    "id": "Shared10",
+    "id": "Shared20",
     "value": false
   },
   {
     "module": "lib/documents/service",
     "name": "DocumentSnapshot",
-    "id": "Shared11",
+    "id": "Shared21",
     "value": false
   },
   {
     "module": "app/actions/files",
     "name": "LinkTarget",
-    "id": "Shared12",
+    "id": "Shared22",
     "value": false
   },
   {
     "module": "lib/finance/tools/queries",
     "name": "FinanceQuery",
-    "id": "Shared13",
+    "id": "Shared23",
     "value": false
   },
   {
     "module": "lib/finance/tools/views",
     "name": "FinanceReportsView",
-    "id": "Shared14",
+    "id": "Shared24",
     "value": false
   },
   {
     "module": "lib/finance/tools/access",
     "name": "FinanceActor",
-    "id": "Shared15",
+    "id": "Shared25",
     "value": false
   },
   {
     "module": "lib/finance/tools/views",
     "name": "AttachedFileMap",
-    "id": "Shared16",
+    "id": "Shared26",
     "value": false
   },
   {
     "module": "lib/finance/tools/queries",
     "name": "ToolSection",
-    "id": "Shared17",
+    "id": "Shared27",
     "value": false
   },
   {
     "module": "lib/finance/tools/views",
     "name": "FinanceToolView",
-    "id": "Shared18",
+    "id": "Shared28",
     "value": false
   },
   {
     "module": "lib/finance/tools/views",
     "name": "PayrollView",
-    "id": "Shared19",
+    "id": "Shared29",
     "value": false
   },
   {
     "module": "lib/finance/tools/queries",
     "name": "FinancePickers",
-    "id": "Shared20",
+    "id": "Shared30",
     "value": false
   },
   {
     "module": "lib/finance/tools/extract",
     "name": "ExtractedReceipt",
-    "id": "Shared21",
+    "id": "Shared31",
     "value": false
   },
   {
     "module": "lib/finance/recurring/queries",
     "name": "AdvancesView",
-    "id": "Shared22",
+    "id": "Shared32",
     "value": false
   },
   {
     "module": "lib/finance/recurring/queries",
     "name": "RecurringQuery",
-    "id": "Shared23",
+    "id": "Shared33",
     "value": false
   },
   {
     "module": "lib/finance/recurring/queries",
     "name": "UpcomingView",
-    "id": "Shared24",
+    "id": "Shared34",
     "value": false
   },
   {
     "module": "lib/finance/recurring/queries",
     "name": "LeaseFinanceView",
-    "id": "Shared25",
+    "id": "Shared35",
     "value": false
   },
   {
     "module": "lib/finance/recurring/queries",
     "name": "ScheduleView",
-    "id": "Shared26",
+    "id": "Shared36",
+    "value": false
+  },
+  {
+    "module": "lib/finance/statements/load",
+    "name": "StatementData",
+    "id": "Shared37",
+    "value": false
+  },
+  {
+    "module": "lib/funding/service/ledger-link-queries",
+    "name": "LedgerChoices",
+    "id": "Shared38",
+    "value": false
+  },
+  {
+    "module": "lib/funding/service/ledger-link",
+    "name": "DuplicateMatch",
+    "id": "Shared39",
     "value": false
   },
   {
     "module": "lib/funding/service",
     "name": "FundingData",
-    "id": "Shared27",
+    "id": "Shared40",
     "value": false
   },
   {
     "module": "lib/funding/service",
     "name": "Filters",
-    "id": "Shared28",
+    "id": "Shared41",
     "value": false
   },
   {
     "module": "lib/governance/service",
     "name": "GovernanceData",
-    "id": "Shared29",
+    "id": "Shared42",
     "value": false
   },
   {
     "module": "lib/governance/service",
     "name": "Actor",
-    "id": "Shared30",
+    "id": "Shared43",
     "value": false
   },
   {
     "module": "lib/governance/service",
     "name": "Filters",
-    "id": "Shared31",
+    "id": "Shared44",
     "value": false
   },
   {
     "module": "lib/govextras/cases",
     "name": "CaseData",
-    "id": "Shared32",
+    "id": "Shared45",
     "value": false
   },
   {
     "module": "lib/govextras/conflicts",
     "name": "ConflictData",
-    "id": "Shared33",
+    "id": "Shared46",
     "value": false
   },
   {
     "module": "lib/marketingIt/service",
     "name": "ToolData",
-    "id": "Shared34",
+    "id": "Shared47",
     "value": false
   },
   {
     "module": "lib/marketingIt/service",
     "name": "Filters",
-    "id": "Shared35",
+    "id": "Shared48",
+    "value": false
+  },
+  {
+    "module": "lib/email/workspaceSettings",
+    "name": "WorkspaceEmailSettingsView",
+    "id": "Shared49",
     "value": false
   },
   {
     "module": "lib/notepad/service",
     "name": "NoteDTO",
-    "id": "Shared36",
+    "id": "Shared50",
     "value": false
   },
   {
     "module": "lib/notepad/service",
     "name": "NotepadData",
-    "id": "Shared37",
+    "id": "Shared51",
     "value": false
   },
   {
     "module": "lib/notepad/service",
     "name": "TodoDTO",
-    "id": "Shared38",
+    "id": "Shared52",
     "value": false
   },
   {
     "module": "lib/opsGaps/attachments",
     "name": "AttachmentKind",
-    "id": "Shared39",
+    "id": "Shared53",
     "value": false
   },
   {
     "module": "lib/orgPeople/files",
     "name": "OrgFileKind",
-    "id": "Shared40",
+    "id": "Shared54",
+    "value": false
+  },
+  {
+    "module": "lib/orgRequests/plan",
+    "name": "PlanView",
+    "id": "Shared55",
+    "value": false
+  },
+  {
+    "module": "lib/payments/links",
+    "name": "InvoicePaymentView",
+    "id": "Shared56",
     "value": false
   },
   {
     "module": "lib/people/profiles",
     "name": "EmergencyContact",
-    "id": "Shared41",
+    "id": "Shared57",
     "value": false
   },
   {
     "module": "lib/productOps/load",
     "name": "ProductData",
-    "id": "Shared42",
+    "id": "Shared58",
     "value": false
   },
   {
     "module": "lib/productOps/service",
     "name": "Filters",
-    "id": "Shared43",
+    "id": "Shared59",
+    "value": false
+  },
+  {
+    "module": "lib/tasks/queries",
+    "name": "ArchivedTaskDTO",
+    "id": "Shared60",
+    "value": false
+  },
+  {
+    "module": "lib/observability/workspaceStore",
+    "name": "AnalyticsView",
+    "id": "Shared61",
+    "value": false
+  },
+  {
+    "module": "lib/observability/workspaceStore",
+    "name": "ProviderView",
+    "id": "Shared62",
     "value": false
   },
   {
     "module": "lib/tasks/service/transfer",
     "name": "TransferPreview",
-    "id": "Shared44",
+    "id": "Shared63",
+    "value": false
+  },
+  {
+    "module": "lib/tasks/views",
+    "name": "TaskViewDTO",
+    "id": "Shared64",
     "value": false
   },
   {
     "module": "lib/auth",
     "name": "SsoMfaChallenge",
-    "id": "Shared45",
+    "id": "Shared65",
     "value": false
   }
 ]

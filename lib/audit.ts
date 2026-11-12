@@ -50,10 +50,14 @@ export async function recordAuditEvent(input: AuditEventInput) {
   });
 }
 
+/** Audit actions recorded against an organisation but shown only in `/admin/organisations/<id>`. */
+export const INSTANCE_ONLY_ACTIONS = ["admin.workspace_accessed"] as const;
+
 export async function listAuditEvents(workspaceId: string, options: { take?: number; cursor?: string } = {}) {
   const take = Math.min(Math.max(options.take ?? 50, 1), 200);
   return prisma.auditEvent.findMany({
-    where: { workspaceId },
+    // Silent super-admin access is for the instance console only, never the organisation's own log.
+    where: { workspaceId, action: { notIn: [...INSTANCE_ONLY_ACTIONS] } },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     take,
     ...(options.cursor ? { cursor: { id: options.cursor }, skip: 1 } : {}),

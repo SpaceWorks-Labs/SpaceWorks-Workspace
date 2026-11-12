@@ -33,6 +33,7 @@ build and functions/runtime environment, without Compose's surrounding quotes:
 | `FRONTEND_GATEWAY_SECRET` | Independent random 32-byte hex peer key, same on backend |
 | `FRONTEND_TRUSTED_IP_HEADER` | `x-nf-client-connection-ip` on Netlify; `x-real-ip` behind Caddy |
 | `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` | Independent stable frontend key, at build and runtime |
+| `OBS_CSP_PROVIDERS`, `OBS_CSP_CONNECT_ORIGINS`, `OBS_CSP_FRAME_ORIGINS` | Optional; the same values as the backend when client analytics or Metabase frames are on, because the website builds its pages' CSP |
 
 The frontend has no database, Redis, Auth.js signing, mail, storage, MFA, vault
 or integration encryption credentials. Restrict production credentials to the
@@ -58,7 +59,7 @@ Browser `/api/*` requests use the website origin. Internal jobs, readiness and
 private gateway routes return 404 there. Non-API resources (private exports,
 assistant streaming, document presence, calendar feeds, blog feeds/covers and
 public status summaries/badges) use an exact generated resource allowlist.
-MCP, heartbeats and signed integration webhooks can target the backend hostname directly. The frontend also forwards their bounded bodies and signature/protocol headers; the backend retains native signature/capability validation.
+MCP, heartbeats and signed integration webhooks can target the backend hostname directly. The frontend also forwards their bounded bodies and signature/protocol headers; the backend retains native signature/capability validation. The same applies to payment webhooks (`/api/payments/...`), campaign bounce webhooks, one-click unsubscribe and the public subscribe endpoint, which are published on the website origin, and to Sign in with Apple's cross-site `form_post` callback, which keeps its cookies so Auth.js can check state and nonce.
 Keep webhook signatures and machine bearer checks intact; gateway trust never
 replaces those checks.
 

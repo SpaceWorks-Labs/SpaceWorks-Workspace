@@ -15,6 +15,7 @@ import { useAppColorMode } from "@/components/providers";
 import { useRealtime } from "@/components/realtime/useRealtime";
 import { Avatar } from "@/components/ui/display";
 import { IconButton } from "@/components/ui/button";
+import { SwitcherRequests } from "@/components/orgs/SwitcherRequests";
 import { RouteProgress } from "@/components/chrome/RouteProgress";
 import { NavLink, SidebarNav } from "@/components/chrome/SidebarNav";
 import { Menu, MenuContent, MenuItem, MenuLabel, MenuSeparator, MenuTrigger } from "@/components/ui/menu";
@@ -41,6 +42,16 @@ function WorkspaceSwitcher({ data, onNavigate }: { data: ShellData; onNavigate?:
             </Link>
           </MenuItem>
         ))}
+        {data.isSuperAdmin ? (
+          <>
+            <MenuSeparator />
+            <MenuLabel>Instance</MenuLabel>
+            <MenuItem asChild>
+              <Link href="/admin" onClick={onNavigate}>Instance admin</Link>
+            </MenuItem>
+          </>
+        ) : null}
+        <SwitcherRequests onNavigate={onNavigate} />
       </MenuContent>
     </Menu>
   );

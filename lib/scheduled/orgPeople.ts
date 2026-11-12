@@ -6,7 +6,7 @@ import { dayKey, addDays } from "@/lib/community/schedule";
 export async function run(now: Date) {
   let cursor: string | undefined;
   for (;;) {
-    const rows = await prisma.responsibility.findMany({ where: { status: "ACTIVE", reviewOn: { lte: new Date(now.getTime() + 91 * 86400000) }, workspace: { archivedAt: null } }, include: { workspace: { select: { slug: true, timezone: true } } }, take: 200, orderBy: { id: "asc" }, ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}) });
+    const rows = await prisma.responsibility.findMany({ where: { status: "ACTIVE", reviewOn: { lte: new Date(now.getTime() + 91 * 86400000) }, workspace: { status: "ACTIVE", archivedAt: null } }, include: { workspace: { select: { slug: true, timezone: true } } }, take: 200, orderBy: { id: "asc" }, ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}) });
     for (const row of rows) {
       if (row.reviewOn.toISOString().slice(0, 10) > addDays(dayKey(now, row.workspace.timezone), row.reminderDays)) continue;
       const key = `org_people:review:${row.id}:${row.reviewOn.toISOString()}`;

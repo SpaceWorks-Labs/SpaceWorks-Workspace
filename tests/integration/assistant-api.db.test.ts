@@ -51,6 +51,12 @@ describe.sequential("API tokens, /api/v1 and /api/mcp", () => {
     const expiring = await w.makeToken(["read:tasks"]);
     await prisma.apiToken.update({ where: { id: expiring.id }, data: { expiresAt: new Date(Date.now() - 1000) } });
     expect(await authenticateApiToken(`Bearer ${expiring.token}`)).toBeNull();
+    for (const status of ["SUSPENDED", "PENDING", "REJECTED"] as const) {
+      await prisma.workspace.update({ where: { id: w.a.id }, data: { status } });
+      expect(await authenticateApiToken(`Bearer ${good.token}`)).toBeNull();
+    }
+    await prisma.workspace.update({ where: { id: w.a.id }, data: { status: "ACTIVE" } });
+    expect(await authenticateApiToken(`Bearer ${good.token}`)).not.toBeNull();
   });
 
   it("enforces scopes on /api/v1 and returns minimal paginated DTOs", async () => {

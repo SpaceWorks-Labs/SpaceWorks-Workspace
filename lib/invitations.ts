@@ -6,12 +6,15 @@ import { prisma } from "@/lib/db";
 import { recordAuditEvent } from "@/lib/audit";
 import { enqueueInviteEmail } from "@/lib/outbox";
 import { joinedFromInvitation } from "@/lib/people/inviteHook";
+import { appBaseUrl } from "@/lib/notify/render";
 import { joinDefaultChannels } from "@/lib/workspaces";
+import { assertSeatAvailable, lockWorkspace } from "@/lib/seatLimits";
 import {
   createInvitationToken,
   hashInvitationToken,
   invitationExpiry,
   invitationUrl,
+  invitationState,
   isPlausibleInvitationToken,
 } from "@/lib/invitationTokens";
 
@@ -40,6 +43,10 @@ export async function createInvitation(input: {
   const { token, tokenHash } = createInvitationToken();
   const expiresAt = invitationExpiry();
   const invitation = await prisma.$transaction(async (tx) => {
+    await lockWorkspace(tx, input.workspace.id);
+    // Pending invitations hold a seat; the one this replaces does not count twice.
+    const seat = await assertSeatAvailable(tx, input.workspace.id, input.role, { email });
+    if (!seat.ok) return seat;
     // One live invitation per email: revoke older pending ones.
     await tx.invitation.updateMany({
       where: { workspaceId: input.workspace.id, email, acceptedAt: null, revokedAt: null },
@@ -55,7 +62,7 @@ export async function createInvitation(input: {
       workspaceName: input.workspace.name,
       inviterName: input.invitedBy.name,
       role: input.role,
-      inviteUrl: invitationUrl(token),
+      inviteUrl: invitationUrl(token, appBaseUrl()),
       expiresAt,
     });
     await recordAuditEvent({
@@ -69,6 +76,7 @@ export async function createInvitation(input: {
     });
     return created;
   });
+  if ("ok" in invitation) return invitation;
   return { ok: true, invitationId: invitation.id };
 }
 
@@ -89,7 +97,7 @@ export async function resendInvitation(input: { workspace: { id: string; name: s
       workspaceName: input.workspace.name,
       inviterName: input.actor.name,
       role: invitation.role,
-      inviteUrl: invitationUrl(token),
+      inviteUrl: invitationUrl(token, appBaseUrl()),
       expiresAt,
     });
     await recordAuditEvent({ client: tx, action: "invite.resent", workspaceId: input.workspace.id, actorId: input.actor.id, targetType: "Invitation", targetId: input.invitationId });
@@ -119,18 +127,51 @@ export async function findPendingInvitation(token: string) {
       expiresAt: true,
       acceptedAt: true,
       revokedAt: true,
-      workspace: { select: { id: true, slug: true, name: true, tagline: true, archivedAt: true } },
+      workspace: { select: { id: true, slug: true, name: true, tagline: true, archivedAt: true, status: true } },
       invitedBy: { select: { name: true } },
     },
   });
-  if (!invitation || invitation.acceptedAt || invitation.revokedAt || invitation.expiresAt <= new Date() || invitation.workspace.archivedAt) return null;
+  if (!invitation || invitation.acceptedAt || invitation.revokedAt || invitation.expiresAt <= new Date() || invitation.workspace.archivedAt || invitation.workspace.status !== "ACTIVE") return null;
   const existingUser = await prisma.user.findUnique({ where: { email: invitation.email }, select: { id: true } });
   return { ...invitation, existingAccount: Boolean(existingUser) };
 }
 
+export type InviteLinkState =
+  | { state: "PENDING"; invitation: NonNullable<Awaited<ReturnType<typeof findPendingInvitation>>> }
+  | { state: "ACCEPTED" | "REVOKED" | "EXPIRED"; workspaceName: string; inviterName: string | null }
+  | { state: "INVALID" };
+
+/**
+ * What the /invite page shows. Whoever holds the link may learn why it stopped working
+ * (used, withdrawn or expired) and for which workspace; unknown tokens and closed
+ * organisations look the same.
+ */
+export async function inviteLinkState(token: string): Promise<InviteLinkState> {
+  const pending = await findPendingInvitation(token);
+  if (pending) return { state: "PENDING", invitation: pending };
+  if (!isPlausibleInvitationToken(token)) return { state: "INVALID" };
+  const row = await prisma.invitation.findUnique({
+    where: { tokenHash: hashInvitationToken(token) },
+    select: { acceptedAt: true, revokedAt: true, expiresAt: true, workspace: { select: { name: true, archivedAt: true, status: true } }, invitedBy: { select: { name: true } } },
+  });
+  if (!row || row.workspace.archivedAt || row.workspace.status !== "ACTIVE") return { state: "INVALID" };
+  const state = invitationState(row);
+  if (state === "PENDING") return { state: "INVALID" };
+  return { state, workspaceName: row.workspace.name, inviterName: row.invitedBy?.name?.trim() || null };
+}
+
+const USERNAME_TAKEN = "That username is taken. Choose another.";
+
+/** A concurrent sign-up can win the same username between the check and the insert. */
+function usernameRace(error: unknown) {
+  const e = error as { code?: string; meta?: { target?: unknown } } | null;
+  if (e?.code === "P2002" && String(e.meta?.target ?? "").includes("username")) return { ok: false as const, error: USERNAME_TAKEN };
+  throw error;
+}
+
 export type AcceptAs =
   | { kind: "existing"; userId: string }
-  | { kind: "new"; name: string; password: string };
+  | { kind: "new"; name: string; password: string; username?: string };
 
 /**
  * Accept an invitation exactly once. The claim is a conditional update on the
@@ -146,9 +187,18 @@ export async function acceptInvitation(token: string, as: AcceptAs): Promise<Res
   const result = await prisma.$transaction(async (tx) => {
     const invitation = await tx.invitation.findUnique({
       where: { tokenHash },
-      select: { id: true, email: true, role: true, workspaceId: true, invitedById: true, workspace: { select: { slug: true, name: true, archivedAt: true } } },
+      select: { id: true, email: true, role: true, workspaceId: true, invitedById: true, workspace: { select: { slug: true, name: true, archivedAt: true, status: true } } },
     });
-    if (!invitation || invitation.workspace.archivedAt) return { ok: false as const, error: "This invitation link isn't valid. Ask for a new one." };
+    if (!invitation || invitation.workspace.archivedAt || invitation.workspace.status !== "ACTIVE") return { ok: false as const, error: "This invitation link isn't valid. Ask for a new one." };
+
+    const holdsSeat = as.kind === "existing"
+      ? Boolean(await tx.membership.findUnique({ where: { userId_workspaceId: { userId: as.userId, workspaceId: invitation.workspaceId } }, select: { id: true } }))
+      : false;
+    if (!holdsSeat) {
+      await lockWorkspace(tx, invitation.workspaceId);
+      const seat = await assertSeatAvailable(tx, invitation.workspaceId, invitation.role, { consume: true });
+      if (!seat.ok) return seat;
+    }
 
     let userId: string;
     if (as.kind === "existing") {
@@ -161,6 +211,7 @@ export async function acceptInvitation(token: string, as: AcceptAs): Promise<Res
     } else {
       const taken = await tx.user.findUnique({ where: { email: invitation.email }, select: { id: true } });
       if (taken) return { ok: false as const, error: "An account with this email already exists. Sign in to accept the invitation." };
+      if (as.username && (await tx.user.findUnique({ where: { username: as.username }, select: { id: true } }))) return { ok: false as const, error: USERNAME_TAKEN };
       userId = "";
     }
 
@@ -172,7 +223,7 @@ export async function acceptInvitation(token: string, as: AcceptAs): Promise<Res
 
     if (as.kind === "new") {
       const user = await tx.user.create({
-        data: { email: invitation.email, name: as.name.trim(), passwordHash, emailVerified: new Date() },
+        data: { email: invitation.email, name: as.name.trim(), username: as.username ?? null, passwordHash, emailVerified: new Date() },
         select: { id: true },
       });
       userId = user.id;
@@ -196,7 +247,7 @@ export async function acceptInvitation(token: string, as: AcceptAs): Promise<Res
       metadata: { role: invitation.role, newAccount: as.kind === "new" },
     });
     return { ok: true as const, workspaceSlug: invitation.workspace.slug, workspaceId: invitation.workspaceId, invitedById: invitation.invitedById, userId, afterJoined };
-  });
+  }).catch(usernameRace);
 
   if (!result.ok) return result;
   await result.afterJoined?.();

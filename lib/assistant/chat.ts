@@ -8,7 +8,8 @@ import { runAgentLoop, runToolCalls, systemBlocks, toApiContent, type StoredTool
 import { createAnthropicClient, getAssistantConfig, usageTotals } from "@/lib/assistant/client";
 import type { Principal } from "@/lib/assistant/principal";
 import { buildRequestContext, buildStableSystemPrompt, conversationTitle } from "@/lib/assistant/prompt";
-import { getTool, isWriteTool, toolsFor } from "@/lib/assistant/tools";
+import { assertAssistantAllowed } from "@/lib/assistant/usage";
+import { getTool, isWriteTool, toolsForWorkspace } from "@/lib/assistant/tools";
 
 /**
  * Web chat turns. Conversations are private to their owner. Every message is
@@ -89,6 +90,11 @@ export async function runChatTurn(input: {
     emit({ type: "error", message: "The assistant isn't set up yet. Ask your instance admin to add an AI key." });
     return;
   }
+  const allowed = await assertAssistantAllowed(principal.workspace.id);
+  if (!allowed.ok) {
+    emit({ type: "error", message: allowed.error });
+    return;
+  }
   const conversation = await loadOwnConversation(principal, input.conversationId);
   if (!conversation) {
     emit({ type: "error", message: "That conversation isn't available." });
@@ -96,7 +102,7 @@ export async function runChatTurn(input: {
   }
 
   const rows = await prisma.assistantMessage.findMany({ where: { conversationId: conversation.id }, orderBy: { createdAt: "asc" }, select: { id: true, role: true, content: true } });
-  const tools = toolsFor(principal);
+  const tools = await toolsForWorkspace(principal);
   const pending = pendingCalls(rows);
 
   if (pending.length > 0) {

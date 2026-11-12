@@ -2,11 +2,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { InvoiceActions } from "@/components/finance/InvoiceActions";
 import { InvoiceDocument } from "@/components/finance/InvoiceDocument";
+import { InvoicePaymentPanel } from "@/components/payments/InvoicePaymentPanel";
 import { Callout } from "@/components/ui/display";
 import { formatDay, localDate } from "@/lib/finance/dates";
 import { isInvoiceOverdue, parseInvoiceItems } from "@/lib/finance/invoice";
 import { getInvoice, listCategories } from "@/lib/finance/queries";
 import { canManageFinance, canViewFinance, requireWorkspace } from "@/lib/permissions";
+import { connectedProviders } from "@/lib/payments/accounts";
+import { listInvoicePayments } from "@/lib/payments/links";
 import { idSchema } from "@/lib/validation";
 
 export const metadata = { title: "Invoice" };
@@ -21,6 +24,7 @@ export default async function InvoicePage({ params }: PageProps<"/w/[workspaceSl
   const today = localDate(new Date(), workspace.timezone);
   const overdue = isInvoiceOverdue(invoice, today);
   const listHref = `/w/${workspace.slug}/finance/invoices`;
+  const [payments, providers] = manage ? await Promise.all([listInvoicePayments(workspace.id, invoice.id), connectedProviders(workspace.id)]) : [[], []];
   const incomeCategories = manage ? (await listCategories(workspace.id)).filter((c) => c.kind === "INCOME") : [];
 
   return (
@@ -60,6 +64,7 @@ export default async function InvoicePage({ params }: PageProps<"/w/[workspaceSl
           )}
         </p>
       ) : null}
+      {manage ? <InvoicePaymentPanel slug={workspace.slug} invoiceId={invoice.id} invoiceStatus={invoice.status} providers={providers} payments={payments} /> : null}
       <InvoiceDocument
         workspaceName={workspace.name}
         overdue={overdue}

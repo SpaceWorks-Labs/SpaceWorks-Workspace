@@ -117,6 +117,7 @@ export async function uploadDocumentFiles(
 export async function mayDownloadDocumentFile(
   file: { id: string; workspaceId: string; folder: string },
   userId: string,
+  viaSuperAdmin = false,
 ) {
   const link = await prisma.documentFile.findFirst({
     where: { workspaceId: file.workspaceId, fileId: file.id },
@@ -129,7 +130,7 @@ export async function mayDownloadDocumentFile(
   const actor = {
     user: { id: userId, name: null },
     workspace,
-    membership: { role: "GUEST" as const },
+    membership: { role: "GUEST" as const, ...(viaSuperAdmin ? { viaSuperAdmin: true } : {}) },
   };
   try {
     if (link.documentId) await getDocument(actor, link.documentId);

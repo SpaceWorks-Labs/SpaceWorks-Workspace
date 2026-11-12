@@ -167,12 +167,16 @@ enum BoardroomTurnRole {
 // ──────────────────────── Auth and instance ────────────────────────
 
 model User {
+  orgRequestsMade    OrgRequest[]   @relation("OrgRequestRequester")
+  orgRequestsDecided OrgRequest[]   @relation("OrgRequestDecider")
   cliSessions        CliSession[]
   personalNotes      PersonalNote[]
   personalTodos      PersonalTodo[]
   id                 String         @id @default(cuid())
   name               String?
   email              String         @unique
+  /// Lowercase sign-in handle; optional alternative to email.
+  username           String?        @unique
   emailVerified      DateTime?
   /// Bcrypt hash for email + password sign-in. Null for Google-only users.
   passwordHash       String?
@@ -451,30 +455,58 @@ model Workspace {
   socialDrafts                 SocialConnectionDraft[]
   analyticsPresets             AnalyticsPreset[]
   analyticsAdjustments         AnalyticsAdjustment[]
-  id                           String                     @id @default(cuid())
+  assetDowntimes               AssetDowntime[]
+  assetCertRequirements        AssetCertRequirement[]
+  stockItems                   StockItem[]
+  stockMovements               StockMovement[]
+  bankStatements               FinanceBankStatement[]
+  bankLines                    FinanceBankLine[]
+  analyticsConnections         WorkspaceAnalyticsConnection[]
+  mailingLists                 MailingList[]
+  subscribers                  Subscriber[]
+  listSubscriptions            ListSubscription[]
+  emailTemplates               EmailTemplate[]
+  campaigns                    Campaign[]
+  campaignMessages             CampaignMessage[]
+  campaignLinks                CampaignLink[]
+  campaignEngagements          CampaignEngagement[]
+  campaignBounces              CampaignBounce[]
+  campaignSettings             CampaignSettings?
+  paymentAccounts              PaymentProviderAccount[]
+  invoicePayments              InvoicePayment[]
+  paymentWebhookEvents         PaymentWebhookEvent[]
+  emailSettings                WorkspaceEmailSettings?
+  limits                       WorkspaceLimits?
+  orgRequests                  OrgRequest[]
+  status                       WorkspaceStatus                @default(ACTIVE)
+  statusReason                 String?
+  suspendedAt                  DateTime?
+  /// First month (1-12) of the financial year; 4 = April.
+  fiscalYearStartMonth         Int                            @default(4)
+  id                           String                         @id @default(cuid())
   personalNotes                PersonalNote[]
   personalTodos                PersonalTodo[]
-  slug                         String                     @unique
+  slug                         String                         @unique
   name                         String
   tagline                      String?
   description                  String?
-  timezone                     String                     @default("Asia/Kolkata")
-  currency                     String                     @default("INR")
-  financeVisibleToMembers      Boolean                    @default(false)
+  timezone                     String                         @default("Asia/Kolkata")
+  currency                     String                         @default("INR")
+  financeVisibleToMembers      Boolean                        @default(false)
   /// Channel (id) that receives assistant digests by default.
   digestChannelId              String?
   /// Members may see Services costs (cloud spend, service costs).
-  costsVisibleToMembers        Boolean                    @default(false)
+  costsVisibleToMembers        Boolean                        @default(false)
   /// Members (not only admins) may acknowledge Services incidents.
-  membersCanAckIncidents       Boolean                    @default(false)
+  membersCanAckIncidents       Boolean                        @default(false)
   /// Pauses retention purges (legal hold).
-  legalHold                    Boolean                    @default(false)
-  defaultLocale                String                     @default("en-IN")
+  legalHold                    Boolean                        @default(false)
+  defaultLocale                String                         @default("en-IN")
   /// Raw monitor check retention in days (7–30).
-  monitorRetentionDays         Int                        @default(14)
+  monitorRetentionDays         Int                            @default(14)
   archivedAt                   DateTime?
-  createdAt                    DateTime                   @default(now())
-  updatedAt                    DateTime                   @updatedAt
+  createdAt                    DateTime                       @default(now())
+  updatedAt                    DateTime                       @updatedAt
 
   memberships       Membership[]
   invitations       Invitation[]
@@ -766,6 +798,10 @@ model BoardColumn {
   name      String
   position  Int
   category  ColumnCategory @default(TODO)
+  /// Optional tint for the column header.
+  color     LabelTone?
+  /// Soft work-in-progress limit (header tints when exceeded).
+  wipLimit  Int?
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
 
@@ -1152,12 +1188,14 @@ model Announcement {
 // ────────────────────────── Operations ──────────────────────────
 
 model FinanceCategory {
-  id          String     @id @default(cuid())
-  workspaceId String
-  name        String
-  kind        LedgerKind
-  archivedAt  DateTime?
-  createdAt   DateTime   @default(now())
+  id           String     @id @default(cuid())
+  workspaceId  String
+  name         String
+  kind         LedgerKind
+  archivedAt   DateTime?
+  /// Code in the external accounting system (Tally ledger, Xero account code).
+  externalCode String?
+  createdAt    DateTime   @default(now())
 
   workspace Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   entries   LedgerEntry[]
@@ -1243,8 +1281,9 @@ model Invoice {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  createdBy User?     @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  workspace Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy User?            @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  payments  InvoicePayment[]
 
   @@unique([workspaceId, number])
   @@index([workspaceId, status])
@@ -2639,8 +2678,9 @@ model CertType {
   trainerTeamId String?
   createdAt     DateTime @default(now())
 
-  workspace      Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  certifications Certification[]
+  workspace         Workspace              @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  certifications    Certification[]
+  assetRequirements AssetCertRequirement[]
 
   @@unique([workspaceId, name])
 }
@@ -2928,9 +2968,11 @@ model Asset {
   createdAt          DateTime    @default(now())
   updatedAt          DateTime    @updatedAt
 
-  workspace   Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  manualDoc   Doc?                  @relation(fields: [manualDocId], references: [id], onDelete: SetNull)
-  maintenance AssetMaintenanceLog[]
+  workspace        Workspace              @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  manualDoc        Doc?                   @relation(fields: [manualDocId], references: [id], onDelete: SetNull)
+  maintenance      AssetMaintenanceLog[]
+  downtimes        AssetDowntime[]
+  certRequirements AssetCertRequirement[]
 
   @@unique([workspaceId, tag])
   @@index([workspaceId, status])
@@ -3045,6 +3087,7 @@ model Contact {
   deletedAt         DateTime?
 
   workspace         Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  subscribers       Subscriber[]
   orgRoles          ContactOrgRole[]
   interactions      ContactInteraction[]
   meetingAttendance MeetingAttendee[]
@@ -5418,6 +5461,8 @@ model FinanceFund {
   restricted     Boolean         @default(false)
   currency       String          @default("INR")
   funder         String?
+  /// Foreign-contribution (FCRA) fund; drives FCRA reporting.
+  fcra           Boolean         @default(false)
   notes          String?
   archivedAt     DateTime?
   createdAt      DateTime        @default(now())
@@ -5458,9 +5503,12 @@ model FinanceAccount {
   openingMinor    Int                     @default(0)
   openingOn       DateTime                @db.Date
   reconciledUpTo  DateTime?               @db.Date
+  externalCode    String?
   workspace       Workspace               @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   entries         LedgerEntry[]
   reconciliations FinanceReconciliation[]
+  bankStatements  FinanceBankStatement[]
+  bankLines       FinanceBankLine[]
 
   moneyControlMovements MoneyControlMovement[] @relation("MoneyControlMovementAccount")
 
@@ -5752,6 +5800,8 @@ model FundingRecord {
   receiptEmailedAt DateTime?
   createdById      String?
   archivedAt       DateTime?
+  /// Ledger entry this donation or grant receipt was posted to.
+  ledgerEntryId    String?
   createdAt        DateTime            @default(now())
   updatedAt        DateTime            @updatedAt
   workspace        Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
@@ -5762,6 +5812,7 @@ model FundingRecord {
   @@unique([workspaceId, id])
   @@unique([workspaceId, kind, key])
   @@unique([workspaceId, receiptNumber])
+  @@unique([workspaceId, ledgerEntryId])
   @@index([workspaceId, kind, archivedAt, dueOn])
   @@index([workspaceId, parentId])
   @@index([workspaceId, ownerId])
@@ -6943,4 +6994,639 @@ model AnalyticsAdjustment {
   workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId, currency, dueOn])
+}
+
+// ---------------------------------------------------------------------------
+// Organisation governance: approval status, per-organisation limits, requests.
+// ---------------------------------------------------------------------------
+
+enum WorkspaceStatus {
+  PENDING
+  ACTIVE
+  REJECTED
+  SUSPENDED
+}
+
+/// One row per workspace. Every field is nullable: null means "inherit the instance default".
+model WorkspaceLimits {
+  workspaceId            String   @id
+  maxMembers             Int?
+  maxGuests              Int?
+  maxProjects            Int?
+  maxStorageBytes        BigInt?
+  maxFileBytes           Int?
+  maxApiTokens           Int?
+  maxWebhooks            Int?
+  assistantEnabled       Boolean?
+  assistantMonthlyTokens Int?
+  monthlyEmailCap        Int?
+  disabledModules        String[] @default([])
+  enabledModules         String[] @default([])
+  plan                   String?
+  updatedById            String?
+  updatedAt              DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+enum OrgRequestKind {
+  NEW_ORG
+  MORE_LIMIT
+  FEATURE
+  OTHER
+}
+
+enum OrgRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+model OrgRequest {
+  id            String           @id @default(cuid())
+  kind          OrgRequestKind
+  status        OrgRequestStatus @default(PENDING)
+  /// Null for NEW_ORG until approved.
+  workspaceId   String?
+  requestedById String
+  requestedName String?
+  requestedSlug String?
+  payload       Json             @default("{}")
+  message       String?
+  decidedById   String?
+  decidedAt     DateTime?
+  decisionNote  String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  requestedBy User       @relation("OrgRequestRequester", fields: [requestedById], references: [id], onDelete: Cascade)
+  decidedBy   User?      @relation("OrgRequestDecider", fields: [decidedById], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([requestedById])
+  @@index([workspaceId])
+}
+
+// ---------------------------------------------------------------------------
+// Per-workspace outbound SMTP (notification, invoice and campaign mail).
+// ---------------------------------------------------------------------------
+
+model WorkspaceEmailSettings {
+  workspaceId    String    @id
+  enabled        Boolean   @default(false)
+  host           String
+  port           Int
+  secure         Boolean   @default(false)
+  username       String?
+  /// Encrypted with SecretPurpose "workspace-smtp".
+  passwordEnc    String?
+  fromEmail      String
+  fromName       String?
+  replyTo        String?
+  lastVerifiedAt DateTime?
+  lastError      String?
+  updatedById    String?
+  updatedAt      DateTime  @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+// ---------------------------------------------------------------------------
+// Online invoice payments (Stripe and Razorpay, hosted payment links only).
+// ---------------------------------------------------------------------------
+
+enum PaymentProvider {
+  STRIPE
+  RAZORPAY
+}
+
+enum InvoicePaymentStatus {
+  CREATED
+  PAID
+  FAILED
+  EXPIRED
+  REFUNDED
+  PARTIALLY_REFUNDED
+  NEEDS_REVIEW
+}
+
+model PaymentProviderAccount {
+  id             String          @id @default(cuid())
+  workspaceId    String
+  provider       PaymentProvider
+  label          String
+  /// Encrypted with SecretPurpose "payment-credentials".
+  credentialsEnc String
+  config         Json            @default("{}")
+  /// Unguessable path segment of the webhook URL.
+  webhookToken   String          @unique
+  status         String          @default("ACTIVE")
+  lastVerifiedAt DateTime?
+  lastError      String?
+  createdById    String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, provider])
+}
+
+model InvoicePayment {
+  id                String               @id @default(cuid())
+  workspaceId       String
+  invoiceId         String
+  provider          PaymentProvider
+  externalLinkId    String?
+  url               String?
+  externalPaymentId String?
+  amountMinor       Int
+  currency          String
+  status            InvoicePaymentStatus @default(CREATED)
+  paidAt            DateTime?
+  refundedMinor     Int                  @default(0)
+  lastError         String?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  invoice   Invoice   @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, externalPaymentId])
+  @@index([workspaceId, invoiceId])
+}
+
+model PaymentWebhookEvent {
+  id          String          @id @default(cuid())
+  provider    PaymentProvider
+  eventId     String
+  workspaceId String
+  receivedAt  DateTime        @default(now())
+  status      String
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, provider, eventId])
+}
+
+// ---------------------------------------------------------------------------
+// Email campaigns: lists, subscribers, double opt-in, campaigns, tracking, bounces.
+// ---------------------------------------------------------------------------
+
+enum MailingListVisibility {
+  PUBLIC
+  PRIVATE
+}
+
+enum OptInMode {
+  SINGLE
+  DOUBLE
+}
+
+enum SubscriberStatus {
+  ACTIVE
+  BLOCKLISTED
+}
+
+enum ListSubscriptionStatus {
+  UNCONFIRMED
+  CONFIRMED
+  UNSUBSCRIBED
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  RUNNING
+  PAUSED
+  CANCELLED
+  FINISHED
+}
+
+enum CampaignContentType {
+  RICHTEXT
+  MARKDOWN
+  HTML
+  PLAIN
+}
+
+enum CampaignMessageStatus {
+  PENDING
+  CLAIMED
+  SENT
+  FAILED
+  SKIPPED
+}
+
+enum BounceKind {
+  SOFT
+  HARD
+  COMPLAINT
+}
+
+enum EngagementKind {
+  OPEN
+  CLICK
+}
+
+model MailingList {
+  id          String                @id @default(cuid())
+  workspaceId String
+  name        String
+  slug        String
+  description String?
+  visibility  MailingListVisibility @default(PRIVATE)
+  optIn       OptInMode             @default(DOUBLE)
+  archivedAt  DateTime?
+  createdById String?
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+
+  workspace     Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  subscriptions ListSubscription[]
+  campaignLists CampaignList[]
+
+  @@unique([workspaceId, slug])
+}
+
+model Subscriber {
+  id              String           @id @default(cuid())
+  workspaceId     String
+  /// Stored lowercase.
+  email           String
+  emailDomain     String?
+  name            String?
+  attributes      Json             @default("{}")
+  status          SubscriberStatus @default(ACTIVE)
+  blocklistedAt   DateTime?
+  blocklistReason String?
+  contactId       String?
+  source          String?
+  bounceCount     Int              @default(0)
+  /// Unguessable id used in public preference links.
+  publicToken     String           @unique
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  workspace     Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  contact       Contact?           @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  subscriptions ListSubscription[]
+  messages      CampaignMessage[]
+
+  @@unique([workspaceId, email])
+  @@index([workspaceId, status])
+  @@index([workspaceId, emailDomain])
+}
+
+model ListSubscription {
+  subscriberId          String
+  listId                String
+  workspaceId           String
+  status                ListSubscriptionStatus @default(UNCONFIRMED)
+  confirmTokenHash      String?
+  confirmTokenExpiresAt DateTime?
+  consentSource         String
+  consentText           String?
+  consentIp             String?
+  consentUserAgent      String?
+  subscribedAt          DateTime               @default(now())
+  confirmedAt           DateTime?
+  unsubscribedAt        DateTime?
+  unsubscribeSource     String?
+  updatedAt             DateTime               @updatedAt
+
+  workspace  Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  subscriber Subscriber  @relation(fields: [subscriberId], references: [id], onDelete: Cascade)
+  list       MailingList @relation(fields: [listId], references: [id], onDelete: Cascade)
+
+  @@id([subscriberId, listId])
+  @@index([workspaceId, listId, status])
+  @@index([confirmTokenHash])
+}
+
+model EmailTemplate {
+  id          String   @id @default(cuid())
+  workspaceId String
+  name        String
+  subject     String?
+  bodyHtml    String
+  isDefault   Boolean  @default(false)
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  campaigns Campaign[]
+
+  @@index([workspaceId])
+}
+
+model Campaign {
+  id                 String              @id @default(cuid())
+  workspaceId        String
+  name               String
+  subject            String
+  fromName           String
+  fromEmail          String?
+  replyTo            String?
+  contentType        CampaignContentType @default(RICHTEXT)
+  bodySource         String              @default("")
+  bodyHtml           String              @default("")
+  bodyText           String              @default("")
+  templateId         String?
+  status             CampaignStatus      @default(DRAFT)
+  scheduledAt        DateTime?
+  startedAt          DateTime?
+  finishedAt         DateTime?
+  totalRecipients    Int                 @default(0)
+  sentCount          Int                 @default(0)
+  failedCount        Int                 @default(0)
+  skippedCount       Int                 @default(0)
+  openCount          Int                 @default(0)
+  clickCount         Int                 @default(0)
+  lastSubscriberId   String?
+  lockedAt           DateTime?
+  lockedBy           String?
+  lastError          String?
+  pausedReason       String?
+  trackOpens         Boolean             @default(false)
+  trackClicks        Boolean             @default(false)
+  individualTracking Boolean             @default(false)
+  createdById        String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  workspace   Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  template    EmailTemplate?       @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  lists       CampaignList[]
+  messages    CampaignMessage[]
+  links       CampaignLink[]
+  engagements CampaignEngagement[]
+
+  @@index([workspaceId, status])
+  @@index([status, scheduledAt])
+}
+
+model CampaignList {
+  campaignId String
+  listId     String
+
+  campaign Campaign    @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  list     MailingList @relation(fields: [listId], references: [id], onDelete: Cascade)
+
+  @@id([campaignId, listId])
+}
+
+model CampaignMessage {
+  id                String                @id @default(cuid())
+  campaignId        String
+  workspaceId       String
+  subscriberId      String?
+  emailSnapshot     String
+  status            CampaignMessageStatus @default(PENDING)
+  attempts          Int                   @default(0)
+  nextAttemptAt     DateTime?
+  claimedAt         DateTime?
+  sentAt            DateTime?
+  providerMessageId String?
+  lastError         String?
+  /// Unguessable id used in tracking and unsubscribe links.
+  token             String                @unique
+  openedAt          DateTime?
+  firstClickedAt    DateTime?
+  createdAt         DateTime              @default(now())
+
+  workspace  Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  campaign   Campaign    @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  subscriber Subscriber? @relation(fields: [subscriberId], references: [id], onDelete: SetNull)
+
+  @@unique([campaignId, subscriberId])
+  @@index([campaignId, status, nextAttemptAt])
+  @@index([workspaceId, sentAt])
+}
+
+model CampaignLink {
+  id               String @id @default(cuid())
+  campaignId       String
+  workspaceId      String
+  url              String
+  urlHash          String
+  clickCount       Int    @default(0)
+  uniqueClickCount Int    @default(0)
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  campaign  Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, urlHash])
+}
+
+model CampaignEngagement {
+  id          String         @id @default(cuid())
+  campaignId  String
+  workspaceId String
+  messageId   String?
+  linkId      String?
+  kind        EngagementKind
+  createdAt   DateTime       @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  campaign  Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId, kind, createdAt])
+  @@index([workspaceId, createdAt])
+}
+
+model CampaignBounce {
+  id              String     @id @default(cuid())
+  workspaceId     String
+  subscriberId    String?
+  campaignId      String?
+  messageId       String?
+  kind            BounceKind
+  source          String
+  diagnostic      String?
+  providerEventId String?
+  createdAt       DateTime   @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, createdAt])
+  @@index([workspaceId, subscriberId])
+  @@index([campaignId])
+}
+
+model CampaignSettings {
+  workspaceId            String   @id
+  trackOpens             Boolean  @default(false)
+  trackClicks            Boolean  @default(false)
+  individualTracking     Boolean  @default(false)
+  recordConsentIp        Boolean  @default(false)
+  sendPerMinute          Int      @default(60)
+  batchSize              Int      @default(50)
+  maxErrors              Int      @default(20)
+  softBounceLimit        Int      @default(3)
+  domainBlocklist        String[] @default([])
+  footerAddress          String?
+  /// Encrypted with SecretPurpose "campaign.bounce".
+  bounceWebhookSecretEnc String?
+  updatedAt              DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+// ---------------------------------------------------------------------------
+// Observability: per-workspace connections to analytics providers.
+// ---------------------------------------------------------------------------
+
+model WorkspaceAnalyticsConnection {
+  workspaceId  String
+  /// metabase, posthog, clarity or grafana.
+  provider     String
+  enabled      Boolean  @default(false)
+  /// inherit, own, off or linkout.
+  mode         String   @default("inherit")
+  publicConfig Json     @default("{}")
+  /// Encrypted with SecretPurpose "workspace-analytics".
+  secretEnc    String?
+  updatedById  String?
+  updatedAt    DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@id([workspaceId, provider])
+}
+
+// ---------------------------------------------------------------------------
+// Finance completeness: bank statement import and matching.
+// ---------------------------------------------------------------------------
+
+model FinanceBankStatement {
+  id           String    @id @default(cuid())
+  workspaceId  String
+  accountId    String
+  filename     String
+  /// CSV or OFX.
+  format       String
+  importedById String?
+  importedAt   DateTime  @default(now())
+  fileHash     String
+  rowCount     Int
+  fromDate     DateTime? @db.Date
+  toDate       DateTime? @db.Date
+  openingMinor Int?
+  closingMinor Int?
+
+  workspace Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  account   FinanceAccount    @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  lines     FinanceBankLine[]
+
+  @@unique([workspaceId, accountId, fileHash])
+  @@index([workspaceId, accountId, importedAt])
+}
+
+model FinanceBankLine {
+  id            String    @id @default(cuid())
+  workspaceId   String
+  statementId   String
+  accountId     String
+  postedOn      DateTime  @db.Date
+  description   String
+  reference     String?
+  /// Signed: credits positive, debits negative.
+  amountMinor   Int
+  currency      String
+  balanceMinor  Int?
+  lineHash      String
+  /// UNMATCHED, MATCHED or IGNORED.
+  status        String    @default("UNMATCHED")
+  ledgerEntryId String?
+  matchedAt     DateTime?
+  matchedById   String?
+
+  workspace Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  statement FinanceBankStatement @relation(fields: [statementId], references: [id], onDelete: Cascade)
+  account   FinanceAccount       @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, accountId, lineHash])
+  @@index([workspaceId, accountId, status, postedOn])
+  @@index([statementId])
+  @@index([workspaceId, ledgerEntryId])
+}
+
+// ---------------------------------------------------------------------------
+// Makerspace operations: machine downtime, required inductions, consumables stock.
+// ---------------------------------------------------------------------------
+
+model AssetDowntime {
+  id          String    @id @default(cuid())
+  workspaceId String
+  assetId     String
+  from        DateTime
+  /// Null while the machine is still out of service.
+  to          DateTime?
+  reason      String
+  createdById String?
+  createdAt   DateTime  @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  asset     Asset     @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, assetId, from])
+  @@index([workspaceId, to])
+}
+
+model AssetCertRequirement {
+  assetId     String
+  certTypeId  String
+  workspaceId String
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  asset     Asset     @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  certType  CertType  @relation(fields: [certTypeId], references: [id], onDelete: Cascade)
+
+  @@id([assetId, certTypeId])
+  @@index([workspaceId, certTypeId])
+}
+
+model StockItem {
+  id              String    @id @default(cuid())
+  workspaceId     String
+  name            String
+  sku             String?
+  unit            String
+  onHand          Decimal   @default(0) @db.Decimal(12, 3)
+  reorderLevel    Decimal?  @db.Decimal(12, 3)
+  reorderQty      Decimal?  @db.Decimal(12, 3)
+  preferredVendor String?
+  location        String?
+  costMinor       Int?
+  currency        String    @default("INR")
+  archivedAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  workspace Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  movements StockMovement[]
+
+  @@index([workspaceId, archivedAt])
+}
+
+model StockMovement {
+  id            String   @id @default(cuid())
+  workspaceId   String
+  itemId        String
+  /// RECEIVE, ISSUE, ADJUST or SALE.
+  kind          String
+  quantity      Decimal  @db.Decimal(12, 3)
+  note          String?
+  ledgerEntryId String?
+  createdById   String?
+  createdAt     DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  item      StockItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, itemId, createdAt])
 }

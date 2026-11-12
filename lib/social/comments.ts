@@ -1,5 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
+import { activeMemberOrSuperAdmin } from "@/lib/accessMember";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { canManageSocial, canConnectSocial } from "@/lib/roles";
@@ -20,8 +21,8 @@ export async function changeComment(ctx: WorkspaceContext, raw: unknown) {
   const parsed = commentInput.safeParse(raw); if (!parsed.success) return { ok: false as const, error: "Check the comment fields and try again." };
   const input = parsed.data, workspaceId = ctx.workspace.id;
   // Recheck current membership before an external write, including callers outside Server Actions.
-  const member = await prisma.membership.findFirst({ where: { workspaceId, userId: ctx.user.id, status: "ACTIVE", role: { in: ["OWNER", "ADMIN", "MEMBER"] }, user: { disabledAt: null }, workspace: { archivedAt: null } } });
-  if (!member) return { ok: false as const, error: "This workspace is unavailable." };
+  const member = await activeMemberOrSuperAdmin(prisma, ctx);
+  if (!member || member.role === "GUEST") return { ok: false as const, error: "This workspace is unavailable." };
   const comment = await prisma.socialComment.findFirst({ where: { workspaceId, id: input.id }, include: { account: true, post: { select: { externalId: true } } } });
   if (!comment) return { ok: false as const, error: "That comment is unavailable." };
   if (input.operation === "seen" || input.operation === "assign") {
@@ -81,7 +82,7 @@ export async function reconcileComment(ctx: WorkspaceContext, raw: unknown) {
   const parsed = reconcileInput.safeParse(raw); if (!parsed.success) return { ok: false as const, error: "Confirm that you checked the original discussion." };
   const input = parsed.data;
   return prisma.$transaction(async tx => {
-    const live = await tx.membership.findFirst({ where: { workspaceId: ctx.workspace.id, userId: ctx.user.id, status: "ACTIVE", role: { in: ["OWNER", "ADMIN"] }, user: { disabledAt: null }, workspace: { archivedAt: null } } }); if (!live) return { ok: false as const, error: "Only active admins can reconcile a request." };
+    const live = await activeMemberOrSuperAdmin(tx, ctx); if (!live || !["OWNER", "ADMIN"].includes(live.role)) return { ok: false as const, error: "Only active admins can reconcile a request." };
     const comment = await tx.socialComment.findFirst({ where: { workspaceId: ctx.workspace.id, id: input.id, operationToken: { not: null } } }); if (!comment) return { ok: false as const, error: "There is no uncertain request to reconcile." };
     if (comment.replyState === "SENDING" && comment.operationAt && comment.operationAt.getTime() > Date.now() - 600000) return { ok: false as const, error: "This request may still be running. Wait 10 minutes before reconciling." };
     if (input.outcome === "sent" && (!input.externalId || !comment.replyText)) return { ok: false as const, error: "Enter the platform reply id after checking the original discussion." };

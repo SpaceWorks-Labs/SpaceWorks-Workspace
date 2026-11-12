@@ -6,7 +6,7 @@ import { Checkbox } from "@/components/ui/choice";
 import { CollapsibleSection, useOpenState } from "@/components/ui/collapsible-section";
 import { EmptyState } from "@/components/ui/display";
 import { Table, TBody, TH, THead } from "@/components/ui/table";
-import { groupTasks, sortTasks, type GroupKey, type SortKey } from "@/lib/tasks/filters";
+import { groupTasks, HEADER_SORTS, sortTasks, type GroupKey, type SortDir, type SortKey, type TaskQuery } from "@/lib/tasks/filters";
 import { taskReference } from "@/lib/tasks/links";
 import { triState } from "@/lib/tasks/selection";
 import type { BoardData, BoardTask } from "@/lib/tasks/types";
@@ -15,6 +15,7 @@ import { assigneeItems } from "./ListCells";
 import { isSelectable, ListRow, type RowContext } from "./ListRow";
 import { useBulkActions } from "./useBulkActions";
 import { useListEdits } from "./useListEdits";
+import { SortHeader } from "./SortHeader";
 import { useNow } from "./useNow";
 import { useListSelection } from "./useListSelection";
 
@@ -31,7 +32,10 @@ export function ListView({
   data,
   tasks: incoming,
   sort,
+  dir,
   group,
+  query,
+  onQueryChange,
   timeZone,
   slug: slugProp,
   viewerId,
@@ -42,7 +46,11 @@ export function ListView({
   data: BoardData;
   tasks: BoardTask[];
   sort: SortKey;
+  dir: SortDir;
   group: GroupKey;
+  /** The whole query, so a header click can change the sort. */
+  query: TaskQuery;
+  onQueryChange: (query: TaskQuery) => void;
   timeZone: string;
   slug?: string;
   viewerId?: string;
@@ -56,8 +64,8 @@ export function ListView({
   const edits = useListEdits({ slug, viewerId, data, tasks: incoming, timeZone, onChanged });
   const tasks = edits.tasks;
   const groups = useMemo(
-    () => groupTasks(sortTasks(tasks, sort), group, { columns: data.columns, members: data.members, labels: data.labels, now, timeZone }),
-    [tasks, sort, group, data.columns, data.members, data.labels, now, timeZone],
+    () => groupTasks(sortTasks(tasks, sort, { dir, columns: data.columns, members: data.members }), group, { columns: data.columns, members: data.members, labels: data.labels, now, timeZone }),
+    [tasks, sort, dir, group, data.columns, data.members, data.labels, now, timeZone],
   );
   const collapse = useOpenState("sw:collapse:list");
   const groupId = (key: string) => `${data.project.id}:${group}:${key}`;
@@ -112,11 +120,11 @@ export function ListView({
                   <TH className="w-12">
                     <span className="sr-only">Done</span>
                   </TH>
-                  <TH>Task</TH>
-                  <TH>Status</TH>
-                  <TH>Priority</TH>
-                  <TH>Assignees</TH>
-                  <TH>Due</TH>
+                  <SortHeader label="Task" column={HEADER_SORTS.task} query={query} onChange={onQueryChange} className="sticky left-0 z-[1] border-r border-line bg-surface" />
+                  <SortHeader label="Status" column={HEADER_SORTS.status} query={query} onChange={onQueryChange} />
+                  <SortHeader label="Priority" column={HEADER_SORTS.priority} query={query} onChange={onQueryChange} />
+                  <SortHeader label="Assignees" column={HEADER_SORTS.assignee} query={query} onChange={onQueryChange} />
+                  <SortHeader label="Due" column={HEADER_SORTS.due} query={query} onChange={onQueryChange} />
                 </tr>
               </THead>
               <TBody>

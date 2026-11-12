@@ -8,7 +8,7 @@ import type { TaskActor } from "@/lib/tasks/access";
 
 async function run<T>(slug: string, input: unknown, fn: (actor: TaskActor, input: unknown) => Promise<ActionResult<T>>): Promise<ActionResult<T>> {
   if (typeof slug !== "string" || slug.length > 64) return actionError(NOT_ALLOWED);
-  const actor = await getWorkspaceForAction(slug, "MEMBER");
+  const actor = await getWorkspaceForAction(slug, "MEMBER", { module: "projects" });
   if (!actor) return actionError(NOT_ALLOWED);
   if (await isActionRateLimited("action", actor.user.id)) return actionError(RATE_LIMITED);
   const result = await fn(actor, input);

@@ -45,7 +45,7 @@ export async function readInboundBody(request: Request, max = 262144) {
 export async function inboundRequest(request: Request, providerSegment: string, connectionId: string) {
   const provider = providerSegment.toUpperCase();
   if (!["SLACK", "DISCORD", "MATTERMOST", "TELEGRAM", "WHATSAPP"].includes(provider)) return new Response(null, { status: 404 });
-  const connection = await prisma.messagingConnection.findFirst({ where: { id: connectionId, provider: provider as MessagingProvider, status: { not: "DISABLED" }, workspace: { archivedAt: null } } });
+  const connection = await prisma.messagingConnection.findFirst({ where: { id: connectionId, provider: provider as MessagingProvider, status: { not: "DISABLED" }, workspace: { status: "ACTIVE", archivedAt: null } } });
   if (!connection) return new Response(null, { status: 404 });
   if (request.method === "GET" && connection.provider === "WHATSAPP") {
     const credentials = openCredentials({ ...connection, provider: "WHATSAPP" }); const url = new URL(request.url);

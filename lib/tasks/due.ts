@@ -1,4 +1,4 @@
-import { DAY_MS, localDayNumber, localToInstant, weekdayOfDayNumber } from "@/lib/tasks/localDate";
+import { DAY_MS, isoDateOfDayNumber, localDayNumber, localToInstant, weekdayOfDayNumber } from "@/lib/tasks/localDate";
 
 /**
  * Due dates (pure, client-safe). A task's `dueAt` is the start of its local
@@ -51,4 +51,21 @@ export function reminderDue(dueAt: Date, now: Date, timeZone: string): "due" | "
   if (now >= overdueReminderAt) return now.getTime() - overdueReminderAt.getTime() <= 7 * DAY_MS ? "overdue" : null;
   if (now >= dueReminderAt) return "due";
   return null;
+}
+
+export type DueQuickPick = { key: "today" | "tomorrow" | "next-week" | "clear"; label: string; /** "YYYY-MM-DD" in the workspace zone, "" clears the date. */ value: string };
+
+/**
+ * One-click due dates: today, tomorrow, next Monday ("Next week") and Clear.
+ * Dates are local calendar days in the workspace time zone.
+ */
+export function dueQuickPicks(now: Date, timeZone: string): DueQuickPick[] {
+  const today = localDayNumber(now, timeZone);
+  const nextMonday = today + (7 - weekdayOfDayNumber(today));
+  return [
+    { key: "today", label: "Today", value: isoDateOfDayNumber(today) },
+    { key: "tomorrow", label: "Tomorrow", value: isoDateOfDayNumber(today + 1) },
+    { key: "next-week", label: "Next week", value: isoDateOfDayNumber(nextMonday) },
+    { key: "clear", label: "Clear", value: "" },
+  ];
 }

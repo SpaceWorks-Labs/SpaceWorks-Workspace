@@ -12,6 +12,7 @@ import {
   addDependency,
   createTask,
   deleteComment,
+  deleteTaskPermanently,
   editComment,
   moveTask,
   removeAttachment,
@@ -21,6 +22,7 @@ import {
   setTaskArchived,
   setTaskCompleted,
   updateTask,
+  uploadDescriptionImage,
 } from "@/lib/tasks/service";
 import type { BoardData, MyTaskDTO, TaskDetailDTO } from "@/lib/tasks/types";
 
@@ -140,4 +142,17 @@ export async function uploadTaskAttachmentAction(slug: string, formData: FormDat
 
 export async function removeTaskAttachmentAction(slug: string, input: unknown) {
   return mutate(slug, (ctx) => removeAttachment(ctx, input));
+}
+
+/** Admins and the project owner delete an archived task for good (type the project key to confirm). */
+export async function deleteTaskPermanentlyAction(slug: string, input: unknown) {
+  return mutate(slug, (ctx) => deleteTaskPermanently(ctx, input));
+}
+
+/** An image pasted or dropped into a task description. */
+export async function uploadDescriptionImageAction(slug: string, formData: FormData): Promise<ActionResult<{ id: string; url: string; alt: string }>> {
+  const taskId = formData.get("taskId");
+  const file = formData.get("file");
+  if (typeof taskId !== "string" || !(file instanceof File) || file.size === 0) return actionError("Choose an image to add.");
+  return mutate(slug, (ctx) => uploadDescriptionImage(ctx, taskId, file), "upload");
 }

@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma, type DbClient } from "@/lib/db";
+import { activeMemberOrSuperAdmin } from "@/lib/accessMember";
 import type { OpsActor } from "@/lib/approvals/context";
 import { canUseSecrets, canManageSecrets } from "@/lib/roles";
 import { SecretsError, ROLES, type SecretRole } from "./values";
@@ -21,15 +22,7 @@ export async function environmentAccess(
   permission: SecretRole,
   client: DbClient = prisma,
 ) {
-  const membership = await client.membership.findFirst({
-    where: {
-      workspaceId: actor.workspace.id,
-      userId: actor.user.id,
-      status: "ACTIVE",
-      user: { disabledAt: null },
-      workspace: { archivedAt: null },
-    },
-  });
+  const membership = await activeMemberOrSuperAdmin(client, actor);
   if (
     !membership ||
     !canUseSecrets(membership) ||
