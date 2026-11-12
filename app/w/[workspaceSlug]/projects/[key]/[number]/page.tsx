@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { TaskDetail } from "@/components/tasks/TaskDetail";
 import { requireWorkspace } from "@/lib/permissions";
+import { canonicalTaskRedirect } from "@/lib/tasks/links";
 import { getTaskDetail } from "@/lib/tasks/queries";
 
 function parseNumber(value: string) {
@@ -18,8 +19,8 @@ export async function generateMetadata({ params }: PageProps<"/w/[workspaceSlug]
 
 /**
  * Full task page. Task numbers are unique per workspace, so a link with an
- * old project key (the key was changed, or the task moved) redirects to the
- * current one.
+ * old project key (the key was changed, or the task moved to another project)
+ * redirects to the current one.
  */
 export default async function TaskPage({ params }: PageProps<"/w/[workspaceSlug]/projects/[key]/[number]">) {
   const { workspaceSlug, key, number } = await params;
@@ -27,6 +28,7 @@ export default async function TaskPage({ params }: PageProps<"/w/[workspaceSlug]
   const parsed = parseNumber(number);
   const task = parsed ? await getTaskDetail(context, parsed) : null;
   if (!task) notFound();
-  if (task.project?.key !== key) redirect(task.url);
+  const canonical = canonicalTaskRedirect(context.workspace.slug, key, { number: task.number, projectKey: task.project?.key ?? null });
+  if (canonical) redirect(canonical);
   return <TaskDetail slug={context.workspace.slug} initial={task} variant="page" />;
 }

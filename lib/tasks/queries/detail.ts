@@ -7,6 +7,8 @@ import { assignableMembers, visibleTaskWhere, type TaskActor } from "@/lib/tasks
 import { activityText, HIDDEN_ACTIVITY_KINDS } from "@/lib/tasks/activityText";
 import { taskReference, taskUrl } from "@/lib/tasks/links";
 import { describeRule, parseAssigneeRule, parseRRule } from "@/lib/tasks/recurrence";
+import { effectiveType } from "@/lib/tasks/taskTypes";
+import { listTaskTypesFor } from "@/lib/tasks/service/types";
 import type {
   ColumnDTO,
   PersonRef,
@@ -14,7 +16,7 @@ import type {
   TaskRef,
 } from "@/lib/tasks/types";
 import { iso, dateOnly } from "./formatters";
-import { permissionsFor, projectSummary, workspaceLabels } from "./projects";
+import { permissionsFor, projectSummary, taskRights, workspaceLabels } from "./projects";
 
 async function people(ids: Iterable<string>): Promise<Map<string, PersonRef>> {
   const unique = [...new Set(ids)].filter(Boolean);
@@ -66,22 +68,24 @@ export async function getTaskDetail(actor: TaskActor, number: number): Promise<T
     ...task.activities.map((activity) => activity.actorId ?? ""),
     ...task.files.map((file) => file.uploadedById ?? ""),
     ...task.activities.flatMap((activity) => {
-      const data = activity.data as { userIds?: unknown } | null;
-      return Array.isArray(data?.userIds) ? (data!.userIds as string[]) : [];
+      const data = activity.data as { userIds?: unknown; droppedAssignees?: unknown } | null;
+      return [data?.userIds, data?.droppedAssignees].flatMap((value) => (Array.isArray(value) ? (value as string[]) : []));
     }),
     ...task.comments.flatMap((comment) => [...comment.body.matchAll(/<@([A-Za-z0-9_-]{1,64})>/g)].map((match) => match[1]!)),
     ...(rule ? parseAssigneeRule(rule.assigneeRule).userIds : []),
   ];
-  const [peopleMap, columns, members, labels, summary] = await Promise.all([
+  const [peopleMap, columns, members, labels, summary, taskTypes] = await Promise.all([
     people(personIds),
     project ? prisma.boardColumn.findMany({ where: { projectId: project.id }, orderBy: { position: "asc" }, select: { id: true, name: true, position: true, category: true } }) : Promise.resolve([] as ColumnDTO[]),
     assignableMembers(actor.workspace.id, project),
     workspaceLabels(actor.workspace.id),
     project ? projectSummary(project) : Promise.resolve(null),
+    project ? listTaskTypesFor(actor.workspace.id, project.id) : Promise.resolve([]),
   ]);
   const nameOf = (id: string) => peopleMap.get(id)?.name ?? members.find((member) => member.id === id)?.name ?? "a former member";
   const isAdmin = hasRoleAtLeast(actor.membership.role, "ADMIN");
-  const permissions = permissionsFor(actor, project);
+  const rights = taskRights(actor, { creatorId: task.creatorId, project }, task.assignees.map((row) => row.user.id));
+  const permissions = { ...permissionsFor(actor, project), canEdit: rights.canEdit };
   const pattern = rule ? parseRRule(rule.rrule) : null;
   const assigneeRule = rule ? parseAssigneeRule(rule.assigneeRule) : null;
 
@@ -101,6 +105,8 @@ export async function getTaskDetail(actor: TaskActor, number: number): Promise<T
     updatedAt: task.updatedAt.toISOString(),
     creator: task.creatorId ? (peopleMap.get(task.creatorId) ?? null) : null,
     columnId: task.columnId,
+    typeId: effectiveType(taskTypes, task.typeId)?.id ?? null,
+    taskTypes,
     project: summary,
     columns,
     parent: task.parent ? ref(task.parent) : null,
@@ -155,6 +161,9 @@ export async function getTaskDetail(actor: TaskActor, number: number): Promise<T
     members,
     labels,
     permissions,
+    canClaim: rights.canClaim,
+    canUnclaim: rights.canUnclaim,
+    isAssignedToMe: rights.isAssignedToMe,
     url: taskUrl(actor.workspace.slug, project?.key, task.number),
     reference: taskReference(project?.key, task.number),
     timeZone: actor.workspace.timezone,

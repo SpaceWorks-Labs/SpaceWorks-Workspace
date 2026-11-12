@@ -5,7 +5,7 @@ import type { BoardTask, ColumnDTO, LabelRef, PersonRef } from "@/lib/tasks/type
 /**
  * Board and list filters, sorting and grouping (pure, client-safe). The
  * state lives in the URL so a filtered board can be shared:
- * `?assignee=me,<id>&label=<id>&priority=HIGH&due=overdue&q=motor&view=list&sort=due&group=assignee`.
+ * `?assignee=me,<id>&label=<id>&type=<id>&priority=HIGH&due=overdue&q=motor&view=list&sort=due&group=assignee`.
  */
 
 export const PRIORITIES: readonly TaskPriority[] = ["URGENT", "HIGH", "MEDIUM", "LOW", "NONE"] as const;
@@ -34,18 +34,20 @@ export const SORT_OPTIONS: ReadonlyArray<{ value: SortKey; label: string }> = [
 
 export type GroupKey = "column" | "assignee" | "priority" | "label" | "due" | "none";
 export const GROUP_OPTIONS: ReadonlyArray<{ value: GroupKey; label: string }> = [
+  { value: "none", label: "No grouping" },
   { value: "column", label: "Status" },
   { value: "assignee", label: "Assignee" },
   { value: "priority", label: "Priority" },
   { value: "label", label: "Label" },
   { value: "due", label: "Due date" },
-  { value: "none", label: "No grouping" },
 ];
 
 export type TaskFilters = {
   /** User ids, "me" or "none" (unassigned). */
   assignees: string[];
   labels: string[];
+  /** Task type ids (the effective type, so legacy untyped tasks match the default). */
+  types: string[];
   priorities: TaskPriority[];
   due: DueFilter | null;
   q: string;
@@ -53,7 +55,7 @@ export type TaskFilters = {
 
 export type TaskQuery = { filters: TaskFilters; sort: SortKey; group: GroupKey; view: "board" | "list" };
 
-export const EMPTY_FILTERS: TaskFilters = { assignees: [], labels: [], priorities: [], due: null, q: "" };
+export const EMPTY_FILTERS: TaskFilters = { assignees: [], labels: [], types: [], priorities: [], due: null, q: "" };
 
 type ParamSource = URLSearchParams | Record<string, string | string[] | undefined>;
 
@@ -75,6 +77,7 @@ export function parseTaskQuery(source: ParamSource): TaskQuery {
     filters: {
       assignees: list(read(source, "assignee")),
       labels: list(read(source, "label")),
+      types: list(read(source, "type")),
       priorities,
       due: DUE_FILTERS.some((option) => option.value === due) ? (due as DueFilter) : null,
       q: read(source, "q").trim().slice(0, 100),
@@ -91,6 +94,7 @@ export function taskQueryToParams(query: TaskQuery): URLSearchParams {
   if (query.view === "list") params.set("view", "list");
   if (filters.assignees.length) params.set("assignee", filters.assignees.join(","));
   if (filters.labels.length) params.set("label", filters.labels.join(","));
+  if (filters.types.length) params.set("type", filters.types.join(","));
   if (filters.priorities.length) params.set("priority", filters.priorities.join(","));
   if (filters.due) params.set("due", filters.due);
   if (filters.q) params.set("q", filters.q);
@@ -100,11 +104,11 @@ export function taskQueryToParams(query: TaskQuery): URLSearchParams {
 }
 
 export function activeFilterCount(filters: TaskFilters): number {
-  return filters.assignees.length + filters.labels.length + filters.priorities.length + (filters.due ? 1 : 0) + (filters.q ? 1 : 0);
+  return filters.assignees.length + filters.labels.length + filters.types.length + filters.priorities.length + (filters.due ? 1 : 0) + (filters.q ? 1 : 0);
 }
 
 export type FilterContext = { userId: string; now: Date; timeZone: string };
-export type FilterableTask = Pick<BoardTask, "number" | "title" | "priority" | "dueAt" | "assigneeIds" | "labelIds">;
+export type FilterableTask = Pick<BoardTask, "number" | "title" | "priority" | "dueAt" | "assigneeIds" | "labelIds"> & { typeId?: string | null };
 
 export function matchesFilters(task: FilterableTask, filters: TaskFilters, context: FilterContext): boolean {
   if (filters.assignees.length > 0) {
@@ -116,6 +120,7 @@ export function matchesFilters(task: FilterableTask, filters: TaskFilters, conte
     if (!ok) return false;
   }
   if (filters.labels.length > 0 && !filters.labels.some((id) => task.labelIds.includes(id))) return false;
+  if (filters.types.length > 0 && !(task.typeId && filters.types.includes(task.typeId))) return false;
   if (filters.priorities.length > 0 && !filters.priorities.includes(task.priority)) return false;
   if (filters.due) {
     const bucket = dueBucket(task.dueAt, context.now, context.timeZone);

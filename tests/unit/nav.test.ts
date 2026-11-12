@@ -68,4 +68,13 @@ describe("navigation by role", () => {
     expect(activeNavKey(groups, "/w/kochi/settings/notifications")).toBe("notification-routing");
     expect(activeNavKey(groups, "/w/kochi/services/monitors/abc")).toBe("services");
   });
+
+  it("orders the groups and keeps personal-first items in the first group", () => {
+    expect(NAV_GROUPS.map((group) => group.key)).toEqual([
+      "home", "work", "chat", "knowledge", "community", "people", "operations", "support", "outreach", "finance", "settings", "personal",
+    ]);
+    const groups = navForMember("kochi", { role: "MEMBER", workspace });
+    expect(groups[0]!.label).toBeNull();
+    expect(groups[0]!.items.map((item) => item.key)).toEqual(["home", "my-tasks", "calendar", "notepad", "search", "analytics"]);
+  });
 });

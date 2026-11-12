@@ -11,17 +11,37 @@ export const Dialog = DialogPrimitive.Root;
 export const DialogTrigger = DialogPrimitive.Trigger;
 export const DialogClose = DialogPrimitive.Close;
 
+/**
+ * Toasts live outside the dialog but must stay usable (e.g. Undo) without
+ * closing it. Touch taps reach Radix's outside check on `click`, after the
+ * toast action has already removed the toast, so presses that start inside
+ * the toast viewport are remembered here.
+ */
+const TOAST = "[data-sw-toast-viewport]";
+let toastPressAt = 0;
+if (typeof document !== "undefined") {
+  document.addEventListener("pointerdown", (event) => {
+    if (event.target instanceof Element && event.target.closest(TOAST)) toastPressAt = Date.now();
+  }, true);
+}
+function ignoreToast(event: { target: EventTarget | null; detail?: { originalEvent?: Event }; preventDefault: () => void }) {
+  const target = event.detail?.originalEvent?.target ?? event.target;
+  const inToast = target instanceof Element && target.closest(TOAST) !== null;
+  if (inToast || Date.now() - toastPressAt < 1500) event.preventDefault();
+}
+
 export const DialogContent = forwardRef<
   ElementRef<typeof DialogPrimitive.Content>,
   ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & { size?: "sm" | "md" | "lg" | "xl"; hideClose?: boolean; presentation?: "dialog" | "drawer" }
->(function DialogContent({ className, children, size = "sm", hideClose = false, presentation = "dialog", ...props }, ref) {
+>(function DialogContent({ className, children, size = "sm", hideClose = false, presentation = "dialog", onPointerDownOutside, onInteractOutside, onFocusOutside, ...props }, ref) {
   return (
     <DialogPrimitive.Portal>
-      <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-[var(--yy-overlay)] data-[state=open]:animate-[yy-fade-in_120ms_ease-out]" />
+      <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-[var(--yy-overlay)] sw-overlay" />
       <DialogPrimitive.Content
         ref={ref}
         className={cn(
-          "fixed z-50 flex flex-col overflow-hidden border border-line bg-panel text-ink shadow-float focus:outline-none data-[state=open]:animate-[yy-dialog-in_240ms_cubic-bezier(0.32,0.72,0,1)]",
+          "fixed z-50 flex flex-col overflow-hidden border border-line bg-panel text-ink shadow-float focus:outline-none",
+          presentation === "dialog" ? "sw-dialog" : "sw-drawer",
           presentation === "dialog"
             ? "inset-x-0 bottom-0 max-h-[calc(100dvh-16px)] w-full rounded-t-xl sm:inset-x-auto sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:max-h-[calc(100dvh-32px)] sm:w-[calc(100vw-32px)] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl"
             : "right-0 top-0 h-dvh max-h-dvh w-full rounded-none",
@@ -31,6 +51,18 @@ export const DialogContent = forwardRef<
           size === "xl" && "max-w-[1100px]",
           className,
         )}
+        onPointerDownOutside={(event) => {
+          ignoreToast(event);
+          onPointerDownOutside?.(event);
+        }}
+        onFocusOutside={(event) => {
+          ignoreToast(event);
+          onFocusOutside?.(event);
+        }}
+        onInteractOutside={(event) => {
+          ignoreToast(event);
+          onInteractOutside?.(event);
+        }}
         {...props}
       >
         {children}

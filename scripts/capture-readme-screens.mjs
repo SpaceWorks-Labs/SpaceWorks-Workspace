@@ -26,7 +26,7 @@ try {
   const board = await page.locator(`a[href^="${workspace}/projects/"]:not([href*="/blockers"])`).first().getAttribute('href');
   if (!board) throw new Error('Seed a demo project before capturing screenshots.');
   const screens = [
-    ['home', workspace], ['project-board', board], ['calendar', `${workspace}/calendar?view=week`], ['chat', `${workspace}/chat/general`],
+    ['home', workspace], ['project-board', board], ['project-list', `${board}?view=list`], ['my-tasks', `${workspace}/my-tasks`], ['calendar', `${workspace}/calendar?view=week`], ['chat', `${workspace}/chat/general`],
     ['docs', `${workspace}/docs`], ['notepad', `${workspace}/notepad`], ['finance-dark', `${workspace}/finance`], ['finance-dues', `${workspace}/finance/dues`],
     ['funding', `${workspace}/funding`], ['analytics', `${workspace}/analytics`], ['secrets', `${workspace}/secrets`], ['bom-estimates', `${workspace}/product-ops/estimates`],
     ['governance', `${workspace}/governance`], ['organisation', `${workspace}/organisation`], ['services', `${workspace}/services`], ['helpdesk', `${workspace}/helpdesk`],
@@ -42,6 +42,8 @@ try {
     await page.waitForLoadState('networkidle');
     await page.waitForFunction(() => !/^\s*Loading\b/m.test(document.querySelector('main')?.innerText ?? ''), null, { timeout: 30_000 });
     await page.evaluate(mode => { document.documentElement.dataset.colorMode = mode; localStorage.setItem('sww:color-mode', mode); }, mode);
+    // Hide the Next.js dev overlay badge when capturing against `npm run dev`.
+    await page.addStyleTag({ content: 'nextjs-portal { display: none !important; }' });
     await page.evaluate(() => document.fonts.ready);
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     const png = await page.screenshot({ fullPage: false, animations: 'disabled' });

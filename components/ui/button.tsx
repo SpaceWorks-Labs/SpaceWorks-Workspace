@@ -32,7 +32,7 @@ export type ButtonVariant =
 export type ButtonSize = "sm" | "md" | "lg";
 
 const base =
-  "relative inline-flex select-none items-center justify-center gap-2 whitespace-nowrap rounded-md font-semibold transition-[background-color,border-color,color] duration-[120ms] ease-yy disabled:pointer-events-none aria-disabled:pointer-events-none";
+  "relative inline-flex select-none items-center justify-center gap-2 whitespace-nowrap rounded-md font-semibold active:scale-[var(--sw-pop-scale)] transition-[background-color,border-color,color,scale] duration-[var(--sw-dur-fast)] ease-[var(--sw-ease-standard)] disabled:pointer-events-none aria-disabled:pointer-events-none";
 
 const neutral = "border border-line bg-panel text-ink hover:bg-muted active:bg-emphasis";
 const dangerOutline = "border border-danger-fg bg-panel text-danger-fg hover:border-danger-hover hover:bg-muted hover:text-danger-hover";
@@ -149,7 +149,7 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(functio
       aria-label={label}
       title={label}
       className={cn(
-        "inline-flex shrink-0 items-center justify-center rounded-md transition-colors duration-[120ms] ease-yy disabled:pointer-events-none disabled:text-ink-disabled [&_svg]:size-5",
+        "inline-flex shrink-0 items-center justify-center rounded-md transition-colors duration-[var(--sw-dur-fast)] ease-[var(--sw-ease-standard)] disabled:pointer-events-none disabled:text-ink-disabled [&_svg]:size-5",
         size === "sm" ? "size-11 [&_svg]:size-4" : "size-11 [&_svg]:size-5",
         variant === "quiet" && "text-ink-secondary hover:bg-muted hover:text-ink",
         variant === "secondary" && "border border-line bg-panel text-ink hover:bg-muted",

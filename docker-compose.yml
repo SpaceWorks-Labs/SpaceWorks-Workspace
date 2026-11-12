@@ -23,7 +23,7 @@ services:
     image: pgsty/silo:RELEASE.2026-10-26T00-00-00Z@sha256:7bb2aff6b89efe1cb1303c10fc21d579447434ed06649ac9ec05a5e2dbf30ad7
     depends_on: {silo: {condition: service_healthy}}
     entrypoint: [/bin/sh, -ec]
-    command: ["mc alias set local http://silo:9000 swwdev sww_dev_storage_pw; mc mb --ignore-existing local/sww-dev; mc anonymous set none local/sww-dev"]
+    command: ["mc alias set local http://silo:9000 swwdev sww_dev_storage_pw; mc mb --ignore-existing local/sww-dev; mc mb --ignore-existing local/sww-docsfiles; mc anonymous set none local/sww-dev"]
   mailpit:
     image: axllent/mailpit:v1.27
     ports: ["127.0.0.1:1025:1025", "127.0.0.1:8025:8025"]

@@ -98,7 +98,16 @@ hasRoleAtLeast(role, min); canContribute(m); canManageMembers(m); canManageLabel
 canManageChannels(m); canManageFinance(m); canViewFinance(m, workspace);
 canManageApiTokens(m); canManageIntegrations(m); canViewAuditLog(m); canManageWorkspace(m);
 canDeleteWorkspace(m); canTransferOwnership(m); assignableRoles(actor); canActOnMember(actor, targetRole)
+// lib/tasks/capabilities.ts (pure): per-task rights, shared by services and DTOs
+canPerformTaskAction("edit" | "claim" | "unclaim" | "contribute", { role, userId, restrictTaskEdits, projectOwnerId, creatorId, assigneeIds })
+taskCapabilities(input) // { canEdit, canClaim, canUnclaim, isAssignedToMe }
+// lib/tasks/service/helpers.ts: loadEditableTask(actor, taskId, { action, allowArchived? }) gates every task mutation
 ```
+
+Task assignment (`lib/tasks/service/assignments.ts`) locks the `Task` row with
+`SELECT ... FOR UPDATE`, re-reads the assignees in the transaction and decides
+permission from that fresh set, so concurrent claims cannot both win. See
+[tasks](areas/tasks.md).
 
 ### Realtime — `lib/realtime.ts`, `components/realtime/useRealtime.ts`
 

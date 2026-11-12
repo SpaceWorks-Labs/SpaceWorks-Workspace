@@ -88,7 +88,7 @@ export function SpaceWorksLogo({ variant = "lockup-horizontal", tone = "full", a
 
 /**
  * The product lockup for headers: the horizontal Space Works lockup, a thin
- * rule, and "Workspace" in Gilroy 600. The rule and label sit a clear space
+ * rule, and "Workspace" in Outfit 600. The rule and label sit a clear space
  * (¼ of the lockup height) away from the artwork.
  */
 export function SpaceWorksWorkspaceLogo({ height = 48, label = "Space Works Workspace", className }: { height?: number; label?: string | null; className?: string }) {

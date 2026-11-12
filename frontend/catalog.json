@@ -2063,6 +2063,11 @@
       "id": "money-controls:reconcileMoneyMovementAction"
     },
     {
+      "module": "app/actions/myTasks",
+      "name": "loadMyTasksTabAction",
+      "id": "myTasks:loadMyTasksTabAction"
+    },
+    {
       "module": "app/actions/notepad",
       "name": "loadNotepadAction",
       "id": "notepad:loadNotepadAction"
@@ -2566,6 +2571,76 @@
       "module": "app/actions/subscriptions",
       "name": "saveSubscriptionRecord",
       "id": "subscriptions:saveSubscriptionRecord"
+    },
+    {
+      "module": "app/actions/taskAssign",
+      "name": "assignTaskAction",
+      "id": "taskAssign:assignTaskAction"
+    },
+    {
+      "module": "app/actions/taskAssign",
+      "name": "unassignTaskAction",
+      "id": "taskAssign:unassignTaskAction"
+    },
+    {
+      "module": "app/actions/taskAssign",
+      "name": "claimTaskAction",
+      "id": "taskAssign:claimTaskAction"
+    },
+    {
+      "module": "app/actions/taskAssign",
+      "name": "unclaimTaskAction",
+      "id": "taskAssign:unclaimTaskAction"
+    },
+    {
+      "module": "app/actions/taskBulk",
+      "name": "bulkUpdateTasksAction",
+      "id": "taskBulk:bulkUpdateTasksAction"
+    },
+    {
+      "module": "app/actions/taskTransfer",
+      "name": "listTransferTargetsAction",
+      "id": "taskTransfer:listTransferTargetsAction"
+    },
+    {
+      "module": "app/actions/taskTransfer",
+      "name": "previewTransferAction",
+      "id": "taskTransfer:previewTransferAction"
+    },
+    {
+      "module": "app/actions/taskTransfer",
+      "name": "transferTaskAction",
+      "id": "taskTransfer:transferTaskAction"
+    },
+    {
+      "module": "app/actions/taskTypes",
+      "name": "listTaskTypesAction",
+      "id": "taskTypes:listTaskTypesAction"
+    },
+    {
+      "module": "app/actions/taskTypes",
+      "name": "createTaskTypeAction",
+      "id": "taskTypes:createTaskTypeAction"
+    },
+    {
+      "module": "app/actions/taskTypes",
+      "name": "updateTaskTypeAction",
+      "id": "taskTypes:updateTaskTypeAction"
+    },
+    {
+      "module": "app/actions/taskTypes",
+      "name": "setDefaultTaskTypeAction",
+      "id": "taskTypes:setDefaultTaskTypeAction"
+    },
+    {
+      "module": "app/actions/taskTypes",
+      "name": "reorderTaskTypesAction",
+      "id": "taskTypes:reorderTaskTypesAction"
+    },
+    {
+      "module": "app/actions/taskTypes",
+      "name": "deleteTaskTypeAction",
+      "id": "taskTypes:deleteTaskTypeAction"
     },
     {
       "module": "app/actions/tasks",

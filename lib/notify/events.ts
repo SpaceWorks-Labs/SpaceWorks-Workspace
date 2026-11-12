@@ -114,6 +114,7 @@ export const EVENT_CATALOG = {
   "maintenance.ended": s("incidents", "Maintenance ended", "both", "info", "MEMBER"),
 
   "task.assigned": s("tasks", "Task assigned to you", "both"),
+  "task.unassigned": s("tasks", "Task unassigned from you", "personal"),
   "task.due": s("tasks", "Task due soon", "personal"),
   "task.overdue": s("tasks", "Task overdue", "personal", "warning"),
   "task.commented": s("tasks", "Comment on your task", "personal"),

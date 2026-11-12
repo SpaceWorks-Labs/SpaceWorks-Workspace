@@ -2,11 +2,15 @@
 import "server-only";
 import { viewDto } from "@/lib/frontend/view";
 import { requireWorkspace } from "@/lib/permissions";
-import { listMyTasks, workspaceLabels } from "@/lib/tasks/queries";
+import { parseMyTasksTab } from "@/lib/tasks/myTasks";
+import { directReportIds, listMyTasks, listQuickAddProjects, workspaceLabels } from "@/lib/tasks/queries";
 
-export async function loadMyTasksPage({ params }: PageProps<"/w/[workspaceSlug]/my-tasks">) {
+export async function loadMyTasksPage({ params, searchParams }: PageProps<"/w/[workspaceSlug]/my-tasks">) {
 const { workspaceSlug } = await params;
 const context = await requireWorkspace(workspaceSlug, "MEMBER");
-const [tasks, labels] = await Promise.all([listMyTasks(context), workspaceLabels(context.workspace.id)]);
-return viewDto({ context, tasks, labels } as const);
+const [reports, projects, labels] = await Promise.all([directReportIds(context), listQuickAddProjects(context), workspaceLabels(context.workspace.id)]);
+const requested = parseMyTasksTab((await searchParams).tab);
+const tab = requested === "team" && reports.length === 0 ? "assigned" : requested;
+const tasks = await listMyTasks(context, new Date(), tab);
+return viewDto({ context, reports, projects, labels, tab, tasks } as const);
 }

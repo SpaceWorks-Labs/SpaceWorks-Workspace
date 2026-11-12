@@ -18,22 +18,24 @@ import { publishTaskChange } from "@/lib/tasks/realtime";
 import { sanitizeDescription } from "@/lib/tasks/sanitize";
 import { createTaskSchema, updateTaskSchema } from "@/lib/tasks/schemas";
 import { indexTask } from "@/lib/tasks/search";
+import { effectiveType } from "@/lib/tasks/taskTypes";
+import { defaultTaskType, listTaskTypesFor, resolveTypeForProject } from "./types";
 import {
   type After,
   type LoadedTask,
   ARCHIVED_PROJECT,
-  ARCHIVED_TASK,
-  NOT_FOUND,
   loadEditableTask,
   actorName,
   eventBase,
   notify,
   runAfter,
   addHistory,
+  viaOf,
   validateAssignees,
   validateLabels,
-  loadVisibleTask,
 } from "./helpers";
+
+const WRONG_TYPE = "That type isn't available on this project. Reload and try again.";
 
 /* ---------- Create ---------- */
 
@@ -48,10 +50,10 @@ export async function createTask(actor: TaskActor, input: unknown): Promise<Acti
   let columnId: string | null = null;
   let columnCategory: string | null = null;
   if (data.parentId) {
-    parent = await loadVisibleTask(actor, data.parentId);
-    if (!parent) return actionError(NOT_FOUND);
+    const found = await loadEditableTask(actor, data.parentId, { action: "edit" });
+    if ("error" in found) return actionError(found.error);
+    parent = found.task;
     if (parent.parentId) return actionError("Subtasks can't have their own subtasks.");
-    if (parent.archivedAt) return actionError(ARCHIVED_TASK);
     project = parent.project;
   } else if (data.projectId) {
     project = await prisma.project.findFirst({ where: { AND: [{ id: data.projectId }, await visibleProjectWhere(actor)] } });
@@ -71,6 +73,12 @@ export async function createTask(actor: TaskActor, input: unknown): Promise<Acti
   if (!labels.ok) return actionError("One of those labels no longer exists. Reload and try again.");
   const dueAt = data.dueDate ? fromDateInputValue(data.dueDate, actor.workspace.timezone) : null;
   if (data.dueDate && !dueAt) return actionError("Pick a valid date.", { dueDate: ["Pick a valid date."] });
+  let typeId: string | null = null;
+  if (project) {
+    const type = data.typeId ? await resolveTypeForProject(actor.workspace.id, project.id, data.typeId) : await defaultTaskType(actor.workspace.id, project.id);
+    if (data.typeId && !type) return actionError(WRONG_TYPE, { typeId: [WRONG_TYPE] });
+    typeId = type?.id ?? null;
+  } else if (data.typeId) return actionError(WRONG_TYPE, { typeId: [WRONG_TYPE] });
   const description = sanitizeDescription(data.description);
   const after: After = [];
 
@@ -89,6 +97,7 @@ export async function createTask(actor: TaskActor, input: unknown): Promise<Acti
         workspaceId: actor.workspace.id,
         projectId: project?.id ?? null,
         columnId,
+        typeId,
         parentId: parent?.id ?? null,
         number,
         title: data.title,
@@ -98,12 +107,12 @@ export async function createTask(actor: TaskActor, input: unknown): Promise<Acti
         position,
         creatorId: actor.user.id,
         completedAt: columnCategory === "DONE" ? new Date() : null,
-        assignees: { create: assignees.userIds.map((userId) => ({ userId })) },
+        assignees: { create: assignees.userIds.map((userId) => ({ userId, assignedById: actor.user.id })) },
         labels: { create: data.labelIds.map((labelId) => ({ labelId })) },
       },
     });
-    await addHistory(tx, task.id, actor.user.id, "created");
-    if (parent) await addHistory(tx, parent.id, actor.user.id, "subtask_added", { number: task.number, title: task.title.slice(0, 120) });
+    await addHistory(tx, task.id, actor.user.id, "created", undefined, viaOf(actor));
+    if (parent) await addHistory(tx, parent.id, actor.user.id, "subtask_added", { number: task.number, title: task.title.slice(0, 120) }, viaOf(actor));
     await recordActivity(
       { workspaceId: actor.workspace.id, actorId: actor.user.id, verb: "created", entityType: "task", entityId: task.id, summary: `created ${taskReference(project?.key, number)} ${task.title}`, projectId: project?.id ?? null, teamId: project?.teamId ?? null },
       tx,
@@ -131,7 +140,7 @@ export async function createTask(actor: TaskActor, input: unknown): Promise<Acti
 export async function updateTask(actor: TaskActor, input: unknown): Promise<ActionResult> {
   const parsed = updateTaskSchema.safeParse(input);
   if (!parsed.success) return validationError(parsed.error);
-  const found = await loadEditableTask(actor, parsed.data.taskId);
+  const found = await loadEditableTask(actor, parsed.data.taskId, { action: "edit" });
   if ("error" in found) return actionError(found.error);
   const { task } = found;
   const data: Prisma.TaskUpdateInput = {};
@@ -160,10 +169,21 @@ export async function updateTask(actor: TaskActor, input: unknown): Promise<Acti
       history.push(["due", { to: dueAt?.toISOString() ?? null }]);
     }
   }
+  if (parsed.data.typeId !== undefined) {
+    if (!task.projectId) return actionError(WRONG_TYPE);
+    const types = await listTaskTypesFor(actor.workspace.id, task.projectId);
+    const next = parsed.data.typeId ? types.find((type) => type.id === parsed.data.typeId) : types.find((type) => type.isDefault);
+    if (!next) return actionError(WRONG_TYPE, { typeId: [WRONG_TYPE] });
+    const current = effectiveType(types, task.typeId);
+    if (next.id !== current?.id) {
+      data.type = parsed.data.typeId ? { connect: { id: next.id } } : { disconnect: true };
+      history.push(["type_changed", { from: current?.name ?? null, to: next.name }]);
+    }
+  }
   if (history.length === 0) return { ok: true };
   await prisma.$transaction(async (tx) => {
     const updated = await tx.task.update({ where: { id: task.id }, data });
-    for (const [kind, value] of history) await addHistory(tx, task.id, actor.user.id, kind, value);
+    for (const [kind, value] of history) await addHistory(tx, task.id, actor.user.id, kind, value, viaOf(actor));
     await indexTask(tx, actor.workspace.slug, updated, task.project);
   });
   await publishTaskChange({ workspaceId: actor.workspace.id, project: task.project, taskIds: task.parentId ? [task.id, task.parentId] : [task.id], type: "task.changed", actorId: actor.user.id });

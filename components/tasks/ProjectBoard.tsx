@@ -1,28 +1,26 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { createTaskAction, loadBoardAction, moveTaskAction, setTaskCompletedAction } from "@/app/actions/tasks";
 import { useRealtime } from "@/components/realtime/useRealtime";
 import { Callout } from "@/components/ui/display";
-import { cn } from "@/lib/cn";
 import { activeFilterCount, matchesFilters, parseTaskQuery, taskQueryToParams, type TaskQuery } from "@/lib/tasks/filters";
 import { taskReference } from "@/lib/tasks/links";
-import { placeAt } from "@/lib/tasks/position";
+import { useNow } from "./useNow";
+import { applyOptimisticMove, buildLayout, relativeAfterId, type RelativeMove } from "@/lib/tasks/boardMoves";
 import type { BoardData, BoardTask } from "@/lib/tasks/types";
-import { AddColumn, ColumnMenu } from "./ColumnControls";
 import { FilterBar } from "./FilterBar";
 import { ListView } from "./ListView";
-import { TaskCard, type CardMove } from "./TaskCard";
+import type { CardMove } from "./TaskCard";
+import { BoardView } from "./board/BoardView";
 import { TaskDrawer } from "./TaskDrawer";
+import { useBoardAssignment } from "./useAssignment";
 import { useTaskRunner } from "./useTaskRunner";
-import { QuickAdd } from "./BoardQuickAdd";
-
-const byPosition = (a: BoardTask, b: BoardTask) => a.position - b.position || a.number - b.number;
 
 /**
- * The project board and list. Cards move by drag and drop or with each
- * card's Move menu; changes show immediately and are rolled back if the
+ * The project board and list. Cards move by drag and drop (pointer, touch,
+ * keyboard: see board/) or with each card's Move menu; changes show immediately and are rolled back if the
  * server refuses. Other people's changes arrive over realtime
  * (`project:<id>`) and trigger a refetch. Filters, view, sorting and the
  * open task live in the URL.
@@ -39,8 +37,6 @@ export function ProjectBoard({ slug, initial, viewerId, timeZone }: { slug: stri
   const searchParams = useSearchParams();
   const query = useMemo(() => parseTaskQuery(new URLSearchParams(searchParams.toString())), [searchParams]);
   const openNumber = Number(searchParams.get("task")) || null;
-  const [dragId, setDragId] = useState<string | null>(null);
-  const [drop, setDrop] = useState<{ columnId: string; index: number } | null>(null);
   const [focusId, setFocusId] = useState<string | null>(null);
   const dragging = useRef(false);
   const stale = useRef(false);
@@ -53,6 +49,7 @@ export function ProjectBoard({ slug, initial, viewerId, timeZone }: { slug: stri
     if (next) setData(next);
   }, [slug, key]);
   const run = useTaskRunner(reload);
+  const assign = useBoardAssignment(slug, viewerId, setData, reload);
 
   useRealtime(
     slug,
@@ -68,6 +65,18 @@ export function ProjectBoard({ slug, initial, viewerId, timeZone }: { slug: stri
       },
       [projectId, reload],
     ),
+  );
+
+  /** A drag in progress holds back realtime refetches; the missed one runs when it ends. */
+  const onActiveChange = useCallback(
+    (active: boolean) => {
+      dragging.current = active;
+      if (!active && stale.current) {
+        stale.current = false;
+        void reload();
+      }
+    },
+    [reload],
   );
 
   useEffect(() => {
@@ -90,110 +99,72 @@ export function ProjectBoard({ slug, initial, viewerId, timeZone }: { slug: stri
     [pathname],
   );
 
-  const context = useMemo(() => ({ userId: viewerId, now: new Date(), timeZone }), [viewerId, timeZone]);
+  const now = useNow();
+  const context = useMemo(() => ({ userId: viewerId, now, timeZone }), [viewerId, now, timeZone]);
   const visible = useMemo(() => data.tasks.filter((task) => matchesFilters(task, query.filters, context)), [data.tasks, query.filters, context]);
-  const columnTasks = useCallback((columnId: string) => visible.filter((task) => task.columnId === columnId).sort(byPosition), [visible]);
-  const canEdit = data.permissions.canEdit;
   const filtered = activeFilterCount(query.filters) > 0;
 
+  /** Show the move at once, send it, and put the board back (with the server's message) if refused. */
   const applyMove = useCallback(
     async (task: BoardTask, columnId: string, afterTaskId: string | null, success?: string) => {
-      const before = data;
-      const siblings = data.tasks.filter((item) => item.columnId === columnId && item.id !== task.id).sort(byPosition);
-      const index = afterTaskId === null ? 0 : siblings.findIndex((item) => item.id === afterTaskId) + 1 || siblings.length;
-      const { position } = placeAt(
-        siblings.map((item) => item.position),
-        index,
-      );
-      const column = data.columns.find((item) => item.id === columnId);
-      const completedAt = column?.category === "DONE" ? (task.completedAt ?? new Date().toISOString()) : null;
-      setData({ ...data, tasks: data.tasks.map((item) => (item.id === task.id ? { ...item, columnId, position, completedAt } : item)) });
+      const original = data.tasks.find((item) => item.id === task.id) ?? task;
+      setData({ ...data, tasks: applyOptimisticMove(data.tasks, data.columns, task.id, columnId, afterTaskId) });
       const ok = await run(() => moveTaskAction(slug, { taskId: task.id, columnId, afterTaskId }), success);
-      if (!ok) setData(before);
+      // Put back only the moved card; other edits that landed meanwhile stay.
+      if (!ok) setData((current) => ({ ...current, tasks: current.tasks.map((item) => (item.id === task.id ? original : item)) }));
     },
     [data, run, slug],
+  );
+
+  const onCommit = useCallback(
+    (task: BoardTask, columnId: string, afterTaskId: string | null, movedColumn: boolean) => {
+      setFocusId(task.id);
+      const column = data.columns.find((item) => item.id === columnId);
+      void applyMove(task, columnId, afterTaskId, movedColumn ? `Moved ${taskReference(key, task.number)} to ${column?.name ?? "the column"}.` : undefined);
+    },
+    [applyMove, data.columns, key],
   );
 
   const onMove = useCallback(
     (task: BoardTask, move: CardMove) => {
       const reference = taskReference(key, task.number);
-      setFocusId(task.id);
       if (move.kind === "column") {
-        const column = data.columns.find((item) => item.id === move.columnId);
-        void applyMove(task, move.columnId, null, `Moved ${reference} to ${column?.name ?? "the column"}.`);
+        onCommit(task, move.columnId, null, true);
         return;
       }
       if (!task.columnId) return;
-      const list = columnTasks(task.columnId);
-      const index = list.findIndex((item) => item.id === task.id);
-      const others = list.filter((item) => item.id !== task.id);
-      let after: string | null = null;
-      if (move.kind === "up") after = index >= 2 ? list[index - 2]!.id : null;
-      if (move.kind === "down") after = list[index + 1]?.id ?? others[others.length - 1]?.id ?? null;
-      if (move.kind === "top") after = null;
-      if (move.kind === "bottom") after = others[others.length - 1]?.id ?? null;
+      const layout = buildLayout(data.columns, visible);
+      const after = relativeAfterId(layout[task.columnId] ?? [], task.id, move.kind as RelativeMove);
       const label = { up: "up", down: "down", top: "to the top", bottom: "to the bottom" }[move.kind];
+      setFocusId(task.id);
       void applyMove(task, task.columnId, after, `Moved ${reference} ${label}.`);
     },
-    [applyMove, columnTasks, data.columns, key],
+    [applyMove, data.columns, key, onCommit, visible],
   );
 
-  const onDragStart = useCallback((event: DragEvent<HTMLElement>, task: BoardTask) => {
-    event.dataTransfer.setData("text/plain", task.id);
-    event.dataTransfer.effectAllowed = "move";
-    dragging.current = true;
-    setDragId(task.id);
-  }, []);
-
-  const onDragEnd = useCallback(() => {
-    dragging.current = false;
-    setDragId(null);
-    setDrop(null);
-    if (stale.current) {
-      stale.current = false;
-      void reload();
-    }
-  }, [reload]);
-
-  const onDragOver = (event: DragEvent<HTMLElement>, columnId: string) => {
-    if (!dragId) return;
-    event.preventDefault();
-    event.dataTransfer.dropEffect = "move";
-    const cards = Array.from(event.currentTarget.querySelectorAll<HTMLElement>("[data-card-id]")).filter((el) => el.dataset.cardId !== dragId);
-    const found = cards.findIndex((el) => {
-      const rect = el.getBoundingClientRect();
-      return event.clientY < rect.top + rect.height / 2;
-    });
-    const index = found === -1 ? cards.length : found;
-    if (drop?.columnId !== columnId || drop.index !== index) setDrop({ columnId, index });
-  };
-
-  const onDrop = (event: DragEvent<HTMLElement>, columnId: string) => {
-    event.preventDefault();
-    const task = data.tasks.find((item) => item.id === dragId);
-    const target = drop && drop.columnId === columnId ? drop.index : null;
-    onDragEnd();
-    if (!task || target === null) return;
-    const list = columnTasks(columnId).filter((item) => item.id !== task.id);
-    const after = target > 0 ? list[target - 1]!.id : null;
-    if (task.columnId === columnId) {
-      const current = columnTasks(columnId);
-      const currentIndex = current.findIndex((item) => item.id === task.id);
-      if (currentIndex === target) return;
-    }
-    const column = data.columns.find((item) => item.id === columnId);
-    void applyMove(task, columnId, after, task.columnId !== columnId ? `Moved ${taskReference(key, task.number)} to ${column?.name ?? "the column"}.` : undefined);
-  };
-
-  const createIn = (columnId: string) => async (title: string) =>
-    run(() => createTaskAction(slug, { projectId, columnId, title }), (created) => (created ? `Added ${created.reference}.` : null));
+  /** Resolves with whether the task was added; `openAfter` (Shift+Enter) opens it. */
+  const createIn = useCallback(
+    async (columnId: string, title: string, options: { openAfter: boolean }) => {
+      let created: number | null = null;
+      const ok = await run(
+        () => createTaskAction(slug, { projectId, columnId, title }),
+        (task) => {
+          created = task?.number ?? null;
+          return task ? `Added ${task.reference}.` : null;
+        },
+      );
+      if (ok && options.openAfter && created) writeUrl(query, created, true);
+      return ok;
+    },
+    [projectId, query, run, slug, writeUrl],
+  );
 
   const openTask = useCallback((number: number) => writeUrl(query, number, true), [query, writeUrl]);
   const closeTask = useCallback(() => writeUrl(query, null), [query, writeUrl]);
 
   return (
     <div className="flex flex-col gap-5">
-      <FilterBar query={query} onChange={(next) => writeUrl(next, openNumber)} members={data.members} labels={data.labels} />
+      <FilterBar query={query} onChange={(next) => writeUrl(next, openNumber)} members={data.members} labels={data.labels} taskTypes={data.taskTypes} />
       {data.project.status === "ARCHIVED" ? (
         <Callout tone="info" title="This project is archived.">
           The board is read-only until someone restores it in the project settings.
@@ -212,78 +183,27 @@ export function ProjectBoard({ slug, initial, viewerId, timeZone }: { slug: stri
           sort={query.sort}
           group={query.group}
           timeZone={timeZone}
+          slug={slug}
+          viewerId={viewerId}
+          onChanged={reload}
           onOpen={openTask}
           onComplete={(task, completed) => void run(() => setTaskCompletedAction(slug, { taskId: task.id, completed }), completed ? `${taskReference(key, task.number)} done.` : `${taskReference(key, task.number)} reopened.`)}
         />
       ) : (
-        <div className="relative -mx-4 overflow-x-auto px-4 pb-4 sm:-mx-6 sm:px-6 [scrollbar-width:thin]" role="region" aria-label={`${data.project.name} board`} tabIndex={0}>
-          <ol className="flex snap-x snap-mandatory items-start gap-4 sm:snap-none">
-            {data.columns.map((column) => {
-              const list = columnTasks(column.id);
-              const total = data.tasks.filter((task) => task.columnId === column.id).length;
-              const others = list.filter((task) => task.id !== dragId);
-              const indicatorAt = drop?.columnId === column.id ? drop.index : null;
-              return (
-                <li key={column.id} className="flex w-[min(85vw,300px)] shrink-0 snap-start flex-col rounded-xl border border-line bg-surface">
-                  <div className="flex items-center justify-between gap-2 border-b border-line py-1.5 pl-3.5 pr-1.5">
-                    <h2 className="flex min-w-0 items-center gap-2 text-label font-semibold text-ink">
-                      <span className="truncate">{column.name}</span>
-                      <span className="text-caption tabular-nums text-ink-muted">
-                        {filtered ? `${list.length}/${total}` : total}
-                        <span className="sr-only"> tasks</span>
-                      </span>
-                    </h2>
-                    {data.permissions.canManage && data.project.status !== "ARCHIVED" ? (
-                      <ColumnMenu slug={slug} projectId={projectId} projectKey={key} column={column} columns={data.columns} taskCount={total} run={run} />
-                    ) : (
-                      <span className="size-9" aria-hidden />
-                    )}
-                  </div>
-                  <div
-                    className={cn("flex min-h-24 flex-col gap-2 p-2 transition-colors duration-[120ms]", indicatorAt !== null && "bg-accent-soft")}
-                    onDragOver={(event) => onDragOver(event, column.id)}
-                    onDrop={(event) => onDrop(event, column.id)}
-                    onDragLeave={(event) => {
-                      if (!event.currentTarget.contains(event.relatedTarget as Node | null) && drop?.columnId === column.id) setDrop(null);
-                    }}
-                  >
-                    {list.map((task) => {
-                      const index = others.findIndex((item) => item.id === task.id);
-                      return (
-                        <div key={task.id} className="flex flex-col gap-2">
-                          {indicatorAt !== null && index === indicatorAt && task.id !== dragId ? <div aria-hidden className="h-0.5 rounded-full bg-accent" /> : null}
-                          <TaskCard
-                            task={task}
-                            projectKey={key}
-                            columns={data.columns}
-                            members={data.members}
-                            labels={data.labels}
-                            timeZone={timeZone}
-                            canEdit={canEdit}
-                            dragging={task.id === dragId}
-                            position={{ index: list.indexOf(task), count: list.length }}
-                            onOpen={openTask}
-                            onMove={onMove}
-                            onDragStart={onDragStart}
-                            onDragEnd={onDragEnd}
-                          />
-                        </div>
-                      );
-                    })}
-                    {indicatorAt !== null && indicatorAt >= others.length ? <div aria-hidden className="h-0.5 rounded-full bg-accent" /> : null}
-                    {list.length === 0 ? <p className="px-1.5 py-3 text-caption text-ink-muted">{filtered && total ? "No matching tasks here." : "Nothing here yet."}</p> : null}
-                    {canEdit ? <QuickAdd onCreate={createIn(column.id)} /> : null}
-                  </div>
-                </li>
-              );
-            })}
-            {data.permissions.canManage && data.project.status !== "ARCHIVED" ? (
-              <li className="w-[min(85vw,300px)] shrink-0 snap-start">
-                <AddColumn slug={slug} projectId={projectId} projectKey={key} run={run} />
-              </li>
-            ) : null}
-          </ol>
-        </div>
+        <BoardView
+          slug={slug}
+          data={data}
+          visible={visible}
+          filtered={filtered}
+          timeZone={timeZone}
+          run={run}
+          onOpen={openTask}
+          onMove={onMove}
+          onCommit={onCommit}
+          onClaim={(item) => void assign({ id: item.id, reference: taskReference(key, item.number), assigneeIds: item.assigneeIds }, "claim")}
+          onCreate={createIn}
+          onActiveChange={onActiveChange}
+        />
       )}
       <TaskDrawer slug={slug} number={openNumber} onClose={closeTask} onChanged={reload} />
     </div>

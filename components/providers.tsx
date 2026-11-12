@@ -13,14 +13,15 @@ export type ColorModePreference = ColorMode | "system";
 function readPreference(): ColorModePreference {
   try {
     const saved = window.localStorage.getItem(COLOR_MODE_STORAGE_KEY);
-    if (saved === "light" || saved === "dark") return saved;
+    if (saved === "light" || saved === "dark" || saved === "system") return saved;
   } catch {
     // Storage can be blocked; fall back to the cookie below.
   }
   // The cookie is what the server rendered with, so honour it when storage is
   // empty; otherwise the page would flip back to the system mode after loading.
   const cookie = document.cookie.split("; ").find((entry) => entry.startsWith(`${COLOR_MODE_COOKIE}=`))?.split("=")[1];
-  return cookie === "light" || cookie === "dark" ? cookie : "system";
+  if (cookie === "light" || cookie === "dark" || cookie === "system") return cookie;
+  return "light";
 }
 
 function readSystemDark() {
@@ -154,14 +155,11 @@ export function Providers({
     const setColorModePreference = (next: ColorModePreference, origin?: ColorModeOrigin) => {
       const secure = window.location.protocol === "https:" ? "; Secure" : "";
       try {
-        if (next === "system") window.localStorage.removeItem(COLOR_MODE_STORAGE_KEY);
-        else window.localStorage.setItem(COLOR_MODE_STORAGE_KEY, next);
+        window.localStorage.setItem(COLOR_MODE_STORAGE_KEY, next);
       } catch {
         // Ignore blocked storage; the cookie still carries the choice.
       }
-      document.cookie = next === "system"
-        ? `${COLOR_MODE_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax${secure}`
-        : `${COLOR_MODE_COOKIE}=${next}; Path=/; Max-Age=31536000; SameSite=Lax${secure}`;
+      document.cookie = `${COLOR_MODE_COOKIE}=${next}; Path=/; Max-Age=31536000; SameSite=Lax${secure}`;
       const resolved: ColorMode = next === "system" ? (readSystemDark() ? "dark" : "light") : next;
       const commit = () => {
         // Tokens and React state (icons, labels) change in the same frame.

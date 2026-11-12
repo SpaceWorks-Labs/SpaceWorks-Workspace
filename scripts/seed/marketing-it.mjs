@@ -13,7 +13,7 @@ export default async function seed(prisma, { workspaceId, workspace }) {
   await prisma.searchDocument.upsert({ where: { entityType_entityId: { entityType: "marketing_it", entityId: row.id } }, create: data, update: {} }); return row;
  }
  await record("content", "CONTENT", "Volunteer handbook update", "DRAFT", { channel: "NEWSLETTER", publishAt: `${day(7)}T04:30:00Z`, caption: "Share the operating team's handbook changes.", socialPostId: "" }, { ownerId: person.userId, dueOn: new Date(day(7)) });
- await record("brand", "BRAND", "Space Works approved brand references", "APPROVED", { category: "TYPE", tags: "brand, typography, approved", usage: "Use Gilroy for body copy. Keep the accent type for a single hero phrase.", reference: "Use the Space Works brand tokens for colour references." });
+ await record("brand", "BRAND", "Space Works approved brand references", "APPROVED", { category: "TYPE", tags: "brand, typography, approved", usage: "Use Outfit for body copy. Keep the accent type for a single hero phrase.", reference: "Use the Space Works brand tokens for colour references." });
  let org = await prisma.organisation.findFirst({ where: { workspaceId, name: "Kochi Community Foundation", deletedAt: null } });
  if (!org) org = await prisma.organisation.create({ data: { workspaceId, name: "Kochi Community Foundation", ownerId: admin.userId, createdById: admin.userId } });
  const deal = await prisma.deal.findFirst({ where: { workspaceId, organisationId: org.id }, select: { id: true } });

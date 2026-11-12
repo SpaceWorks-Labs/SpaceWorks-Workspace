@@ -71,6 +71,7 @@ export interface EventPayloads {
   "maintenance.ended": MaintenanceRef;
   // Tasks
   "task.assigned": TaskRef;
+  "task.unassigned": TaskRef;
   "task.due": TaskRef & { dueAt: Iso };
   "task.overdue": TaskRef & { dueAt: Iso };
   "task.commented": TaskRef & { commentId: Id };

@@ -8,7 +8,7 @@ export type ToolResult = { summary: string; data: unknown };
 
 /** A refusal or validation problem the model (and the person) may read. Never carries internals. */
 export class ToolError extends Error {
-  constructor(message: string, readonly code: "not_found" | "forbidden" | "invalid" | "rate_limited" | "unavailable" = "invalid") {
+  constructor(message: string, readonly code: "not_found" | "forbidden" | "invalid" | "conflict" | "rate_limited" | "unavailable" = "invalid") {
     super(message);
     this.name = "ToolError";
   }

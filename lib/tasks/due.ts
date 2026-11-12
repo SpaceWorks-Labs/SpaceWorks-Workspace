@@ -9,8 +9,8 @@ export type DueBucket = "overdue" | "today" | "week" | "later" | "none";
 
 export const DUE_BUCKETS: ReadonlyArray<{ key: DueBucket; label: string }> = [
   { key: "overdue", label: "Overdue" },
-  { key: "today", label: "Today" },
-  { key: "week", label: "This week" },
+  { key: "today", label: "Due today" },
+  { key: "week", label: "Due this week" },
   { key: "later", label: "Later" },
   { key: "none", label: "No due date" },
 ];

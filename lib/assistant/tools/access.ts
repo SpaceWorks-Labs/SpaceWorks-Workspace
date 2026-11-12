@@ -5,6 +5,8 @@ import { prisma } from "@/lib/db";
 import { hasRoleAtLeast } from "@/lib/roles";
 import { hiddenTeamIds, teamScopeFilter } from "@/lib/teamAccess";
 import { canUsePrivateChannels, type Principal } from "@/lib/assistant/principal";
+import { actorFromPrincipal } from "@/lib/assistant/tools/tasks/actor";
+import { visibleTaskWhere } from "@/lib/tasks/access";
 
 /**
  * Record-level visibility for assistant tools. Mirrors the product rules:
@@ -28,17 +30,16 @@ export async function projectWhere(principal: Principal): Promise<Prisma.Project
 }
 
 /**
- * Prisma filter for tasks: tasks in visible projects, plus tasks without a
- * project (personal and meeting follow-ups) for members and above.
+ * Prisma filter for tasks the principal can read: the product's own
+ * `visibleTaskWhere` (lib/tasks/access: tasks of visible projects, loose tasks
+ * for members, guests only their own), minus archived tasks. Jobs also lose
+ * every private team's tasks because their answer is posted where others read.
  */
 export async function taskWhere(principal: Principal): Promise<Prisma.TaskWhereInput> {
-  const hidden = await hiddenTeamsFor(principal);
-  const inProject: Prisma.TaskWhereInput = { project: { ...teamScopeFilter(hidden) } };
-  return {
-    workspaceId: principal.workspace.id,
-    archivedAt: null,
-    ...(hasRoleAtLeast(principal.role, "MEMBER") ? { OR: [{ projectId: null }, { projectId: { not: null }, ...inProject }] } : { projectId: { not: null }, ...inProject }),
-  };
+  const visible = await visibleTaskWhere(actorFromPrincipal(principal));
+  const and: Prisma.TaskWhereInput[] = [visible, { archivedAt: null }];
+  if (principal.kind === "job") and.push({ OR: [{ projectId: null }, { project: { ...teamScopeFilter(await hiddenTeamsFor(principal)) } }] });
+  return { AND: and };
 }
 
 /** Channels (never DMs) the principal may read. */

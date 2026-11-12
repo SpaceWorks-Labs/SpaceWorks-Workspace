@@ -1,5 +1,5 @@
-import { BrandPageLoader } from "@/components/brand/BrandLoader";
+import { ListSkeleton } from "@/components/ui/skeletons";
 
 export default function Loading() {
-  return <BrandPageLoader label="Loading your workspace" />;
+  return <ListSkeleton label="Loading notifications" />;
 }

@@ -16,7 +16,7 @@ export const EMAIL_COLORS = {
   line: "#E6DCCF",
 } as const;
 
-export const EMAIL_FONT = "Gilroy, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+export const EMAIL_FONT = "Outfit, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
 
 /** Inline style for a primary email button: teal fill, cream label, 10px radius. */
 export const EMAIL_BUTTON_STYLE = `background-color: ${EMAIL_COLORS.teal}; color: ${EMAIL_COLORS.cream}; padding: 14px 28px; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 16px; display: inline-block;`;

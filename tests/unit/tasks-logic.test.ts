@@ -86,6 +86,11 @@ const task = (overrides: Partial<BoardTask>): BoardTask => ({
   recurring: false,
   createdAt: "2026-10-01T00:00:00.000Z",
   updatedAt: "2026-10-01T00:00:00.000Z",
+  typeId: null,
+  canEdit: true,
+  canClaim: true,
+  canUnclaim: false,
+  isAssignedToMe: false,
   ...overrides,
 });
 
@@ -94,12 +99,12 @@ describe("filters", () => {
   const tasks = [
     task({ id: "1", number: 1, title: "Solder the sensor bar", priority: "HIGH", assigneeIds: ["me-id"], labelIds: ["hw"], dueAt: fromDateInputValue("2026-10-18", IST)!.toISOString(), position: 3 }),
     task({ id: "2", number: 2, title: "PID tuning", priority: "URGENT", assigneeIds: ["joel"], dueAt: fromDateInputValue("2026-10-21", IST)!.toISOString(), position: 1 }),
-    task({ id: "3", number: 3, title: "Write handout", priority: "LOW", position: 2, updatedAt: "2026-10-10T00:00:00.000Z" }),
+    task({ id: "3", number: 3, title: "Write handout", priority: "LOW", position: 2, typeId: "bug", updatedAt: "2026-10-10T00:00:00.000Z" }),
   ];
 
   it("parses and serialises URL state", () => {
     const query = parseTaskQuery(new URLSearchParams("assignee=me,none&label=hw&priority=high,bogus&due=overdue&q=%20pid%20&view=list&sort=due&group=assignee"));
-    expect(query.filters).toEqual({ assignees: ["me", "none"], labels: ["hw"], priorities: ["HIGH"], due: "overdue", q: "pid" });
+    expect(query.filters).toEqual({ assignees: ["me", "none"], labels: ["hw"], types: [], priorities: ["HIGH"], due: "overdue", q: "pid" });
     expect(query).toMatchObject({ view: "list", sort: "due", group: "assignee" });
     expect(parseTaskQuery(taskQueryToParams(query))).toEqual(query);
     expect(activeFilterCount(query.filters)).toBe(6);
@@ -117,6 +122,7 @@ describe("filters", () => {
     expect(pick("due=none")).toEqual(["3"]);
     expect(pick("q=sensor")).toEqual(["1"]);
     expect(pick("q=%232")).toEqual(["2"]);
+    expect(pick("type=bug")).toEqual(["3"]);
   });
 
   it("sorts and groups", () => {

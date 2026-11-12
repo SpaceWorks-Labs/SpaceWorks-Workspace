@@ -25,6 +25,7 @@ import {
   notify,
   runAfter,
   addHistory,
+  viaOf,
   visibleRecipients,
   loadVisibleTask,
 } from "./helpers";
@@ -56,7 +57,7 @@ export async function addComment(actor: TaskActor, input: unknown): Promise<Acti
   const comment = await prisma.$transaction(async (tx) => {
     const comment = await tx.taskComment.create({ data: { taskId: task.id, authorId: actor.user.id, body: parsed.data.body } });
     await tx.task.update({ where: { id: task.id }, data: { updatedAt: new Date() } });
-    await addHistory(tx, task.id, actor.user.id, "commented");
+    await addHistory(tx, task.id, actor.user.id, "commented", undefined, viaOf(actor));
     await recordActivity({ workspaceId: actor.workspace.id, actorId: actor.user.id, verb: "commented", entityType: "task", entityId: task.id, summary: `commented on ${ref} ${task.title}`, projectId: task.projectId, teamId: task.project?.teamId ?? null }, tx);
     const base = eventBase(actor, task, task.project);
     const mentioned = (await mentionRecipients(tx, actor, task, parsed.data.body)).filter((id) => id !== actor.user.id);

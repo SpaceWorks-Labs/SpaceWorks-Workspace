@@ -7,14 +7,14 @@ import { wouldCreateCycle } from "@/lib/tasks/dependencies";
 import { parseTaskReference, taskReference } from "@/lib/tasks/links";
 import { publishTaskChange } from "@/lib/tasks/realtime";
 import { addDependencySchema, removeDependencySchema } from "@/lib/tasks/schemas";
-import { loadEditableTask, addHistory, loadVisibleTask } from "./helpers";
+import { loadEditableTask, addHistory, viaOf } from "./helpers";
 
 /* ---------- Dependencies ---------- */
 
 export async function addDependency(actor: TaskActor, input: unknown): Promise<ActionResult> {
   const parsed = addDependencySchema.safeParse(input);
   if (!parsed.success) return validationError(parsed.error);
-  const found = await loadEditableTask(actor, parsed.data.taskId);
+  const found = await loadEditableTask(actor, parsed.data.taskId, { action: "edit" });
   if ("error" in found) return actionError(found.error);
   const { task } = found;
   const reference = parseTaskReference(parsed.data.reference);
@@ -25,6 +25,9 @@ export async function addDependency(actor: TaskActor, input: unknown): Promise<A
   });
   if (!other || (reference.key && other.project?.key !== reference.key)) return actionError(`Couldn't find ${parsed.data.reference.toUpperCase()}. Check the reference.`, { reference: ["No task with that reference."] });
   if (other.id === task.id) return actionError("A task can't depend on itself.");
+  // Linking changes the other task too: it needs the same edit gate (restrictTaskEdits, archived task or project).
+  const otherFound = await loadEditableTask(actor, other.id, { action: "edit" });
+  if ("error" in otherFound) return actionError(otherFound.error);
   const blockingTaskId = parsed.data.direction === "blockedBy" ? other.id : task.id;
   const blockedTaskId = parsed.data.direction === "blockedBy" ? task.id : other.id;
 
@@ -38,8 +41,8 @@ export async function addDependency(actor: TaskActor, input: unknown): Promise<A
     await tx.taskDependency.create({ data: { workspaceId: actor.workspace.id, blockingTaskId, blockedTaskId, type: "BLOCKS", createdById: actor.user.id } });
     const blockingRef = blockingTaskId === task.id ? taskReference(task.project?.key, task.number) : taskReference(other.project?.key, other.number);
     const blockedRef = blockedTaskId === task.id ? taskReference(task.project?.key, task.number) : taskReference(other.project?.key, other.number);
-    await addHistory(tx, blockedTaskId, actor.user.id, "blocked_by_added", { ref: blockingRef });
-    await addHistory(tx, blockingTaskId, actor.user.id, "blocks_added", { ref: blockedRef });
+    await addHistory(tx, blockedTaskId, actor.user.id, "blocked_by_added", { ref: blockingRef }, viaOf(actor));
+    await addHistory(tx, blockingTaskId, actor.user.id, "blocks_added", { ref: blockedRef }, viaOf(actor));
     await recordAuditEvent({ action: "task.dependency_added", workspaceId: actor.workspace.id, actorId: actor.user.id, targetType: "Task", targetId: blockedTaskId, metadata: { blockingTaskId }, client: tx });
     return "ok" as const;
   });
@@ -53,14 +56,16 @@ export async function addDependency(actor: TaskActor, input: unknown): Promise<A
 export async function removeDependency(actor: TaskActor, input: unknown): Promise<ActionResult> {
   const parsed = removeDependencySchema.safeParse(input);
   if (!parsed.success) return validationError(parsed.error);
-  const found = await loadEditableTask(actor, parsed.data.blockedTaskId);
+  const found = await loadEditableTask(actor, parsed.data.blockedTaskId, { action: "edit" });
   if ("error" in found) return actionError(found.error);
   const edge = await prisma.taskDependency.findFirst({ where: { workspaceId: actor.workspace.id, blockingTaskId: parsed.data.blockingTaskId, blockedTaskId: parsed.data.blockedTaskId } });
   if (!edge) return { ok: true };
-  const blocking = await loadVisibleTask(actor, edge.blockingTaskId);
+  const blockingFound = await loadEditableTask(actor, edge.blockingTaskId, { action: "edit" });
+  if ("error" in blockingFound) return actionError(blockingFound.error);
+  const blocking = blockingFound.task;
   await prisma.$transaction(async (tx) => {
     await tx.taskDependency.delete({ where: { blockingTaskId_blockedTaskId: { blockingTaskId: edge.blockingTaskId, blockedTaskId: edge.blockedTaskId } } });
-    await addHistory(tx, edge.blockedTaskId, actor.user.id, "blocked_by_removed", { ref: blocking ? taskReference(blocking.project?.key, blocking.number) : null });
+    await addHistory(tx, edge.blockedTaskId, actor.user.id, "blocked_by_removed", { ref: taskReference(blocking.project?.key, blocking.number) }, viaOf(actor));
     await recordAuditEvent({ action: "task.dependency_removed", workspaceId: actor.workspace.id, actorId: actor.user.id, targetType: "Task", targetId: edge.blockedTaskId, metadata: { blockingTaskId: edge.blockingTaskId }, client: tx });
   });
   await publishTaskChange({ workspaceId: actor.workspace.id, project: found.task.project, taskIds: [edge.blockedTaskId, edge.blockingTaskId], type: "task.changed", actorId: actor.user.id });

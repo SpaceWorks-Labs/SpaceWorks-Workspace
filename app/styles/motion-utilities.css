@@ -1,0 +1,73 @@
+/* Motion vocabulary (docs/DESIGN.md §2.10). Every duration, curve and distance
+ * comes from the Design-Kit tokens in motion.css, so reduced motion (zeroed
+ * tokens) and kiosk/TV screens (zeroed distances, fade only) need no extra rules.
+ * Entrances use fill-mode `backwards` so they never pin a transform afterwards
+ * (drag-and-drop writes its own). Exits use `forwards` so nothing flashes back. */
+:root {
+  --sw-stagger: 30ms;
+  --sw-shimmer-dur: 1400ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root { --sw-stagger: 0ms; }
+}
+.sw-kiosk, .sw-tv { --sw-stagger: 0ms; }
+
+@keyframes sw-fade-in { from { opacity: 0; } }
+@keyframes sw-fade-out { to { opacity: 0; } }
+@keyframes sw-rise-in { from { opacity: 0; transform: translateY(var(--sw-enter-y)); } }
+@keyframes sw-pop-in { from { opacity: 0; transform: translate(var(--sw-pop-x, 0px), var(--sw-pop-y, 0px)) scale(var(--sw-pop-scale)); } }
+@keyframes sw-pop-out { to { opacity: 0; transform: translate(var(--sw-pop-x, 0px), var(--sw-pop-y, 0px)) scale(var(--sw-pop-scale)); } }
+@keyframes sw-slide-in-right { from { opacity: 0; transform: translateX(var(--sw-slide-x)); } }
+@keyframes sw-slide-out-right { to { opacity: 0; transform: translateX(var(--sw-slide-x)); } }
+@keyframes sw-lift { from { transform: scale(1); box-shadow: none; } }
+@keyframes sw-shimmer { to { background-position: -200% 0; } }
+@keyframes sw-progress { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+
+/* Enter-only utilities. `--sw-i` (0-5) staggers siblings by --sw-stagger. */
+.sw-fade-in { animation: sw-fade-in var(--sw-dur-base) var(--sw-ease-enter) backwards; }
+.sw-rise-in {
+  animation: sw-rise-in var(--sw-dur-slow) var(--sw-ease-enter) backwards;
+  animation-delay: calc(min(var(--sw-i, 0), 5) * var(--sw-stagger));
+}
+.sw-pop-in { animation: sw-pop-in var(--sw-dur-base) var(--sw-ease-enter) backwards; }
+/* Table rows have no index prop: stagger the first six by position. */
+.sw-row-in { animation: sw-rise-in var(--sw-dur-slow) var(--sw-ease-enter) backwards; }
+.sw-row-in:nth-child(2) { animation-delay: calc(1 * var(--sw-stagger)); }
+.sw-row-in:nth-child(3) { animation-delay: calc(2 * var(--sw-stagger)); }
+.sw-row-in:nth-child(4) { animation-delay: calc(3 * var(--sw-stagger)); }
+.sw-row-in:nth-child(5) { animation-delay: calc(4 * var(--sw-stagger)); }
+.sw-row-in:nth-child(n + 6) { animation-delay: calc(5 * var(--sw-stagger)); }
+.sw-lift { animation: sw-lift var(--sw-dur-fast) var(--sw-ease-enter) backwards; }
+
+/* Radix overlays: data-state drives enter and exit (Presence waits for the exit). */
+.sw-overlay[data-state="open"] { animation: sw-fade-in var(--sw-dur-base) var(--sw-ease-enter) backwards; }
+.sw-overlay[data-state="closed"] { animation: sw-fade-out var(--sw-dur-fast) var(--sw-ease-exit) forwards; }
+.sw-dialog[data-state="open"] { animation: sw-pop-in var(--sw-dur-base) var(--sw-ease-enter) backwards; }
+.sw-dialog[data-state="closed"] { animation: sw-pop-out var(--sw-dur-fast) var(--sw-ease-exit) forwards; }
+.sw-drawer[data-state="open"] { animation: sw-slide-in-right var(--sw-dur-slow) var(--sw-ease-enter) backwards; }
+.sw-drawer[data-state="closed"] { animation: sw-slide-out-right var(--sw-dur-base) var(--sw-ease-exit) forwards; }
+
+/* Menus, popovers, tooltips and selects pop from the side that faces their trigger. */
+.sw-pop { transform-origin: var(--radix-popper-transform-origin); }
+.sw-pop[data-side="top"] { --sw-pop-y: var(--sw-pop-offset); }
+.sw-pop[data-side="bottom"] { --sw-pop-y: calc(var(--sw-pop-offset) * -1); }
+.sw-pop[data-side="left"] { --sw-pop-x: var(--sw-pop-offset); }
+.sw-pop[data-side="right"] { --sw-pop-x: calc(var(--sw-pop-offset) * -1); }
+.sw-pop[data-state="open"], .sw-pop[data-state="delayed-open"], .sw-pop[data-state="instant-open"] { animation: sw-pop-in var(--sw-dur-base) var(--sw-ease-enter) backwards; }
+.sw-pop[data-state="closed"] { animation: sw-pop-out var(--sw-dur-fast) var(--sw-ease-exit) forwards; }
+
+/* Toast: rises in, fades out when dismissed (ToastProvider sets data-state). */
+.sw-toast[data-state="open"] { animation: sw-rise-in var(--sw-dur-base) var(--sw-ease-enter) backwards; }
+.sw-toast[data-state="closed"] { animation: sw-fade-out var(--sw-dur-fast) var(--sw-ease-exit) forwards; }
+
+/* Loading indicators are the only looping motion; reduced motion shows them still. */
+.sw-skeleton {
+  background: linear-gradient(90deg, var(--yy-bg-muted) 0%, var(--yy-bg-emphasis) 50%, var(--yy-bg-muted) 100%);
+  background-size: 200% 100%;
+  animation: sw-shimmer var(--sw-shimmer-dur) linear infinite;
+}
+.sw-progress-bar { animation: sw-progress var(--sw-shimmer-dur) var(--sw-ease-standard) infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .sw-skeleton { animation: none; background: var(--yy-bg-muted); }
+  .sw-progress-bar { animation: none; transform: none; }
+}

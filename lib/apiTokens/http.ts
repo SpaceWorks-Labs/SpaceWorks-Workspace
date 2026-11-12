@@ -31,7 +31,7 @@ export async function requireApiToken(request: Request, kind: "read" | "write"):
   return token;
 }
 
-const STATUS_BY_CODE: Record<string, number> = { forbidden: 403, not_found: 404, invalid: 400, rate_limited: 429, unavailable: 503, internal: 500 };
+const STATUS_BY_CODE: Record<string, number> = { forbidden: 403, not_found: 404, invalid: 400, conflict: 409, rate_limited: 429, unavailable: 503, internal: 500 };
 
 /** Run an sw_* tool for a v1 endpoint and map failures to HTTP errors. */
 export async function runApiTool(token: AuthenticatedToken, name: string, input: unknown): Promise<{ ok: true; data: unknown } | { ok: false; response: Response }> {
@@ -56,6 +56,19 @@ export async function readJson(request: Request): Promise<unknown> {
   return request.json().catch(() => null);
 }
 
+/** Optional-body read: an absent/empty body is `{}`; a present body that is not JSON stays `null` (so the caller answers 400, never a silent default). */
+async function readOptionalJson(request: Request): Promise<unknown> {
+  const text = await request.text().catch(() => null);
+  if (text === null) return null;
+  if (text.trim() === "") return {};
+  if (!(request.headers.get("content-type") ?? "").toLowerCase().startsWith("application/json")) return null;
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    return null;
+  }
+}
+
 /** GET list endpoint: run a list tool and answer `{ data: [...], nextCursor }`. */
 export async function listEndpoint(request: Request, tool: string, key: string, numeric: readonly string[] = ["limit"]) {
   const token = await requireApiToken(request, "read");
@@ -75,11 +88,15 @@ export async function getEndpoint(request: Request, tool: string, input: Record<
 }
 
 /** POST/PATCH endpoint: JSON body merged with the path input; `{ data }` (201 for creates). */
-export async function writeEndpoint(request: Request, tool: string, pathInput: Record<string, unknown>, status = 200) {
+export async function writeEndpoint(request: Request, tool: string, pathInput: Record<string, unknown>, status = 200, options: { bodyOptional?: boolean; requiredStrings?: readonly string[] } = {}) {
   const token = await requireApiToken(request, "write");
   if (token instanceof Response) return token;
-  const body = await readJson(request);
+  const body = options.bodyOptional ? await readOptionalJson(request) : await readJson(request);
   if (!body || typeof body !== "object" || Array.isArray(body)) return apiError(400, "INVALID", "Send a JSON object body with Content-Type: application/json.");
+  for (const field of options.requiredStrings ?? []) {
+    const value = (body as Record<string, unknown>)[field];
+    if (typeof value !== "string" || !value.trim()) return apiError(400, "INVALID", `"${field}" is required.`);
+  }
   const result = await runApiTool(token, tool, { ...(body as Record<string, unknown>), ...pathInput });
   return result.ok ? apiJson({ data: result.data }, status) : result.response;
 }

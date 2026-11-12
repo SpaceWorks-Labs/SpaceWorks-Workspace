@@ -115,7 +115,7 @@ describe("brand and accessible primitives", () => {
     const loading = render(createElement(BrandPageLoader, { label: "Loading projects" }));
     expect(loading).toContain('data-patch="walk"');
     expect(loading).toContain("Loading projects</p>");
-    for (const file of files.filter(f => f.endsWith("/loading.tsx"))) expect(read(file), file).toContain("BrandPageLoader");
+    for (const file of files.filter(f => f.endsWith("/loading.tsx"))) expect(read(file), file).toMatch(/BrandPageLoader|@\/components\/ui\/skeletons/);
   });
   it("names icon buttons and keeps all sizes at least 44px", () => {
     const html = render(createElement(IconButton, { label: "Close", size: "sm" }, "×"));
@@ -187,8 +187,8 @@ describe("design source guards across every area", () => {
     expect(violations).toEqual([]);
   });
   it("keeps app buttons calm, sidebar text-only, and theme choices light/dark", () => {
-    expect(read("components/chrome/AppShell.tsx")).toContain("bg-sidebar-active");
-    expect(read("components/chrome/AppShell.tsx").split("function NavLink")[1].split("function WorkspaceSwitcher")[0]).not.toMatch(/<svg|Icon\s*\//);
+    expect(read("components/chrome/SidebarNav.tsx")).toContain("bg-sidebar-active");
+    expect(read("components/chrome/SidebarNav.tsx").split("function NavLink")[1].split("const listeners")[0]).not.toMatch(/<svg|Icon\s*\//);
     expect(read("components/account/AppearanceCard.tsx")).not.toMatch(/value: "system"|Match device/);
     for (const file of files.filter(f => f.endsWith(".tsx"))) {
       if (file === "components/ui/button.tsx") continue;
@@ -211,7 +211,7 @@ describe("design source guards across every area", () => {
     for (const file of files.filter(f => f.endsWith(".tsx"))) {
       const source = ts.createSourceFile(file, read(file), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
       const icons = new Set<string>();
-      const approved = new Set(["Archive", "Cpu", "MapPin", "Search", "Plus", "ArrowLeft", "ArrowUpRight", "ChevronsUpDown", "Info", "TriangleAlert", "CircleCheck", "Ellipsis", "Sun", "Moon", "LogOut"]);
+      const approved = new Set(["Archive", "Cpu", "MapPin", "Search", "Plus", "ArrowLeft", "ArrowUpRight", "ChevronsUpDown", "Info", "TriangleAlert", "CircleCheck", "Ellipsis", "Sun", "Moon", "LogOut", "Bug", "Sparkles", "FileText", "Wrench", "Flag", "Lightbulb", "Inbox", "Bell"]);
       for (const statement of source.statements) if (ts.isImportDeclaration(statement) && ts.isStringLiteral(statement.moduleSpecifier) && statement.moduleSpecifier.text === "lucide-react") {
         const bindings = statement.importClause?.namedBindings;
         if (bindings && ts.isNamedImports(bindings)) for (const icon of bindings.elements) {

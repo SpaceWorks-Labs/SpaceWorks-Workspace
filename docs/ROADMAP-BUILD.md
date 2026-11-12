@@ -112,7 +112,7 @@ owns; everything else is read-only for it.
 - **Routes**: `projects/**` (list, board, task detail), `my-tasks/**`.
 - **Actions / lib / components**: `app/actions/tasks.ts`, `app/actions/projects.ts`, `lib/tasks/`, `lib/projects/`, `components/tasks/`, `components/projects/`. Scheduled: `lib/scheduled/tasks.ts`.
 - **Writes**: `Project` (incl. `teamId`, `cyclesEnabled`), `BoardColumn`, `Task` (except `cycleId`, which cycles sets), `TaskAssignee`, `TaskLabel`, `TaskComment`, `TaskActivity`, `TaskRecurrence`, `TaskOccurrence`, `TaskDependency`.
-- **Emits**: `task.assigned`, `task.due`, `task.overdue`, `task.commented`, `task.status_changed`, `task.unblocked`, `mention` (comments).
+- **Emits**: `task.assigned`, `task.unassigned`, `task.due`, `task.overdue`, `task.commented`, `task.status_changed`, `task.unblocked`, `mention` (comments).
 - **Notes**: recurring tasks, dependencies (cycle-free) and the repeat control live in the task editor. Team-scoped projects filter with `teamScopeFilter(await hiddenTeamIds(...))`. Labels are managed in settings (foundation); tasks only attach them. Task numbers: `nextWorkspaceSequence(tx, workspaceId, "task")`.
 
 ### 2. chat

@@ -3,10 +3,11 @@ import "server-only";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { recordAuditEvent } from "@/lib/audit";
-import { actionError, NOT_ALLOWED, validationError, type ActionResult } from "@/lib/actionResult";
+import { actionError, validationError, type ActionResult } from "@/lib/actionResult";
 import { nextWorkspaceSequence } from "@/lib/counters";
 import { dispatch } from "@/lib/notify";
-import { assignableMembers, canEditTasks, visibleTaskWhere, type TaskActor } from "@/lib/tasks/access";
+import { assignableMembers, type TaskActor } from "@/lib/tasks/access";
+import { loadEditableTask } from "@/lib/tasks/service/helpers";
 import { taskReference, taskUrl } from "@/lib/tasks/links";
 import { DAY_MS, fromDateInputValue, localDayNumber, localToInstant, startOfLocalDay } from "@/lib/tasks/localDate";
 import { POSITION_GAP } from "@/lib/tasks/position";
@@ -35,18 +36,17 @@ async function findRuleForTask(task: { id: string; recurrenceId: string | null; 
 }
 
 async function editableTask(actor: TaskActor, taskId: string) {
-  if (!canEditTasks(actor)) return null;
-  const task = await prisma.task.findFirst({ where: { AND: [await visibleTaskWhere(actor), { id: taskId }] }, include: { project: true } });
-  if (!task || task.archivedAt || task.project?.status === "ARCHIVED") return null;
-  return task;
+  const found = await loadEditableTask(actor, taskId, { action: "edit" });
+  return "error" in found ? { error: found.error } : { task: found.task };
 }
 
 export async function setRecurrence(actor: TaskActor, input: unknown): Promise<ActionResult<{ description: string; nextRunAt: string | null }>> {
   const parsed = setRecurrenceSchema.safeParse(input);
   if (!parsed.success) return validationError(parsed.error);
   const data = parsed.data;
-  const task = await editableTask(actor, data.taskId);
-  if (!task) return actionError(NOT_ALLOWED);
+  const editable = await editableTask(actor, data.taskId);
+  if (editable.error !== undefined) return actionError(editable.error);
+  const { task } = editable;
   const rule = parseRRule(data.rrule);
   if (!rule) return actionError("Choose how often it repeats.", { rrule: ["That repeat pattern isn't supported."] });
   if (data.assigneeIds.length > 0) {
@@ -108,8 +108,9 @@ export async function setRecurrence(actor: TaskActor, input: unknown): Promise<A
 export async function stopRecurrence(actor: TaskActor, input: unknown): Promise<ActionResult> {
   const parsed = taskIdSchema.safeParse(input);
   if (!parsed.success) return validationError(parsed.error);
-  const task = await editableTask(actor, parsed.data.taskId);
-  if (!task) return actionError(NOT_ALLOWED);
+  const editable = await editableTask(actor, parsed.data.taskId);
+  if (editable.error !== undefined) return actionError(editable.error);
+  const { task } = editable;
   const rule = await findRuleForTask(task);
   if (!rule || !rule.active) return { ok: true };
   await prisma.$transaction(async (tx) => {
@@ -124,8 +125,9 @@ export async function stopRecurrence(actor: TaskActor, input: unknown): Promise<
 export async function skipNextOccurrence(actor: TaskActor, input: unknown): Promise<ActionResult<{ nextRunAt: string | null }>> {
   const parsed = taskIdSchema.safeParse(input);
   if (!parsed.success) return validationError(parsed.error);
-  const task = await editableTask(actor, parsed.data.taskId);
-  if (!task) return actionError(NOT_ALLOWED);
+  const editable = await editableTask(actor, parsed.data.taskId);
+  if (editable.error !== undefined) return actionError(editable.error);
+  const { task } = editable;
   const rule = await findRuleForTask(task);
   const pattern = parseRRule(rule?.rrule);
   if (!rule || !rule.active || rule.createMode !== "ON_SCHEDULE" || !rule.nextRunAt || !pattern) return actionError("There's no upcoming repeat to skip.");

@@ -36,9 +36,9 @@ export async function makePayslipPdf(data: PayslipData) {
   doc.registerFontkit(fontkit);
   const [regular, bold] = await Promise.all([
     readFile(
-      path.join(process.cwd(), "public/brand/fonts/Gilroy-Regular.woff"),
+      path.join(process.cwd(), "public/brand/fonts/Gilroy-Light.woff2"),
     ),
-    readFile(path.join(process.cwd(), "public/brand/fonts/Gilroy-Bold.woff")),
+    readFile(path.join(process.cwd(), "public/brand/fonts/Gilroy-ExtraBold.woff2")),
   ]);
   const font = await doc.embedFont(regular, { features: { liga: false } }),
     strong = await doc.embedFont(bold, { features: { liga: false } });

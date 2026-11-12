@@ -17,7 +17,8 @@ import { labelChipTone } from "@/lib/labels";
 import { PRIORITIES, PRIORITY_LABELS } from "@/lib/tasks/filters";
 import { toDateInputValue } from "@/lib/tasks/localDate";
 import type { TaskDetailDTO } from "@/lib/tasks/types";
-import { DueChip, PriorityChip } from "./bits";
+import { effectiveType } from "@/lib/tasks/taskTypes";
+import { DueChip, PriorityChip, TypeChip } from "./bits";
 import { MultiSelect } from "./MultiSelect";
 import { RepeatControl } from "./RepeatControl";
 import type { RunAction } from "./useTaskRunner";
@@ -31,14 +32,19 @@ function Property({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
+const LOCK_HINT = "Only the creator, assignees and project admins can edit this task";
+
 export function TaskProperties({ slug, task, canEdit, run }: {
   slug: string;
   task: TaskDetailDTO;
   canEdit: boolean;
   run: RunAction;
 }) {
+  const restricted = Boolean(task.project?.restrictTaskEdits) && !task.permissions.canEdit && !task.archivedAt && task.project?.status !== "ARCHIVED";
   const column = task.columns.find((item) => item.id === task.columnId) ?? null;
-  const assigneeItems = task.members.map((person) => ({ id: person.id, label: person.name ?? "Member", leading: <Avatar name={person.name} src={person.image} size="xs" /> }));
+  const assigneeItems = [...task.members]
+    .sort((a, b) => Number(b.id === task.viewerId) - Number(a.id === task.viewerId))
+    .map((person) => ({ id: person.id, label: person.id === task.viewerId ? "Me" : (person.name ?? "Member"), leading: <Avatar name={person.name} src={person.image} size="xs" /> }));
   const labelItems = task.labels.map((label) => ({ id: label.id, label: label.name }));
   return (
     <dl className="divide-y divide-line">
@@ -55,6 +61,23 @@ export function TaskProperties({ slug, task, canEdit, run }: {
             </Dropdown>
           ) : (
             <p className="pt-2.5 text-body-ui text-ink">{column?.name ?? "No status"}</p>
+          )}
+        </Property>
+      ) : null}
+      {task.project ? (
+        <Property label="Type">
+          {canEdit ? (
+            <Dropdown aria-label="Type" value={effectiveType(task.taskTypes, task.typeId)?.id ?? ""} onChange={(event) => void run(() => updateTaskAction(slug, { taskId: task.id, typeId: event.target.value || null }))}>
+              {task.taskTypes.map((type) => (
+                <option key={type.id} value={type.id}>
+                  {type.name}
+                </option>
+              ))}
+            </Dropdown>
+          ) : (
+            <div className="pt-2">
+              <TypeChip type={effectiveType(task.taskTypes, task.typeId)} size="md" />
+            </div>
           )}
         </Property>
       ) : null}
@@ -85,9 +108,15 @@ export function TaskProperties({ slug, task, canEdit, run }: {
           ) : (
             <span className="text-body-ui text-ink-muted">Nobody yet</span>
           )}
-          {canEdit ? (
+          {restricted ? (
+            <span className="inline-flex items-center gap-1.5 text-caption text-ink-muted" title={LOCK_HINT}>
+              {LOCK_HINT}.
+            </span>
+          ) : null}
+          {canEdit || restricted ? (
             <MultiSelect
               title="Assignees"
+              disabled={!canEdit}
               commitOnClose
               trigger={
                 <Button variant="quiet" size="sm">

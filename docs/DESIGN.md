@@ -3,10 +3,13 @@
 > Read this before building or changing any Space Works Workspace UI. It describes how the brand is
 > implemented in this app.
 >
-> **Source of truth for the brand:** [SpaceWorks-Labs/SpaceWorks-Design](https://github.com/SpaceWorks-Labs/SpaceWorks-Design):
-> `tokens/tokens.css` (colour values), `docs/ui-brand-spec.md` (tokens, states, type, shape, logo, icons),
-> `logo/` (master artwork), `fonts/` (Gilroy, Unbounded and their licences). When this file and the
-> design repo disagree, the design repo wins. Update this file to match.
+> **Source of truth for the brand:** [SpaceWorks-Labs/Design-Kit](https://github.com/SpaceWorks-Labs/Design-Kit),
+> mounted as the `design-kit/` git submodule: `tokens/tokens.json` (colour and motion values),
+> `docs/ui-brand-spec.md` (tokens, states, type, shape, logo, icons), `logo/` (master artwork), `fonts/`
+> (Gilroy, Outfit, Unbounded and their licences). When this file and the kit disagree, the kit wins.
+> After bumping the submodule run `npm run tokens:sync`: it regenerates `app/styles/palette.css`,
+> `app/styles/motion.css`, `tests/fixtures/design-tokens.json` and `public/brand/fonts/`, which are
+> committed so builds and CI never need the submodule (`git submodule update --init design-kit` only for the sync).
 >
 > The `--yy-*` variable prefix and the `yy-*` helper classes (`ease-yy`, `yy-prose`) match Space Works
 > Events so utilities stay interchangeable between the two apps. Their **values** are Space Works.
@@ -42,7 +45,7 @@ Seven colours, plus reds for danger (the brand has no red). No black, no other h
 
 | Name | Hex | Utility | Role |
 |---|---|---|---|
-| Deep Ink | `#142C2A` | `sw-ink` | Text, inverse surfaces, dark-mode ground |
+| Deep Ink | `#142C2A` | `sw-ink` | Text, inverse surfaces |
 | Maker Teal | `#006E63` | `sw-teal` | Primary actions, links, focus (light) |
 | Workshop Orange | `#FF7447` | `sw-orange` | Emphasis fill with an ink label. Never text. |
 | Citron | `#DFFF8F` | `sw-citron` | Success, app sidebar, focus (dark), selection |
@@ -56,23 +59,23 @@ ink on citron 13.23, ink on sky 9.23. Orange on cream is 2.47, which is why oran
 
 ### 2.2 Neutrals and surfaces
 
-Light mode is a Warm Cream page with white panels. Dark mode is the brand's teal-lit Deep Ink.
+Light mode is the default: a Warm Cream page with white panels. Dark is an explicit choice (account menu or Appearance settings), remembered per browser. Dark mode is one solid-black neutral family (Design-Kit 0.12.0): no green or teal tint, with teal, Citron and orange as accents.
 
 | Token (`--yy-…`) | Utility | Light | Dark | Use |
 |---|---|---|---|---|
-| `bg-canvas` | `bg-canvas` | `#FFF4E8` | `#142C2A` | Page background |
-| `bg-panel` | `bg-panel` | `#FFFFFF` | `#1F433F` | Cards, panels, inputs, dialogs, menus |
-| `bg-surface` | `bg-surface` | `#F6ECE0` | `#193935` | Recessed areas, table headers, disabled fills |
-| `bg-subtle` | `bg-subtle` | `#EFE6DB` | `#254D48` | Hover on cards and rows |
-| `bg-muted` | `bg-muted` | `#EFE6DB` | `#254D48` | Hover on controls, neutral fills |
-| `bg-emphasis` | `bg-emphasis` | `#D5D0C6` | `#4D6D67` | Pressed controls, selected neutral fills |
-| `bg-track` | `bg-track` | `#D5D0C6` | `#4D6D67` | Progress-bar tracks |
-| `border` | `border-line` | `#D5D0C6` | `#4D6D67` | Hairlines on cards and dividers |
-| `border-strong` | `border-line-strong` | `#828A83` | `#93A198` | Form-control outline (≥3:1) |
+| `bg-canvas` | `bg-canvas` | `#FFF4E8` | `#000000` | Page background |
+| `bg-panel` | `bg-panel` | `#FFFFFF` | `#141414` | Cards, panels, inputs, dialogs, menus |
+| `bg-surface` | `bg-surface` | `#F6ECE0` | `#0B0B0B` | Recessed areas, table headers, disabled fills |
+| `bg-subtle` | `bg-subtle` | `#EFE6DB` | `#1C1C1C` | Hover on cards and rows |
+| `bg-muted` | `bg-muted` | `#EFE6DB` | `#1C1C1C` | Hover on controls, neutral fills |
+| `bg-emphasis` | `bg-emphasis` | `#D5D0C6` | `#2C2C2C` | Pressed controls, selected neutral fills |
+| `bg-track` | `bg-track` | `#D5D0C6` | `#2C2C2C` | Progress-bar tracks |
+| `border` | `border-line` | `#D5D0C6` | `#2C2C2C` | Hairlines on cards and dividers |
+| `border-strong` | `border-line-strong` | `#828A83` | `#787878` | Form-control outline (≥3:1) |
 | `text` | `text-ink` | `#142C2A` | `#FFF4E8` | Primary text |
 | `text-secondary` | `text-ink-secondary` | `#142C2A` | `#FFF4E8` | Body copy under headings |
-| `text-muted` | `text-ink-muted` | `#5B6863` | `#C7C4BA` | Meta, captions, helper text, placeholders |
-| `text-disabled` | `text-ink-disabled` | `#828A83` | `#93A198` | Disabled labels only (WCAG-exempt) |
+| `text-muted` | `text-ink-muted` | `#5B6863` | `#ACACAC` | Meta, captions, helper text, placeholders |
+| `text-disabled` | `text-ink-disabled` | `#828A83` | `#787878` | Disabled labels only (WCAG-exempt) |
 
 ### 2.3 Actions, emphasis and chrome
 
@@ -80,19 +83,19 @@ Light mode is a Warm Cream page with white panels. Dark mode is the brand's teal
 |---|---|---|---|---|
 | `primary` / `-hover` / `-active` | `bg-primary` … | `#006E63` / `#02675D` / `#046158` | same | Space Works' own primary action |
 | `on-primary` | `text-on-primary` | `#FFF4E8` | `#FFF4E8` | Label on teal (5.68) |
-| `inverse-surface` | `bg-inverse` | `#142C2A` | `#254D48` | Toasts, tooltips, code blocks, sticky bars |
+| `inverse-surface` | `bg-inverse` | `#142C2A` | `#142C2A` | Toasts, tooltips, code blocks, sticky bars |
 | `on-inverse` | `text-on-inverse` | `#FFF4E8` | `#FFF4E8` | |
 | `highlight` / `-hover` | `bg-highlight` | `#FF7447` / `#FF8157` | same | The one bold public moment (never an app button) |
 | `on-highlight` | `text-on-highlight` | `#142C2A` | `#142C2A` | Ink on orange (5.51) |
-| `highlight-soft` | `bg-highlight-soft` | `#FFEEE9` | `#2F4640` | Warm tinted panels |
-| `sidebar` | `bg-sidebar` | `#DFFF8F` | `#113532` | Workspace sidebar field |
-| `sidebar-hover` | `bg-sidebar-hover` | `#F2FFD2` | `#254D48` | Sidebar item hover |
+| `highlight-soft` | `bg-highlight-soft` | `#FFEEE9` | `#221A17` | Warm tinted panels |
+| `sidebar` | `bg-sidebar` | `#DFFF8F` | `#0B0B0B` | Workspace sidebar field |
+| `sidebar-hover` | `bg-sidebar-hover` | `#F2FFD2` | `#1C1C1C` | Sidebar item hover |
 | `sidebar-active` | `bg-sidebar-active` | `#006E63` | `#006E63` | Current sidebar item |
 | `on-sidebar-active` | `text-on-sidebar-active` | `#FFF4E8` | `#FFF4E8` | |
 | `focus` | (ring) | `#006E63` | `#DFFF8F` | Focus ring |
 
 Legacy names keep working and now point at brand colours: `brand-marigold*` → Workshop Orange,
-`brand-dot-base` → ink/cream, `brand-dot-off` → line, `highlight-peach` → Citron (light) / `#2F4640`
+`brand-dot-base` → ink/cream, `brand-dot-off` → line, `highlight-peach` → Citron (light) / `#221A17`
 (dark, used for selection and the `.yy-highlight` marker), `tint-peach` → `highlight-soft`.
 
 ### 2.4 Status
@@ -102,10 +105,10 @@ brand's solid pastels with ink words; dark mode uses soft fills with the brand c
 
 | Status | `*-bg` (L / D) | `*-fg` (L / D) | `*-solid` (L / D) | Used for |
 |---|---|---|---|---|
-| Success (Citron) | `#DFFF8F` / `#2C5045` | `#142C2A` / `#DFFF8F` | `#536D49` / `#DFFF8F` | Going, Published, Checked in |
-| Warning (Warm Yellow) | `#FFD447` / `#2F4D40` | `#142C2A` / `#FFD447` | `#696834` / `#FFD447` | Waitlist, Pending approval, Draft reminders |
-| Info (Sky Blue) | `#B5CDFF` / `#2A4D4C` | `#142C2A` / `#B5CDFF` | `#51697B` / `#B5CDFF` | Completed, waitlisted, neutral notices |
-| Danger (reds) | `#FFFFFF` / `#1F433F` | `#B91C1C` / `#FCA5A5` | `#B91C1C` / `#FCA5A5` | Delete, errors, overdue |
+| Success (Citron) | `#DFFF8F` / `#20221B` | `#142C2A` / `#E9FCAA` | `#536D49` / `#E9FCAA` | Going, Published, Checked in |
+| Warning (Warm Yellow) | `#FFD447` / `#222017` | `#142C2A` / `#FFDE77` | `#696834` / `#FFDE77` | Waitlist, Pending approval, Draft reminders |
+| Info (Sky Blue) | `#B5CDFF` / `#1E1F22` | `#142C2A` / `#CBD9F8` | `#51697B` / `#CBD9F8` | Completed, waitlisted, neutral notices |
+| Danger (reds) | `#FFFFFF` / `#141414` | `#B91C1C` / `#FCA5A5` | `#B91C1C` / `#FCA5A5` | Delete, errors, overdue |
 | Danger border | `#FCA5A5` / `#7C6261` | | | Danger-zone card outline |
 | Danger hover / on-danger | `#991B1B` / `#FDB9B6` · `#FFF4E8` / `#142C2A` | | | Solid danger button |
 
@@ -119,29 +122,32 @@ Internal attention counters use `bg-accent-soft text-accent-text`. Orange emphas
 
 | Role | Family | Weights | Files |
 |---|---|---|---|
-| Headings, titles, numbers | **Gilroy** | 600 (700 for inline strong) | `public/brand/fonts/Gilroy-SemiBold.woff`, `Gilroy-Bold.woff` |
-| Body, labels, controls, IDs | **Gilroy** | 400, 500, 600, 700 | `Gilroy-Regular.woff`, `Gilroy-Medium.woff` + above |
+| Display headings | **Gilroy** | 800 | `public/brand/fonts/Gilroy-ExtraBold.woff2` |
+| Light display text | **Gilroy** | 300 | `Gilroy-Light.woff2` |
+| Body, labels, controls, headings, titles, numbers, IDs | **Outfit** | 400–700 (variable) | `Outfit-Variable.woff2` |
 | One short expressive accent | **Unbounded** | 500 (600 allowed) | `Unbounded-Variable.woff2` |
-| Code, secrets, JSON | Gilroy | 500 | `.code-text`, tabular figures and slashed zero |
+| Code, secrets, JSON | Outfit | 500 | `.code-text`, tabular figures and slashed zero |
 
-Fonts are self-hosted with `@font-face` in `app/globals.css` (privacy invariant: no font CDNs).
-Licences are in `public/brand/fonts/LICENSES/`. `font-synthesis: none` is set on `body`: there is no
-faux bold or italic. Only the supplied 400/500/600/700 weights are registered.
+Fonts come from the Design-Kit `fonts/` folder (`npm run tokens:sync` copies them and their licences into
+`public/brand/fonts/`) and are self-hosted with `@font-face` in `app/styles/global-theme.css` (privacy
+invariant: no font CDNs). Licences are in `public/brand/fonts/LICENSES/`. Only the two free Gilroy weights
+are licensed; the paid weights must not be re-added. `font-synthesis: none` is set on `body`: there is no
+faux bold or italic.
 
-- `font-sans` and `font-display` are Gilroy. Headings are **600, never 800**.
-- `font-accent` is Unbounded 500 with −0.01em tracking: **one short phrase per layout** (auth brand panel,
-  an empty-state hero). Never in app chrome, or alongside Patch.
-- IDs, codes and counts use Gilroy 500 with `tabular-nums`, not a monospace face.
+- `font-sans` is Outfit. `font-display` is Gilroy: use it only with weight 800 (or 300), never 400–700.
+- `font-accent` is Unbounded 500 with −0.01em tracking, Outfit as fallback: **one short phrase per layout**
+  (auth brand panel, an empty-state hero). Never in app chrome, or alongside Patch.
+- IDs, codes and counts use Outfit 500 with `tabular-nums`, not a monospace face.
 
 Type scale (mobile → desktop from 640px):
 
 | Class | Weight | Size / line | Tracking | Use |
 |---|---|---|---|---|
-| `text-display-xl` | 600 | 44/48 → 72/76 | −0.02em | Landing hero |
-| `text-display-l` | 600 | 34/40 → 48/52 | −0.02em | Auth and setup headings |
-| `text-display-m` | 600 | 34/40 → 48/52 | −0.015em | Large content titles |
+| `text-display-xl` | Gilroy 800 | 44/48 → 72/76 | −0.02em | Landing hero |
+| `text-display-l` | Gilroy 800 | 34/40 → 48/52 | −0.02em | Auth and setup headings |
+| `text-display-m` | Gilroy 800 | 34/40 → 48/52 | −0.015em | Large content titles |
 | `text-h1` | 600 | 26/32 → 32/38 | −0.01em | One page title per screen |
-| `text-h2` | 600 | 20/28 | −0.01em | Section headings |
+| `text-h2` | 600 | 20/28 | −0.005em | Section headings |
 | `text-h3` | 600 | 20/28 | −0.005em | Card and dialog titles |
 | `text-h4` | 600 | 20/28 | −0.005em | Card and panel titles |
 | `text-title` | 600 | 16/24 | 0 | Card and list-row titles |
@@ -153,7 +159,7 @@ Type scale (mobile → desktop from 640px):
 | `text-overline` | 600 | 12/16 UPPERCASE | 0.08em | Eyebrows ("VENUE") |
 | `font-accent` | Unbounded 500 | inherit | −0.01em | One accent phrase |
 
-Button labels are Gilroy 600. Body copy max width ~640px.
+Button labels are Outfit 600. Body copy max width ~640px.
 
 ### 2.7 Spacing
 
@@ -188,11 +194,36 @@ Prefer `rounded-md` over `rounded-control` inside `cn()`: `tailwind-merge` does 
 
 ### 2.10 Motion
 
-- Colour changes 120ms. Expand 200ms. Dialog enter 240ms, exit 160ms. Easing `ease-yy`
-  (`cubic-bezier(.2,.8,.2,1)`).
-- **No translate, scale or shadow on hover.** Buttons change colour only.
+- Tokens come from Design-Kit (`app/styles/motion.css`): durations `--sw-dur-fast` 120ms (press, hover,
+  exit), `--sw-dur-base` 180ms (overlays, indicators), `--sw-dur-slow` 240ms (route settle); curves
+  `--sw-ease-standard`, `--sw-ease-enter` (arrivals), `--sw-ease-exit` (departures); distances
+  `--sw-enter-y`, `--sw-pop-scale`, `--sw-pop-offset`, `--sw-slide-x`. `ease-yy` is an alias of
+  `--sw-ease-standard`; Tailwind has `ease-standard`, `ease-enter` and `ease-exit`; use `duration-[var(--sw-dur-base)]` for durations.
+- `.sw-kiosk` and `.sw-tv` zero the distances (fade only).
+- **No translate, scale or shadow on hover.** Buttons change colour only; the one exception is the press
+  (`:active`) scale to `--sw-pop-scale`.
 - Content is visible by default; scroll reveals only enhance.
-- `prefers-reduced-motion: reduce` → no translate/scale, fades ≤ 120ms.
+- `prefers-reduced-motion: reduce` zeroes durations and distances (the tokens do it); looping loaders
+  (`sw-skeleton`, `sw-progress-bar`) stop and show a static state.
+- Vocabulary (`app/styles/motion-utilities.css`; every value is a token, never a literal):
+
+| Interaction | Class / mechanism | Timing |
+| --- | --- | --- |
+| Dialog open / close | `sw-overlay` fade + `sw-dialog` pop from centre (`pop-in` / `pop-out`) | base in, fast out |
+| Drawer (task, `presentation="drawer"`) | `sw-drawer` slide from right (`--sw-slide-x`); overlay fades | slow in, base out |
+| Menu, popover, tooltip, select | `sw-pop`: pops from the trigger side (`data-side`, `--sw-pop-offset`) | base in, fast out |
+| Toast | `sw-toast`: rises in, fades out on dismiss | base in, fast out |
+| Cards and list rows on mount | `sw-rise-in` / `sw-row-in`, `--sw-i` stagger (first 6, 30ms apart); no stagger on re-render | slow |
+| Drag overlay | `sw-lift` (scale + shadow), settles with the drop animation | fast / base |
+| Empty states, loaded drawer content, skeleton frames | `sw-fade-in` / `sw-rise-in` | base / slow |
+| Tabs | underline scales in from the centre | base |
+| Buttons, checkbox, switch, radio | colour transitions; press scale; tick fades in | fast |
+| Loading | `Skeleton` shimmer (`sw-shimmer`); layouts in `components/ui/skeletons.tsx`; top `RouteProgress` bar after 150ms | looping, static when reduced |
+
+- Entrance animations use fill-mode `backwards` so they never pin a `transform` (drag-and-drop writes
+  its own); exits use `forwards`. Radix keeps content mounted while the `data-[state=closed]` animation runs.
+- Every route segment that awaits data has a `loading.tsx` built from the shared skeletons
+  (`PageSkeleton`, `ListSkeleton`, `CardsSkeleton`, `BoardSkeleton`, `DetailSkeleton`, `ChatSkeleton`).
 - Colour-mode switch (`components/providers.tsx`): the new mode grows from the toggle as a soft circle
   (View Transitions); without them colours cross-fade; reduced motion switches instantly.
 - Restart-safe sequences: React runs effects twice in development. An imperative `animate()` sequence
@@ -228,8 +259,8 @@ rotation, effects or re-typed wordmarks). Brand components live in `components/b
 ### 3.2 Icons
 
 `lucide-react` (24px grid, 2px stroke, round caps), rendered at 16/20px. Decorative icons get
-`aria-hidden`; icon-only buttons need `IconButton` with a required `label`. The approved icons are Search, Archive, Cpu, MapPin, Plus, ArrowLeft, ArrowUpRight, ChevronsUpDown, Info, TriangleAlert, CircleCheck, Ellipsis, Sun, Moon and LogOut. Formatting, close and visibility controls use short text labels. **The workspace sidebar is
-text-only.** Use icons only where they help: search, add, back, external link, switchers, callouts,
+`aria-hidden`; icon-only buttons need `IconButton` with a required `label`. The approved icons are Search, Archive, Cpu, MapPin, Plus, ArrowLeft, ArrowUpRight, ChevronsUpDown, Info, TriangleAlert, CircleCheck, Ellipsis, Sun, Moon, LogOut, Inbox (the notifications link beside the workspace switcher), Bell (the top-bar notifications peek), and the task-type glyphs Bug, Sparkles, FileText, Wrench, Flag and Lightbulb (used only by `components/tasks/typeIcons.ts`; the Task type uses CircleCheck and Risk uses TriangleAlert). Formatting, close and visibility controls use short text labels. **The workspace sidebar is
+text-only** apart from the Inbox icon. Use icons only where they help: search, add, back, external link, switchers, callouts,
 overflow, theme toggle, sign out.
 
 ### 3.3 Imagery
@@ -237,7 +268,7 @@ overflow, theme toggle, sign out.
 - No emoji in UI.
 - Project covers: 2:1, private files served through `/api/files/[id]`. With none, show
   a flat token fill. Never a broken image.
-- Avatars: photo, else 1–2 initials (Gilroy 600) on a tint. `AvatarImage` swaps to initials on error.
+- Avatars: photo, else 1–2 initials (Outfit 600) on a tint. `AvatarImage` swaps to initials on error.
 - Workspace mark: square; fallback is initials on teal.
 - QR codes always sit on a white plate, in both modes.
 
@@ -249,7 +280,7 @@ All primitives are Radix + Tailwind. Their props and exports are stable; prefer 
 
 ### 4.1 Button
 
-`rounded-md` (10px), Gilroy 600, `min-h-11` for every size (`lg` is 48px). No hover lift, scale or
+`rounded-md` (10px), Outfit 600, `min-h-11` for every size (`lg` is 48px). No hover lift, scale or
 shadow; colour changes only. Focus uses the global 2px ring with a 2px offset.
 
 | Variant | Rest | Hover | When |
@@ -292,14 +323,14 @@ a dialog.
 ### 4.4 Tabs & navigation
 
 - Underline tabs: rest `text-ink-muted`, hover `text-ink`, active `text-ink` + **2px underline** (teal). Rows scroll sideways with faded arrow hints.
-- Workspace sidebar: Citron field (256px) (`bg-sidebar`), text-only items 44px tall in labelled groups (People, Work, Chat, Operations, Assistant, Settings), hover `bg-sidebar-hover`,
+- Workspace sidebar: Citron field (256px) (`bg-sidebar`), text-only items 44px tall in labelled groups, in order: Home (unlabelled; Home, My tasks, Calendar, Notepad, Search, Reports & analytics), Work, Chat, Knowledge, Community, People, Operations, Support & IT, Outreach, Finance, Settings, Preferences. Operations, Support & IT, Outreach, Finance, Settings and Preferences are collapsible (a button with `aria-expanded`, `▸` chevron that rotates), collapsed by default, auto-opened when the current page is inside, with the choice remembered per group in `localStorage` (applied after hydration). Notifications live in the Inbox icon link, not the list. Hover `bg-sidebar-hover`,
   current item `bg-sidebar-active text-on-sidebar-active font-semibold` with `aria-current="page"`.
   Dark mode uses the Deep Ink sidebar.
 - Back link: `← Back to workspace`, quiet, 14px 600.
 
 ### 4.5 Status pills (`Chip`)
 
-Fully round, 24px tall (`min-h-6`), 12–13px Gilroy 600, padding 8–10. **The word is mandatory**; the
+Fully round, 24px tall (`min-h-6`), 12–13px Outfit 600, padding 8–10. **The word is mandatory**; the
 icon is optional. Tones: `success`, `warning`, `info` (solid pastel + ink in light, soft + brand word in
 dark), `danger` (panel + `danger-border` + red word), `accent` (accent-soft + accent text), `highlight`
 (orange + ink; for "2 left"-style attention), `neutral` (surface + hairline + ink), `ink` (inverse),
@@ -311,13 +342,13 @@ To do / In progress / Review / Done (board columns), Urgent / High / Medium / Lo
 ### 4.6 Date block
 
 50–68px wide, `rounded-md`, 1px line, `bg-panel`. Top band: month, 11–12px 600, 0.08em tracking, on the
-teal or `bg-emphasis` (draft). Bottom: day in Gilroy 600 `tabular-nums`, 20–30px.
+teal or `bg-emphasis` (draft). Bottom: day in Outfit 600 `tabular-nums`, 20–30px.
 
 ### 4.7 Cards
 
 - **Base card** (`Card`): `bg-panel`, 1px `border-line`, `rounded-xl` (16px), padding 16–24, **no shadow**.
   Clickable cards are one `<a>` with hover `bg-subtle`.
-- **Stat tile:** label (14px muted) over a Gilroy 600 `tabular-nums` number (32px); optional progress
+- **Stat tile:** label (14px muted) over a Outfit 600 `tabular-nums` number (32px); optional progress
   bar; the "attention" variant colours the number and keeps the card flat.
 - **Callout:** tinted status fill (`warning`, `info`, `success`, `danger`), icon, bold first sentence,
   one action. One per page. No translucent text.
@@ -328,7 +359,7 @@ teal or `bg-emphasis` (draft). Bottom: day in Gilroy 600 `tabular-nums`, 20–30
 
 ### 4.8 Lists & tables
 
-- `Table`: `rounded-lg` (12px) panel with a 1px line; header row on `bg-surface`, 14px Gilroy 600 sentence case
+- `Table`: `rounded-lg` (12px) panel with a 1px line; header row on `bg-surface`, 14px Outfit 600 sentence case
   in `text-accent-text`; **rows 48px** with 1px `border-line` separators; hover `bg-subtle`; scrolls
   inside its own box on small screens.
 - Person cell = avatar + name + email (never repeat the email).
@@ -350,6 +381,15 @@ Instance admin pages (`SimpleShell` + underline tabs) stay restrained: panel car
 - Toast: `bg-inverse text-on-inverse`, `shadow-float`, 4s, optional Undo.
 - Menu / popover: `bg-panel`, `rounded-lg`, 1px line, `shadow-float`; items 40px, highlighted `bg-muted`,
   danger items last in `text-danger-fg`. Tooltip: `bg-inverse`, 13px.
+
+### 4.16 Collapsible groups
+
+One primitive, `components/ui/collapsible-section.tsx` (`CollapseToggle`, `CollapsibleSection`, `useOpenState`, `usePersistentOpen`; pure parts in `lib/collapse.ts`). The toggle is a button with `aria-expanded` and `aria-controls` and a text "▸" chevron that rotates 90deg using `--sw-dur-fast` / `--sw-ease-standard` (instant with reduced motion); no icons.
+
+- Used by: sidebar groups, List view groups, My Tasks due buckets and Board columns.
+- Defaults: sidebar Work, Chat, Knowledge, Community and People open; Operations, Support & IT, Outreach, Finance, Settings and Preferences closed (`collapsedByDefault` in `lib/nav.ts`); the unlabelled Home group never collapses and the group holding the current page is always open. My Tasks: "No due date" closed, other buckets open. List groups and Board columns open.
+- Persistence: per key in `localStorage` (`sw:nav-open`, `sw:collapse:my-tasks`, `sw:collapse:list` by project, group-by and group, `sw:collapse:board` by column id). The server and first client render use the default, so there is no hydration mismatch; blocked storage keeps the choice for the page view.
+- A collapsed List group shows its count and its rows cannot be selected (collapsing deselects them). A collapsed Board column is a narrow strip with the name and count that stays a drop target (a dropped card goes to the end).
 
 ## 5. Page patterns
 
@@ -422,7 +462,7 @@ security invariants (CSP nonce, tenant isolation). Don't add external scripts, f
 
 ### 9.1 One source of truth for tokens
 
-1. `app/styles/palette.css` pins every canonical sRGB triplet from Space Works Design (with a `--sw-color-*` prefix to avoid Tailwind collisions). `app/styles/tokens.css` adapts them to the stable `--yy-*` names. It declares every token as `--yy-*` (plus raw `--sw-*` brand colours). Light
+1. `app/styles/palette.css` is generated by `npm run tokens:sync` from the Design-Kit submodule (never edit it by hand) and pins every canonical sRGB triplet (including `scrim`, which feeds `--yy-overlay`) (with a `--sw-color-*` prefix to avoid Tailwind collisions). `app/styles/tokens.css` adapts them to the stable `--yy-*` names. It declares every token as `--yy-*` (plus raw `--sw-*` brand colours). Light
    values go under `:root`. Dark values go under `:root[data-color-mode="dark"], .yy-dark-band` **and**
    the `@media (prefers-color-scheme: dark) { :root:not([data-color-mode]) }` mirror. Keep all three in
    sync.

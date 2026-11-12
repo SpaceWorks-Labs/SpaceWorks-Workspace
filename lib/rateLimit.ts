@@ -12,6 +12,7 @@ export type Bucket =
   | "global"
   | "frontendAction"
   | "action"
+  | "bulk"
   | "auth"
   | "setup"
   | "passwordReset"
@@ -31,6 +32,8 @@ const limits: Record<Bucket, { max: number; windowMs: number; }> = {
   global: { max: 600, windowMs: 60_000 },
   frontendAction: { max: 240, windowMs: 60_000 },
   action: { max: 240, windowMs: 60_000 },
+  // Bulk edits spend one unit per task (lib/tasks/bulkSchemas MAX_BULK = 50 per call).
+  bulk: { max: 200, windowMs: 60_000 },
   auth: { max: 10, windowMs: 60_000 },
   setup: { max: 5, windowMs: 60 * 60_000 },
   passwordReset: { max: 5, windowMs: 60 * 60_000 },
@@ -133,7 +136,7 @@ function forwardedClientIp(value: string): string {
   return entry || "unknown";
 }
 
-function checkRateLimitMemory(bucket: Bucket, id: string): boolean {
+function checkRateLimitMemory(bucket: Bucket, id: string, cost = 1): boolean {
   const k = keyFor(bucket, id);
   const { max, windowMs } = limits[bucket];
   const now = Date.now();
@@ -142,7 +145,7 @@ function checkRateLimitMemory(bucket: Bucket, id: string): boolean {
     entry = { count: 0, resetAt: now + windowMs };
     memoryStore.set(k, entry);
   }
-  entry.count += 1;
+  entry.count += cost;
   return entry.count <= max;
 }
 
@@ -155,12 +158,12 @@ export async function checkRateLimit(
 }
 
 /** Check a bucket using a privacy-safe, caller-provided subject key. */
-export async function checkRateLimitById(bucket: Bucket, id: string): Promise<boolean> {
+export async function checkRateLimitById(bucket: Bucket, id: string, cost = 1): Promise<boolean> {
   const redis = getRedisClient();
 
   if (!redis) {
     if (process.env.NODE_ENV === "production" && !allowTestMemoryFallback()) return false;
-    return checkRateLimitMemory(bucket, id);
+    return checkRateLimitMemory(bucket, id, cost);
   }
 
   const k = keyFor(bucket, id);
@@ -170,15 +173,16 @@ export async function checkRateLimitById(bucket: Bucket, id: string): Promise<bo
     // Increment and expiry must be one Redis operation. A pipeline can leave
     // an unexpiring key behind if the process dies between INCR and PEXPIRE.
     const count = await redis.eval(
-      "local c = redis.call('INCR', KEYS[1]); if c == 1 then redis.call('PEXPIRE', KEYS[1], ARGV[1]); end; return c",
+      "local c = redis.call('INCRBY', KEYS[1], ARGV[2]); if c == tonumber(ARGV[2]) then redis.call('PEXPIRE', KEYS[1], ARGV[1]); end; return c",
       1,
       k,
       String(windowMs),
+      String(cost),
     );
     return Number(count) <= max;
   } catch {
     console.warn("[rateLimit] Redis check failed");
     if (process.env.NODE_ENV === "production" && !allowTestMemoryFallback()) return false;
-    return checkRateLimitMemory(bucket, id);
+    return checkRateLimitMemory(bucket, id, cost);
   }
 }

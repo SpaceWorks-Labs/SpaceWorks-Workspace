@@ -27,13 +27,13 @@ export async function makeReportPdf(data: {
   doc.registerFontkit(fontkit);
   const font = await doc.embedFont(
     await readFile(
-      path.join(process.cwd(), "public/brand/fonts/Gilroy-Regular.woff"),
+      path.join(process.cwd(), "public/brand/fonts/Gilroy-Light.woff2"),
     ),
     { features: { liga: false } },
   );
   const strong = await doc.embedFont(
     await readFile(
-      path.join(process.cwd(), "public/brand/fonts/Gilroy-Bold.woff"),
+      path.join(process.cwd(), "public/brand/fonts/Gilroy-ExtraBold.woff2"),
     ),
     { features: { liga: false } },
   );

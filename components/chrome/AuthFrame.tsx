@@ -6,7 +6,7 @@ import { SpaceWorksLogo, SpaceWorksWorkspaceLogo } from "@/components/brand/Spac
 /**
  * Split layout for sign-in, setup, invitation and password pages: the form on
  * the left, a calm brand panel on the right (desktop only). Patch supplies the
- * single bold moment; the accompanying copy stays in Gilroy.
+ * single bold moment; the accompanying copy stays in Outfit.
  */
 export function AuthFrame({ title, description, children, accent = "Make things\ntogether.", centered = false }: { title: ReactNode; description?: ReactNode; children: ReactNode; accent?: string; centered?: boolean }) {
   if (centered) return (

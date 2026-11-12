@@ -13,7 +13,7 @@ function worker() {
     keys: vi.fn(async () => [
       "other-cache",
       "sww-offline-old",
-      "sww-offline-v1",
+      "sww-offline-v2",
     ]),
     delete: vi.fn(async () => true),
   };
@@ -49,7 +49,7 @@ it("pre-caches only public shell assets", async () => {
   expect(w.cache.addAll).toHaveBeenCalledWith([
     "/offline.html",
     "/shell-offline.css",
-    "/brand/fonts/Gilroy-Regular.woff",
+    "/brand/fonts/Gilroy-Light.woff2",
     "/brand/icon-192.png",
   ]);
 });

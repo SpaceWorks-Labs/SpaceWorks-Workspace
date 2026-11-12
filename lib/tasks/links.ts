@@ -25,3 +25,12 @@ export function parseTaskReference(value: string): { key: string | null; number:
   if (!Number.isSafeInteger(number) || number < 1) return null;
   return { key: match[1] ? match[1].toUpperCase() : null, number };
 }
+
+/**
+ * Where a task link should land when the project key in the URL is not the task's
+ * current one (the task moved to another project, or the key was renamed); null when it is already canonical.
+ */
+export function canonicalTaskRedirect(workspaceSlug: string, requestedKey: string, task: { number: number; projectKey: string | null }): string | null {
+  if (task.projectKey && task.projectKey.toUpperCase() === requestedKey.toUpperCase()) return null;
+  return taskUrl(workspaceSlug, task.projectKey, task.number);
+}

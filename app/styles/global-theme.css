@@ -11,36 +11,30 @@
 }
 
 /*
- * Space Works type: Gilroy 400–700 for everything, Unbounded 500 for one
- * short accent phrase per public layout (`.font-accent`). Self-hosted from
- * public/brand/fonts (licences in public/brand/fonts/LICENSES).
+ * Space Works type (Design-Kit, docs/ui-brand-spec.md D): Outfit 400-700 for
+ * body and UI, Gilroy ExtraBold 800 for display headings (Light 300 for light
+ * display text; the only free Gilroy weights), Unbounded 500-600 for one short
+ * accent phrase per public layout (`.font-accent`). Self-hosted from
+ * public/brand/fonts (synced by `npm run tokens:sync`, licences in LICENSES).
  */
 @font-face {
-  font-family: "Gilroy";
-  src: url("/brand/fonts/Gilroy-Regular.woff") format("woff");
-  font-weight: 400;
+  font-family: "Outfit";
+  src: url("/brand/fonts/Outfit-Variable.woff2") format("woff2");
+  font-weight: 400 700;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
   font-family: "Gilroy";
-  src: url("/brand/fonts/Gilroy-Medium.woff") format("woff");
-  font-weight: 500;
+  src: url("/brand/fonts/Gilroy-Light.woff2") format("woff2");
+  font-weight: 300;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
   font-family: "Gilroy";
-  src: url("/brand/fonts/Gilroy-SemiBold.woff") format("woff");
-  font-weight: 600;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Gilroy";
-  src: url("/brand/fonts/Gilroy-Bold.woff") format("woff");
-  /* Bold also answers legacy 800/900 requests so nothing is synthesised. */
-  font-weight: 700;
+  src: url("/brand/fonts/Gilroy-ExtraBold.woff2") format("woff2");
+  font-weight: 800;
   font-style: normal;
   font-display: swap;
 }
@@ -131,9 +125,9 @@
   --color-accent-text: var(--yy-accent-text);
 
   --font-display: "Gilroy", ui-sans-serif, system-ui, sans-serif;
-  --font-sans: "Gilroy", ui-sans-serif, system-ui, sans-serif;
-  --font-accent: "Unbounded", "Gilroy", ui-sans-serif, sans-serif;
-  /* Compatibility alias; all text uses Gilroy, including code and secrets. */
+  --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-accent: "Unbounded", "Outfit", ui-sans-serif, sans-serif;
+  /* Compatibility alias; all text uses Outfit, including code and secrets. */
   --font-mono: var(--font-sans);
 
   /* Controls 10px (`rounded-control`), cards and panels 16px (`rounded-xl`). */
@@ -154,5 +148,12 @@
   --breakpoint-md: 960px;
   --breakpoint-lg: 1200px;
 
-  --ease-yy: cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* Motion tokens come from Design-Kit (app/styles/motion.css). */
+  --ease-yy: var(--sw-ease-standard);
+  --ease-standard: var(--sw-ease-standard);
+  --ease-enter: var(--sw-ease-enter);
+  --ease-exit: var(--sw-ease-exit);
+  --duration-fast: var(--sw-dur-fast);
+  --duration-base: var(--sw-dur-base);
+  --duration-slow: var(--sw-dur-slow);
 }

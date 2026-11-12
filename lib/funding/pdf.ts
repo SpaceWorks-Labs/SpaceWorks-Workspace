@@ -6,7 +6,7 @@ import fontkit from "@pdf-lib/fontkit";
 /** Shared brand font, conservative margins and automatic pagination for saved receipts/reports. */
 export async function createFundingPdf(title: string, paragraphs: string[]) {
   const doc = await PDFDocument.create(); doc.registerFontkit(fontkit);
-  const font = await doc.embedFont(await readFile(path.join(process.cwd(), "public/brand/fonts/Gilroy-Regular.woff")), { subset: true });
+  const font = await doc.embedFont(await readFile(path.join(process.cwd(), "public/brand/fonts/Gilroy-Light.woff2")), { subset: true });
   doc.setTitle(title); doc.setCreator("Space Works Workspace");
   let page = doc.addPage([595.28, 841.89]); let y = 790;
   const ink = rgb(20 / 255, 44 / 255, 42 / 255); const teal = rgb(0, 110 / 255, 99 / 255);

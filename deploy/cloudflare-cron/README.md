@@ -1,5 +1,7 @@
 # Space Works Workspace cron Worker
 
+Cloudflare Cron Trigger that replaces the beat process on free hosting plans. Part of [Space Works Workspace](../../README.md); see also the [documentation index](../../docs/README.md).
+
 A Cloudflare Worker with a Cron Trigger (`* * * * *`). Every minute it:
 
 1. `GET {APP_URL}/api/health` wakes the app if a free instance is asleep

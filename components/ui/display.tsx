@@ -112,7 +112,7 @@ export function Callout({ tone = "info", title, children, action, className, rol
  */
 export function EmptyState({ title, children, action, className, icon, mood, patch }: { title?: ReactNode; children?: ReactNode; action?: ReactNode; className?: string; icon?: ReactNode; mood?: Mood; patch?: PatchPose | true }) {
   return (
-    <div className={cn("flex flex-col items-center gap-2 rounded-xl border border-line bg-panel px-6 py-7 text-center", className)}>
+    <div className={cn("sw-rise-in flex flex-col items-center gap-2 rounded-xl border border-line bg-panel px-6 py-7 text-center", className)}>
       {patch ? <Patch pose={patch === true ? "idle" : patch} size={112} className="mb-2" /> : mood ? <MoodTile mood={mood} size={48} className="yy-face mb-1" /> : null}
       {!patch && icon ? <span aria-hidden className="text-ink-muted [&_svg]:size-5">{icon}</span> : null}
       {title ? <p className="text-label text-ink">{title}</p> : null}
@@ -157,7 +157,7 @@ export function DateBlock({ month, day, tone = "accent", size = "md", series = f
       <span className={cn("block py-0.5 text-xs font-semibold tracking-[0.08em]", size === "lg" && "text-xs", header)}>{month}</span>
       <span
         className={cn(
-          "flex items-center justify-center font-display font-semibold tabular-nums leading-none text-ink",
+          "flex items-center justify-center font-sans font-semibold tabular-nums leading-none text-ink",
           size === "sm" && "h-8 text-xl",
           size === "md" && "h-10 text-2xl",
           size === "lg" && "h-12 text-h1",
@@ -204,7 +204,7 @@ export function StatTile({ label, value, hint, progress, tone = "default", class
 /* ---------- Skeleton ---------- */
 
 export function Skeleton({ className }: { className?: string }) {
-  return <span aria-hidden className={cn("block animate-pulse rounded-md bg-muted", className)} />;
+  return <span aria-hidden className={cn("sw-skeleton block rounded-md bg-muted", className)} />;
 }
 
 /* ---------- Page headings ---------- */
