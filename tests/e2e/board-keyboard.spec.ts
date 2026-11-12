@@ -25,9 +25,13 @@ test.describe("board keyboard interactions", () => {
     await expect(page.getByRole("button", { name: "Add task", exact: true }).first()).toBeFocused();
 
     const card = page.getByRole("article", { name: new RegExp(`First ${core.tag}`) }).getByRole("button").first();
+    // Wait for each live-region announcement, so a fast build never sends a key before the drag is ready.
+    const live = page.locator('[id^="DndLiveRegion"]');
     await card.focus();
     await page.keyboard.press("Space");
+    await expect(live).toContainText("Picked up");
     await page.keyboard.press("ArrowRight");
+    await expect(live).toContainText("moved to In progress");
     await page.keyboard.press("Space");
     await expect.poll(async () => (await core.prisma.task.findFirst({ where: { workspaceId: core.workspaceId, title: `First ${core.tag}` }, include: { column: true } }))?.column?.name).toBe("In progress");
   });

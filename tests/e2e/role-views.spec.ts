@@ -30,9 +30,14 @@ async function settingsTabs(page: Page) {
   return page.locator('nav[aria-label="Workspace settings"] a').allTextContents();
 }
 
+// Split hosting sends each page's reads through the gateway, which the backend limits per client IP
+// (600 requests a minute). Every CI browser shares one IP, so pace the page sweep well below it.
+const PAGE_GAP_MS = process.env.PLAYWRIGHT_SPLIT === "1" ? 1_500 : 0;
+
 /** Every visible link must open: a role never sees a link that 404s for it. */
 async function expectAllOpen(page: Page, hrefs: string[]) {
   for (const href of [...new Set(hrefs.map((h) => h.split("#")[0]!))]) {
+    if (PAGE_GAP_MS) await page.waitForTimeout(PAGE_GAP_MS);
     // Some index pages (chat) move on to a child route at once, which aborts a "load" wait.
     const response = await page.goto(href, { waitUntil: "commit", timeout: 120_000 }).catch(() => null);
     await page.waitForLoadState("load");
