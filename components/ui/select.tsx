@@ -50,7 +50,7 @@ export const SelectContent = forwardRef<ElementRef<typeof SelectPrimitive.Conten
         ref={ref}
         position={position}
         sideOffset={6}
-        className={cn("z-[60] max-h-[min(420px,var(--radix-select-content-available-height))] min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-lg border border-line bg-panel text-ink shadow-float", className)}
+        className={cn("sw-pop z-[60] max-h-[min(420px,var(--radix-select-content-available-height))] min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-lg border border-line bg-panel text-ink shadow-float", className)}
         {...props}
       >
         <SelectPrimitive.Viewport className="p-1.5">{children}</SelectPrimitive.Viewport>

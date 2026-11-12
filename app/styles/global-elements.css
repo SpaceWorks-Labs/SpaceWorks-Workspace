@@ -44,9 +44,10 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Gilroy 600 for headings (never 800), with the brand's tight tracking. */
+  /* In-app headings are Outfit 600 (ui-brand-spec D.3); Gilroy ExtraBold 800 is
+     reserved for the display classes below. Tight tracking per the brand. */
   h1, h2, h3, h4 {
-    font-family: var(--font-display);
+    font-family: var(--font-sans);
     font-weight: 600;
     letter-spacing: -0.01em;
     color: var(--yy-text);
@@ -73,15 +74,15 @@
 
 @layer components {
   /* Type scale (docs/DESIGN.md §2.6). Mobile sizes first, desktop from 640px.
-     Every heading is Gilroy 600; display sizes carry the brand's tighter tracking. */
-  .text-display-xl { font-family: var(--font-display); font-weight: 600; font-size: 44px; line-height: 1.08; letter-spacing: -0.02em; }
-  .text-display-l { font-family: var(--font-display); font-weight: 600; font-size: 34px; line-height: 1.18; letter-spacing: -0.02em; }
-  .text-display-m { font-family: var(--font-display); font-weight: 600; font-size: 34px; line-height: 1.1765; letter-spacing: -0.015em; }
-  .text-h1 { font-family: var(--font-display); font-weight: 600; font-size: 26px; line-height: 1.22; letter-spacing: -0.01em; }
-  .text-h2 { font-family: var(--font-display); font-weight: 600; font-size: 20px; line-height: 1.4; letter-spacing: -0.005em; }
-  .text-h3 { font-family: var(--font-display); font-weight: 600; font-size: 20px; line-height: 1.4; letter-spacing: -0.005em; }
-  .text-h4 { font-family: var(--font-display); font-weight: 600; font-size: 20px; line-height: 1.4; letter-spacing: -0.005em; }
-  .text-stat { font-family: var(--font-display); font-weight: 600; font-size: 32px; line-height: 1.1875; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+     Display sizes are Gilroy ExtraBold 800; headings, titles and stats are Outfit 600. */
+  .text-display-xl { font-family: var(--font-display); font-weight: 800; font-size: 44px; line-height: 1.08; letter-spacing: -0.02em; }
+  .text-display-l { font-family: var(--font-display); font-weight: 800; font-size: 34px; line-height: 1.18; letter-spacing: -0.02em; }
+  .text-display-m { font-family: var(--font-display); font-weight: 800; font-size: 34px; line-height: 1.1765; letter-spacing: -0.015em; }
+  .text-h1 { font-family: var(--font-sans); font-weight: 600; font-size: 26px; line-height: 1.22; letter-spacing: -0.01em; }
+  .text-h2 { font-family: var(--font-sans); font-weight: 600; font-size: 20px; line-height: 1.4; letter-spacing: -0.005em; }
+  .text-h3 { font-family: var(--font-sans); font-weight: 600; font-size: 20px; line-height: 1.4; letter-spacing: -0.005em; }
+  .text-h4 { font-family: var(--font-sans); font-weight: 600; font-size: 20px; line-height: 1.4; letter-spacing: -0.005em; }
+  .text-stat { font-family: var(--font-sans); font-weight: 600; font-size: 32px; line-height: 1.1875; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
   /* Card and sub-section titles inside the app ("Invite someone", "New API client"). */
   .text-title { font-family: var(--font-sans); font-weight: 600; font-size: 16px; line-height: 1.5; }
   .text-body-l { font-size: 16px; line-height: 1.5; }
@@ -157,33 +158,20 @@
 }
 
 .yy-success-in {
-  animation: yy-success-in 240ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: yy-success-in var(--sw-dur-slow) var(--sw-ease-enter) both;
 }
 
-@keyframes yy-fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes yy-dialog-in {
-  /* Centring comes from the `translate` property (Tailwind v4), so the
-     animation only nudges with `transform`; mixing both used to double the
-     offset and make dialogs fly in from the top-left. */
-  from { opacity: 0; transform: translateY(8px) scale(0.98); }
-  to { opacity: 1; transform: none; }
-}
-
-@keyframes yy-toast-in {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
+/* Legacy names kept as aliases of the token-driven keyframes in motion-utilities.css. */
+@keyframes yy-fade-in { from { opacity: 0; } }
+@keyframes yy-dialog-in { from { opacity: 0; transform: scale(var(--sw-pop-scale)); } }
+@keyframes yy-toast-in { from { opacity: 0; transform: translateY(var(--sw-enter-y)); } }
 
 /* Member-written rich text (sanitised HTML from docs and tasks). */
 @layer components {
   .yy-prose { color: var(--yy-text-secondary); font-size: 16px; line-height: 1.6; overflow-wrap: anywhere; }
   .yy-prose > * + * { margin-top: 0.85em; }
-  .yy-prose h2 { font-family: var(--font-display); font-weight: 600; font-size: 24px; line-height: 1.2; color: var(--yy-text); margin-top: 1.4em; }
-  .yy-prose h3 { font-family: var(--font-display); font-weight: 600; font-size: 20px; line-height: 1.25; color: var(--yy-text); margin-top: 1.2em; }
+  .yy-prose h2 { font-family: var(--font-sans); font-weight: 600; font-size: 24px; line-height: 1.2; color: var(--yy-text); margin-top: 1.4em; }
+  .yy-prose h3 { font-family: var(--font-sans); font-weight: 600; font-size: 20px; line-height: 1.25; color: var(--yy-text); margin-top: 1.2em; }
   .yy-prose strong { color: var(--yy-text); font-weight: 700; }
   .yy-prose a { color: var(--yy-accent-text); text-decoration: underline; text-underline-offset: 3px; }
   .yy-prose ul { list-style: disc; padding-left: 1.4em; }
@@ -224,12 +212,12 @@
 .yy-theme-fade *::before,
 .yy-theme-fade *::after {
   transition-property: background-color, border-color, color, fill, stroke, box-shadow !important;
-  transition-duration: 120ms !important;
-  transition-timing-function: cubic-bezier(0.45, 0, 0.2, 1) !important;
+  transition-duration: var(--sw-dur-fast) !important;
+  transition-timing-function: var(--sw-ease-standard) !important;
 }
 
 .yy-mode-icon {
-  transition: transform 200ms ease-out, opacity 120ms ease-out;
+  transition: transform var(--sw-dur-base) var(--sw-ease-enter), opacity var(--sw-dur-fast) var(--sw-ease-enter);
 }
 
 /* BrandLoader (components/brand/BrandLoader.tsx): the three dots hop one after

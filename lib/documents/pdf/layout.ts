@@ -16,13 +16,13 @@ export async function createDocumentLayout(s: DocumentSnapshot) {
   pdf.registerFontkit(fontkit);
   const font = await pdf.embedFont(
     await readFile(
-      path.join(process.cwd(), "public/brand/fonts/Gilroy-Regular.woff"),
+      path.join(process.cwd(), "public/brand/fonts/Gilroy-Light.woff2"),
     ),
     { subset: true, features: { liga: false } },
   );
   const bold = await pdf.embedFont(
     await readFile(
-      path.join(process.cwd(), "public/brand/fonts/Gilroy-Bold.woff"),
+      path.join(process.cwd(), "public/brand/fonts/Gilroy-ExtraBold.woff2"),
     ),
     { subset: true, features: { liga: false } },
   );

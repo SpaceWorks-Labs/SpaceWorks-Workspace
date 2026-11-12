@@ -22,7 +22,7 @@ export const MenuContent = forwardRef<ElementRef<typeof DropdownMenuPrimitive.Co
         ref={ref}
         sideOffset={sideOffset}
         align={align}
-        className={cn("z-50 min-w-[200px] overflow-hidden rounded-lg border border-line bg-panel p-1.5 text-ink shadow-float", className)}
+        className={cn("sw-pop z-50 min-w-[200px] overflow-hidden rounded-lg border border-line bg-panel p-1.5 text-ink shadow-float", className)}
         {...props}
       />
     </DropdownMenuPrimitive.Portal>
@@ -78,7 +78,7 @@ export function Tooltip({ content, children, side = "top" }: { content: ReactNod
     <TooltipPrimitive.Root delayDuration={300}>
       <TooltipPrimitive.Trigger asChild>{children}</TooltipPrimitive.Trigger>
       <TooltipPrimitive.Portal>
-        <TooltipPrimitive.Content side={side} sideOffset={6} className="z-50 max-w-[280px] rounded-md bg-inverse px-2.5 py-1.5 text-caption text-on-inverse shadow-float">
+        <TooltipPrimitive.Content side={side} sideOffset={6} className="sw-pop z-50 max-w-[280px] rounded-md bg-inverse px-2.5 py-1.5 text-caption text-on-inverse shadow-float">
           {content}
         </TooltipPrimitive.Content>
       </TooltipPrimitive.Portal>
@@ -102,7 +102,7 @@ export const PopoverContent = forwardRef<ElementRef<typeof PopoverPrimitive.Cont
         ref={ref}
         sideOffset={sideOffset}
         align={align}
-        className={cn("z-50 rounded-lg border border-line bg-panel p-3 text-ink shadow-float focus:outline-none", className)}
+        className={cn("sw-pop z-50 rounded-lg border border-line bg-panel p-3 text-ink shadow-float focus:outline-none", className)}
         {...props}
       />
     </PopoverPrimitive.Portal>

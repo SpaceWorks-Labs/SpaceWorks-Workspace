@@ -1,8 +1,8 @@
-const SHELL_CACHE = "sww-offline-v1";
+const SHELL_CACHE = "sww-offline-v2";
 const PUBLIC_SHELL = [
   "/offline.html",
   "/shell-offline.css",
-  "/brand/fonts/Gilroy-Regular.woff",
+  "/brand/fonts/Gilroy-Light.woff2",
   "/brand/icon-192.png",
 ];
 self.addEventListener("install", (event) => {

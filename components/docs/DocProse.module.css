@@ -1,6 +1,6 @@
 /*
  * Doc body typography for the editor and read-only renders (history,
- * previews). Tokens only (app/styles/tokens.css); Gilroy for text, the
+ * previews). Tokens only (app/styles/tokens.css); Outfit for text, the
  * system monospace face only inside code.
  */
 
@@ -24,7 +24,7 @@
 .prose h2,
 .prose h3,
 .prose h4 {
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   font-weight: 600;
   color: var(--yy-text);
   letter-spacing: -0.01em;

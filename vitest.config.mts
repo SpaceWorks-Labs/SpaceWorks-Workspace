@@ -13,6 +13,7 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["tests/unit/**/*.test.ts"],
+    exclude: ["**/node_modules/**", "design-kit/**"],
     // Hermetic base URL, whatever a developer's shell or .env sets.
     env: {
       NEXT_PUBLIC_BASE_URL: "http://localhost:3100",

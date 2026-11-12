@@ -1,6 +1,7 @@
 @font-face {
   font-family: Gilroy;
-  src: url("/brand/fonts/Gilroy-Regular.woff") format("woff");
+  src: url("/brand/fonts/Gilroy-Light.woff2") format("woff2");
+  font-weight: 300;
   font-display: swap;
 }
 :root {
@@ -22,7 +23,7 @@ main {
   padding: 24px;
 }
 h1 {
-  font-weight: 600;
+  font-weight: 300;
 }
 a {
   display: inline-flex;

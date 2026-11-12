@@ -13,6 +13,6 @@ design system (https://github.com/SpaceWorks-Labs/SpaceWorks-Design).
 
 Fonts in public/brand/fonts keep their own licences and are not covered by
 the AGPL (see public/brand/fonts/LICENSES):
-- Gilroy, by Radomir Tinkov, used under its own licence.
+- Gilroy (Light and ExtraBold only), by Radomir Tinkov, used under its free-font licence; Outfit and Unbounded under the SIL OFL 1.1. All from the Space Works Design-Kit.
 - Unbounded, Copyright 2022 The Unbounded Project Authors, licensed under the
   SIL Open Font License, Version 1.1.

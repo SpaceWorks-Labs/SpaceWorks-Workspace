@@ -259,7 +259,7 @@ export function DocEditor({
             editor?.chain().focus("start").run();
           }
         }}
-        className="w-full resize-none overflow-hidden bg-transparent font-display text-h1 text-ink placeholder:text-ink-muted focus:outline-none"
+        className="w-full resize-none overflow-hidden bg-transparent font-sans text-h1 text-ink placeholder:text-ink-muted focus:outline-none"
       />
 
       {canEdit && editor && !archived ? (

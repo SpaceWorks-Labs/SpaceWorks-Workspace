@@ -13,7 +13,7 @@ export const Tabs = TabsPrimitive.Root;
 
 const tabListClasses = "flex gap-1 overflow-x-auto border-b border-line [scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
 const tabClasses =
-  "relative inline-flex min-h-11 shrink-0 items-center gap-1.5 whitespace-nowrap px-3 text-sm font-semibold text-ink-muted transition-colors duration-[120ms] ease-yy hover:text-ink after:absolute after:inset-x-3 after:-bottom-px after:h-0.5 after:rounded-full after:bg-transparent [&_svg]:size-4";
+  "relative inline-flex min-h-11 shrink-0 items-center gap-1.5 whitespace-nowrap px-3 text-sm font-semibold text-ink-muted transition-colors duration-[var(--sw-dur-fast)] ease-[var(--sw-ease-standard)] hover:text-ink after:absolute after:inset-x-3 after:-bottom-px after:h-0.5 after:origin-center after:scale-x-0 after:rounded-full after:bg-transparent after:transition-[transform,background-color] after:duration-[var(--sw-dur-base)] after:ease-[var(--sw-ease-enter)] [&_svg]:size-4";
 
 /**
  * Tab rows scroll sideways on narrow screens. These hints show a faded arrow
@@ -79,7 +79,7 @@ function ScrollHint({ side, visible, onClick }: { side: "left" | "right"; visibl
   return (
     <span
       className={cn(
-        "pointer-events-none absolute inset-y-0 z-[1] flex items-center transition-opacity duration-[200ms] ease-yy",
+        "pointer-events-none absolute inset-y-0 z-[1] flex items-center transition-opacity duration-[var(--sw-dur-fast)] ease-[var(--sw-ease-standard)]",
         side === "left" ? "left-0 bg-gradient-to-r from-canvas from-55% to-transparent pr-6" : "right-0 justify-end bg-gradient-to-l from-canvas from-55% to-transparent pl-6",
         visible ? "opacity-100" : "opacity-0",
       )}
@@ -122,7 +122,7 @@ export const TabsTrigger = forwardRef<
   return (
     <TabsPrimitive.Trigger
       ref={ref}
-      className={cn(tabClasses, "data-[state=active]:text-ink", accent ? "data-[state=active]:after:bg-accent-text" : "data-[state=active]:after:bg-[rgb(var(--sw-color-accent-ink))]", className)}
+      className={cn(tabClasses, "data-[state=active]:text-ink data-[state=active]:after:scale-x-100", accent ? "data-[state=active]:after:bg-accent-text" : "data-[state=active]:after:bg-[rgb(var(--sw-color-accent-ink))]", className)}
       {...props}
     />
   );
@@ -147,7 +147,7 @@ export function NavTabs({ items, label, className }: { items: Array<{ href: stri
             key={item.href}
             href={item.href}
             aria-current={item.active ? "page" : undefined}
-            className={cn(tabClasses, item.active && "text-ink after:bg-accent-text")}
+            className={cn(tabClasses, item.active && "text-ink after:scale-x-100 after:bg-accent-text")}
           >
             {item.label}
           </Link>

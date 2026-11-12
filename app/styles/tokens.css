@@ -5,7 +5,7 @@
  * shadow, and motion value used by components comes from here; components
  * never hard-code hex values.
  *
- * Source of truth: SpaceWorks-Labs/SpaceWorks-Design (`tokens/tokens.css`,
+ * Source of truth: SpaceWorks-Labs/Design-Kit, the `design-kit/` submodule (`tokens/tokens.json`,
  * `docs/ui-brand-spec.md`). The `--yy-` prefix matches Space Works Events so
  * utilities stay interchangeable between the two apps; the values are Space Works.
  * Every text/background pair below reaches WCAG AA (4.5:1); disabled text is
@@ -106,7 +106,7 @@
   --yy-shadow-float: 0 2px 6px rgb(var(--sw-shadow-color) / 0.06), 0 12px 32px rgb(var(--sw-shadow-color) / 0.1);
   --yy-shadow-segment: 0 0 0 1px var(--yy-border-strong);
 
-  --yy-overlay: rgb(var(--sw-shadow-color) / 0.48);
+  --yy-overlay: rgb(var(--sw-color-scrim) / 0.48);
 
   /* Focus ring colour */
   --yy-focus: rgb(var(--sw-color-focus));
