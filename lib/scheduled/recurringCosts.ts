@@ -1,4 +1,5 @@
 import "server-only";
+import { workspacesWithoutModule } from "@/lib/modules-server";
 import { recordAuditEvent } from "@/lib/audit";
 import { prisma } from "@/lib/db";
 import { FinanceError, lockFinance } from "@/lib/finance/tools/access";
@@ -9,10 +10,11 @@ import {
 import { localDate } from "@/lib/finance/dates";
 import { dispatch } from "@/lib/notify";
 export async function run(now = new Date()) {
+  const off = await workspacesWithoutModule("finance");
   let cursor: string | undefined;
   for (;;) {
     const spaces = await prisma.workspace.findMany({
-      where: { archivedAt: null },
+      where: { archivedAt: null, id: { notIn: off } },
       select: { id: true, slug: true, timezone: true },
       orderBy: { id: "asc" },
       take: 50,

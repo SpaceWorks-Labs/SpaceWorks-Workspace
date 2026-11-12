@@ -14,7 +14,7 @@ async function once(workspaceId: string, key: string, event: AnyNotificationEven
  }); await after?.();
 }
 export async function run(now: Date) {
- const workspaces = await prisma.workspace.findMany({ where: { archivedAt: null }, select: { id: true, slug: true } });
+ const workspaces = await prisma.workspace.findMany({ where: { status: "ACTIVE", archivedAt: null }, select: { id: true, slug: true } });
  for (const ws of workspaces) {
   const admins = await memberIdsAtLeast(prisma, ws.id, "ADMIN");
   const subscriptions = await prisma.subscription.findMany({ where: { workspaceId: ws.id, status: { in: ["ACTIVE", "CANCELLING"] }, nextRenewalAt: { not: null } } });

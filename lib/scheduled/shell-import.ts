@@ -32,7 +32,7 @@ export async function processImport(now: Date): Promise<boolean> {
               userId: job.requestedById,
               status: "ACTIVE",
               user: { disabledAt: null },
-              workspace: { archivedAt: null },
+              workspace: { status: "ACTIVE", archivedAt: null },
             },
           })
         : null;

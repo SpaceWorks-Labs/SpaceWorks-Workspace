@@ -64,14 +64,15 @@ export async function consumeShare(capability: string, now = new Date()) {
     await tx.$queryRaw`SELECT "id" FROM "SecretShare" WHERE "capabilityHash"=${hash} FOR UPDATE`;
     const row = await tx.secretShare.findUnique({
       where: { capabilityHash: hash },
-      include: { workspace: { select: { archivedAt: true } } },
+      include: { workspace: { select: { archivedAt: true, status: true } } },
     });
     if (
       !row ||
       !safeEqual(row.capabilityHash, hash) ||
       row.expiresAt <= now ||
       row.remainingViews < 1 ||
-      row.workspace.archivedAt
+      row.workspace.archivedAt ||
+      row.workspace.status !== "ACTIVE"
     )
       throw new SecretsError(
         "This share has expired or has already been viewed.",

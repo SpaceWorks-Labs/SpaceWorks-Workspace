@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma, type DbClient } from "@/lib/db";
+import { activeMemberOrSuperAdmin } from "@/lib/accessMember";
 import {
   canViewAnalytics,
   canManageAnalytics,
@@ -10,7 +11,7 @@ import type { WorkspaceRole, Workspace } from "@prisma/client";
 export type Actor = {
   user: { id: string };
   workspace: { id: string; slug: string; timezone: string };
-  membership: { role: WorkspaceRole };
+  membership: { role: WorkspaceRole; viaSuperAdmin?: boolean };
 };
 export class AnalyticsError extends Error {}
 export type Access = {
@@ -28,28 +29,18 @@ export async function analyticsAccess(
   actor: Actor,
   client: DbClient = prisma,
 ): Promise<Access> {
-  const member = await client.membership.findFirst({
-    where: {
-      workspaceId: actor.workspace.id,
-      userId: actor.user.id,
-      status: "ACTIVE",
-      user: { disabledAt: null },
-      workspace: { archivedAt: null },
+  const found = await activeMemberOrSuperAdmin(client, actor);
+  const member = found && {
+    role: found.role,
+    workspace: {
+      id: found.workspace.id,
+      slug: found.workspace.slug,
+      name: found.workspace.name,
+      currency: found.workspace.currency,
+      timezone: found.workspace.timezone,
+      financeVisibleToMembers: found.workspace.financeVisibleToMembers,
     },
-    select: {
-      role: true,
-      workspace: {
-        select: {
-          id: true,
-          slug: true,
-          name: true,
-          currency: true,
-          timezone: true,
-          financeVisibleToMembers: true,
-        },
-      },
-    },
-  });
+  };
   if (!member || !canViewAnalytics(member))
     throw new AnalyticsError(
       "That report is unavailable. Refresh and try again.",

@@ -4,7 +4,7 @@ import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import type { Principal } from "@/lib/assistant/principal";
-import { executeTool, toolJsonSchema, toolsFor } from "@/lib/assistant/tools";
+import { executeTool, toolJsonSchema, toolsForWorkspace } from "@/lib/assistant/tools";
 
 /**
  * The Space Works MCP server: the same `sw_*` tools as the web assistant,
@@ -22,7 +22,7 @@ export function createMcpServer(principal: Principal): Server {
   );
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
-    tools: toolsFor(principal, { requireMcp: true }).map((tool) => ({
+    tools: (await toolsForWorkspace(principal, { requireMcp: true })).map((tool) => ({
       name: tool.name,
       title: tool.title,
       description: tool.description,

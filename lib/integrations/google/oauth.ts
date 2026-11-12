@@ -19,7 +19,7 @@ export async function beginGoogle(workspaceId: string, userId: string, slug: str
 export async function consumeOAuthState(state: string, userId: string, provider: "GOOGLE" | "GITHUB") {
   if (!state || state.length > 128) return null;
   return prisma.$transaction(async tx => {
-    const row = await tx.oAuthState.findFirst({ where: { stateHash: sha256Hex(state), userId, provider, expiresAt: { gt: new Date() }, workspace: { archivedAt: null } } });
+    const row = await tx.oAuthState.findFirst({ where: { stateHash: sha256Hex(state), userId, provider, expiresAt: { gt: new Date() }, workspace: { status: "ACTIVE", archivedAt: null } } });
     if (!row || !await tx.membership.findFirst({ where: { workspaceId: row.workspaceId, userId, role: { in: provider === "GOOGLE" ? ["OWNER", "ADMIN", "MEMBER"] : ["OWNER", "ADMIN"] }, status: "ACTIVE", user: { disabledAt: null } } })) return null;
     const claim = await tx.oAuthState.deleteMany({ where: { id: row.id, workspaceId: row.workspaceId, userId } }); return claim.count ? row : null;
   });

@@ -62,7 +62,17 @@ export type SecretPurpose =
   | "app-review-account-proxy"
   | "app-review-app-proxy"
   | "app-review-slack-token"
-  | "app-review-slack-signing";
+  | "app-review-slack-signing"
+  /** WorkspaceEmailSettings.passwordEnc. */
+  | "workspace-smtp"
+  /** PaymentProviderAccount.credentialsEnc. */
+  | "payment-credentials"
+  /** WorkspaceAnalyticsConnection.secretEnc. */
+  | "workspace-analytics"
+  /** Campaign link and unsubscribe tokens. */
+  | "campaign.link"
+  /** CampaignSettings.bounceWebhookSecretEnc and bounce tokens. */
+  | "campaign.bounce";
 
 const PURPOSE_INFO: Record<SecretPurpose, string> = {
   "safeguarding-details":"sww-safeguarding-details-v1",
@@ -91,10 +101,15 @@ const PURPOSE_INFO: Record<SecretPurpose, string> = {
   "monitor-secrets": "sww-monitor-secrets-v1",
   "member-emergency": "sww-member-emergency-v1",
   "sso-secrets": "sww-sso-secrets-v1",
+  "workspace-smtp": "sww-workspace-smtp-v1",
+  "payment-credentials": "sww-payment-credentials-v1",
+  "workspace-analytics": "sww-workspace-analytics-v1",
+  "campaign.link": "sww-campaign-link-v1",
+  "campaign.bounce": "sww-campaign-bounce-v1",
 };
 
 /** Third-party credentials use INTEGRATION_ENCRYPTION_KEY when set. */
-const INTEGRATION_PURPOSES = new Set<SecretPurpose>(["integration-tokens", "messaging-credentials", "notification-secrets", "cloud-credentials", "monitor-secrets", "sso-secrets"]);
+const INTEGRATION_PURPOSES = new Set<SecretPurpose>(["integration-tokens", "messaging-credentials", "notification-secrets", "cloud-credentials", "monitor-secrets", "sso-secrets", "workspace-smtp", "payment-credentials", "workspace-analytics", "campaign.bounce"]);
 
 function rootKeyFor(purpose: SecretPurpose): Buffer {
   if ((purpose.startsWith("social-") || purpose.startsWith("app-review-") || INTEGRATION_PURPOSES.has(purpose)) && process.env.INTEGRATION_ENCRYPTION_KEY) {

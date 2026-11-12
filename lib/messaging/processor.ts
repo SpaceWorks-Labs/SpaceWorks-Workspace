@@ -73,7 +73,7 @@ export async function processInboundMessage(connection: MessagingConnection, mes
 /** Durable inbound queue, drained by the outbox scheduler. A lease allows recovery after a crash. */
 export async function processInboundBatch(now = new Date()) {
   const available = { status: { in: ["RECEIVED", "FAILED"] as ("RECEIVED" | "FAILED")[] }, OR: [{ processedAt: null }, { processedAt: { lt: new Date(now.getTime() - 300000) } }] };
-  const rows = await prisma.inboundEvent.findMany({ where: { ...available, connection: { status: "ACTIVE", lastVerifiedAt: { not: null }, workspace: { archivedAt: null } } }, include: { connection: true }, orderBy: { receivedAt: "asc" }, take: 25 });
+  const rows = await prisma.inboundEvent.findMany({ where: { ...available, connection: { status: "ACTIVE", lastVerifiedAt: { not: null }, workspace: { status: "ACTIVE", archivedAt: null } } }, include: { connection: true }, orderBy: { receivedAt: "asc" }, take: 25 });
   for (const row of rows) {
     const payload = row.payload as unknown as InboundMessage & { attempts?: number };
     const attempts = (payload.attempts ?? 0) + 1;

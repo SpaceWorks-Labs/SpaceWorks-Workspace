@@ -1,0 +1,32 @@
+# Prometheus scrape configuration for Space Works.
+# Put the token from /admin/observability (Prometheus metrics, "Create token") in
+# /etc/prometheus/spaceworks.token (file contains only the token, mode 0400).
+rule_files:
+  - alerts.yml
+
+scrape_configs:
+  - job_name: spaceworks-web
+    metrics_path: /api/metrics
+    scheme: https
+    scrape_interval: 30s
+    authorization:
+      type: Bearer
+      credentials_file: /etc/prometheus/spaceworks.token
+    static_configs:
+      # The backend host: the API host (PUBLIC_HOST) in the split VPS layout.
+      - targets: ["workspace.example.org"]
+
+  # Worker and beat serve /metrics on JOBS_HEALTH_PORT, protected by the same token.
+  # They publish no ports: on the VPS, attach Prometheus to the Compose `sww_edge`
+  # network; on Kubernetes, scrape the pods' `health` port (3460).
+  - job_name: spaceworks-worker
+    metrics_path: /metrics
+    scrape_interval: 30s
+    authorization:
+      type: Bearer
+      credentials_file: /etc/prometheus/spaceworks.token
+    static_configs:
+      - targets: ["worker:3460"]
+        labels: { role: worker }
+      - targets: ["beat:3460"]
+        labels: { role: beat }

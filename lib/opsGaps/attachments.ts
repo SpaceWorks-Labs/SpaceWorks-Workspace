@@ -44,11 +44,11 @@ export async function attachFiles(actor:OpsActor,input:{kind:unknown;recordId:un
  });}catch(error){await deleteObjects(stored).catch(()=>undefined);throw error;}
 }
 /** Called by the authorised file route. Reserved-folder orphans fail closed. */
-export async function canDownloadOpsFile(file:{id:string;workspaceId:string;folder?:string},userId:string,role:WorkspaceRole){
+export async function canDownloadOpsFile(file:{id:string;workspaceId:string;folder?:string},userId:string,role:WorkspaceRole,viaSuperAdmin=false){
  const link=await prisma.opsAttachment.findFirst({where:{workspaceId:file.workspaceId,fileId:file.id}});
  if(!link)return file.folder!==OPS_FILE_FOLDER&&!file.folder?.startsWith(`${OPS_FILE_FOLDER}/`);
  if(role==="GUEST")return false;
  const kind=kindSchema.safeParse(link.kind);if(!kind.success)return false;
- const actor={user:{id:userId,name:null},workspace:{id:file.workspaceId,slug:"",name:"",timezone:"UTC"},membership:{role}};
+ const actor={user:{id:userId,name:null},workspace:{id:file.workspaceId,slug:"",name:"",timezone:"UTC"},membership:{role,...(viaSuperAdmin?{viaSuperAdmin:true}:{})}};
  return canReadRecord(actor,kind.data,link.recordId);
 }

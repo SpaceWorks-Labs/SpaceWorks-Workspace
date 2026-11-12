@@ -35,7 +35,7 @@ export async function listForms(actor: OpsActor) {
 }
 export async function publicForm(token: string) {
  if (!/^[A-Za-z0-9_-]{40,100}$/.test(token)) return null;
- return prisma.form.findFirst({ where: { publicSlug: sha256Hex(token), visibility: "PUBLIC_LINK", workspace: { archivedAt: null } }, select: { id: true, workspaceId: true, title: true, description: true, fields: true, closesAt: true, maxResponses: true } });
+ return prisma.form.findFirst({ where: { publicSlug: sha256Hex(token), visibility: "PUBLIC_LINK", workspace: { status: "ACTIVE", archivedAt: null } }, select: { id: true, workspaceId: true, title: true, description: true, fields: true, closesAt: true, maxResponses: true } });
 }
 export async function submitForm(input: { token?: string; formId?: string; actor?: OpsActor; answers: unknown; honeypot?: string; ip: string }, now = new Date()) {
  // Honeypot responses appear successful without storing untrusted payloads.
@@ -50,7 +50,7 @@ export async function submitForm(input: { token?: string; formId?: string; actor
  const answers = parse(answerSchema(fields), input.answers) as Prisma.InputJsonValue;
  const after = await prisma.$transaction(async tx => {
   await tx.$queryRaw`SELECT "id" FROM "Form" WHERE "id"=${form.id} AND "workspaceId"=${form.workspaceId} FOR UPDATE`;
-  const current = await tx.form.findFirst({ where: { id: form.id, workspaceId: form.workspaceId, workspace: { archivedAt: null }, ...(input.token ? { publicSlug: sha256Hex(input.token), visibility: "PUBLIC_LINK" } : {}) }, include: { workspace: { select: { slug: true } } } });
+  const current = await tx.form.findFirst({ where: { id: form.id, workspaceId: form.workspaceId, workspace: { status: "ACTIVE", archivedAt: null }, ...(input.token ? { publicSlug: sha256Hex(input.token), visibility: "PUBLIC_LINK" } : {}) }, include: { workspace: { select: { slug: true } } } });
   if (!current || (current.closesAt && current.closesAt <= now)) throw new OpsError("This form is closed.");
   if (current.maxResponses && await tx.formSubmission.count({ where: { formId: current.id, form: { workspaceId: current.workspaceId } } }) >= current.maxResponses) throw new OpsError("This form has reached its response limit.");
   // Persisted per-form limit holds across replicas even without a Redis fallback.

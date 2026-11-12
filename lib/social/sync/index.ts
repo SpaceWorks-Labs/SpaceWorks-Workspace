@@ -12,7 +12,7 @@ import { linkedinSync } from "../providers/linkedin";
 import { xSync } from "../providers/x";
 export async function claimAccount(workspaceId: string, accountId: string, now = new Date(), manual = false) {
   const leaseToken = randomUUID();
-  const claimed = await prisma.socialAccount.updateMany({ where: { workspaceId, id: accountId, status: { in: ["ACTIVE", "DEGRADED"] }, workspace: { archivedAt: null }, nextSyncAt: { lte: now }, OR: [{ leaseUntil: null }, { leaseUntil: { lt: now } }] }, data: { leaseToken, leaseUntil: new Date(now.getTime() + 600000), ...(manual ? { nextSyncAt: new Date(now.getTime() + 900000) } : {}) } });
+  const claimed = await prisma.socialAccount.updateMany({ where: { workspaceId, id: accountId, status: { in: ["ACTIVE", "DEGRADED"] }, workspace: { status: "ACTIVE", archivedAt: null }, nextSyncAt: { lte: now }, OR: [{ leaseUntil: null }, { leaseUntil: { lt: now } }] }, data: { leaseToken, leaseUntil: new Date(now.getTime() + 600000), ...(manual ? { nextSyncAt: new Date(now.getTime() + 900000) } : {}) } });
   return claimed.count ? leaseToken : null;
 }
 export async function persistSnapshot(account: SocialAccount, batch: Snapshot, now: Date, leaseToken: string) {

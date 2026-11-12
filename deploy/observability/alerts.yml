@@ -1,0 +1,45 @@
+# Database, Redis and outbox gauges are measured by the web process only; worker
+# and beat export them as 0, so those rules select job="spaceworks-web".
+groups:
+  - name: spaceworks
+    rules:
+      - alert: SpaceWorksDown
+        expr: up{job="spaceworks-web"} == 0
+        for: 3m
+        labels: { severity: critical }
+        annotations: { summary: "Space Works web is not answering scrapes" }
+      - alert: SpaceWorksDatabaseDown
+        expr: sww_db_up{job="spaceworks-web"} == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations: { summary: "PostgreSQL is not reachable from the app" }
+      - alert: SpaceWorksRedisDown
+        expr: sww_redis_up{job="spaceworks-web"} == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations: { summary: "Redis is not reachable from the app" }
+      - alert: SpaceWorksOutboxBacklog
+        expr: sww_outbox_oldest_pending_age_seconds{job="spaceworks-web"} > 900
+        for: 10m
+        labels: { severity: warning }
+        annotations: { summary: "The oldest pending email is over 15 minutes old" }
+      - alert: SpaceWorksOutboxFailures
+        expr: sww_outbox_messages{status="failed"} > 0
+        for: 15m
+        labels: { severity: warning }
+        annotations: { summary: "Failed emails are waiting in the outbox" }
+      - alert: SpaceWorksJobsFailing
+        expr: sum(sww_jobs{state="failed"}) > 20
+        for: 10m
+        labels: { severity: warning }
+        annotations: { summary: "Many background jobs are in the failed set" }
+      - alert: SpaceWorksJobsStuck
+        expr: sum by (queue) (sww_jobs{state="waiting"}) > 100
+        for: 15m
+        labels: { severity: warning }
+        annotations: { summary: "A job queue has a growing backlog; check the worker" }
+      - alert: SpaceWorksServerErrors
+        expr: sum(rate(sww_http_requests_total{status_class="5xx"}[5m])) / sum(rate(sww_http_requests_total[5m])) > 0.05
+        for: 10m
+        labels: { severity: warning }
+        annotations: { summary: "More than 5% of instrumented requests are failing" }

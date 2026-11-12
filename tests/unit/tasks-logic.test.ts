@@ -104,7 +104,7 @@ describe("filters", () => {
 
   it("parses and serialises URL state", () => {
     const query = parseTaskQuery(new URLSearchParams("assignee=me,none&label=hw&priority=high,bogus&due=overdue&q=%20pid%20&view=list&sort=due&group=assignee"));
-    expect(query.filters).toEqual({ assignees: ["me", "none"], labels: ["hw"], types: [], priorities: ["HIGH"], due: "overdue", q: "pid" });
+    expect(query.filters).toEqual({ assignees: ["me", "none"], creators: [], labels: ["hw"], types: [], priorities: ["HIGH"], due: "overdue", q: "pid" });
     expect(query).toMatchObject({ view: "list", sort: "due", group: "assignee" });
     expect(parseTaskQuery(taskQueryToParams(query))).toEqual(query);
     expect(activeFilterCount(query.filters)).toBe(6);

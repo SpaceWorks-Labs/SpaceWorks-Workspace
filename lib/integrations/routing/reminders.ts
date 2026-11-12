@@ -7,7 +7,7 @@ import type { NotificationEvent } from "@/lib/notify/types";
 
 /** Repeat the latest warning/critical event in a thread until superseded, for at most seven days. */
 export async function sendRoutingReminders(now = new Date()) {
-  const rules = await prisma.notificationRule.findMany({ where: { enabled: true, reminderIntervalMin: { gt: 0 }, workspace: { archivedAt: null } }, include: { destinations: { where: { destination: { enabled: true } }, select: { destinationId: true } } }, take: 100 });
+  const rules = await prisma.notificationRule.findMany({ where: { enabled: true, reminderIntervalMin: { gt: 0 }, workspace: { status: "ACTIVE", archivedAt: null } }, include: { destinations: { where: { destination: { enabled: true } }, select: { destinationId: true } } }, take: 100 });
   for (const rule of rules) {
     const deliveries = await prisma.notificationDelivery.findMany({ where: { workspaceId: rule.workspaceId, ruleId: rule.id, status: "SENT", isTest: false, event: { reminderOf: null, threadKey: { not: null }, severity: { in: ["WARNING", "CRITICAL"] }, createdAt: { gt: new Date(now.getTime() - 7 * 86400000), lt: new Date(now.getTime() - rule.reminderIntervalMin * 60000) } } }, include: { event: true }, distinct: ["eventId"], orderBy: { createdAt: "desc" }, take: 25 });
     for (const { event } of deliveries) {

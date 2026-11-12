@@ -59,7 +59,7 @@ beforeAll(async () => {
 afterAll(async () => {
   const files = await prisma.fileObject.findMany({ where: { workspace: { slug: { in: [slugA, slugB] } } }, select: { storageKey: true } });
   await deleteObjects(files.map((f) => f.storageKey));
-  await prisma.outboxMessage.deleteMany({ where: { kind: "email", payload: { path: ["to"], equals: `client${domain}` } } });
+  await prisma.outboxMessage.deleteMany({ where: { kind: { in: ["email", "invoice.email"] }, payload: { path: ["to"], equals: `client${domain}` } } });
   await cleanup([slugA, slugB], domain);
   await prisma.$disconnect();
 });
@@ -177,9 +177,9 @@ describe.sequential("invoices and totals", () => {
   });
   it("queues a complete invoice email without copying finance into global search", async () => {
     const id = await newInvoice();
-    const before = await prisma.outboxMessage.count({ where: { kind: "email" } });
+    const before = await prisma.outboxMessage.count({ where: { kind: "invoice.email" } });
     expect(await service.sendInvoice(ctx, id, { email: true })).toMatchObject({ ok: true, data: { emailed: true } });
-    expect(await prisma.outboxMessage.count({ where: { kind: "email" } })).toBe(before + 1);
+    expect(await prisma.outboxMessage.count({ where: { kind: "invoice.email" } })).toBe(before + 1);
     expect(await prisma.searchDocument.findFirst({ where: { workspaceId: ctx.workspace.id, entityType: "invoice", entityId: id } })).toBeNull();
   });
   it("counts only the workspace currency and ignores voided money", async () => {

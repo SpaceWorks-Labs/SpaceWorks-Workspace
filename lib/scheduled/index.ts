@@ -31,6 +31,8 @@ import { run as people } from "@/lib/scheduled/people";
 import { run as opsMoney } from "@/lib/scheduled/opsMoney";
 import { run as collaboration } from "@/lib/scheduled/collaboration";
 import { run as shell } from "@/lib/scheduled/shell";
+import { run as campaigns } from "@/lib/scheduled/campaigns";
+import { run as makerspace } from "@/lib/scheduled/makerspace";
 
 /**
  * Periodic jobs, one module per build area. Each area replaces the body of
@@ -65,6 +67,8 @@ export const SCHEDULED_JOBS: ReadonlyArray<JobDefinition> = [
   { area: "ops-money", run: opsMoney },
   { area: "work-collaboration", run: collaboration },
   { area: "platform-shell", run: shell },
+  { area: "campaigns", schedule: { every: 10_000 }, run: campaigns },
+  { area: "makerspace", schedule: { every: 3_600_000 }, run: makerspace },
   { area: "monitor-checks", queue: "monitor", schedule: { every: 5_000 }, run: async () => { await runDueChecks({ claimWindowMs: 0, maxRetryWaitMs: 5_000 }); } },
   { area: "outbox-relay", queue: "outbox", schedule: { every: 5_000 }, run: async () => { await enqueueDueOutbox(); } },
   { area: "operational-retention", schedule: { pattern: "0 0 * * *", tz: "UTC" }, run: async () => { await purgeExpiredOperationalData(); } },

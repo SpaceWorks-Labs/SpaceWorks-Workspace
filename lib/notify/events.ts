@@ -187,6 +187,15 @@ export const EVENT_CATALOG = {
   "import.finished": s("operations", "Import finished", "personal", "info", "MEMBER"),
   "security.new_login": s("security", "New sign-in", "personal", "warning"),
   "destination.failing": s("security", "Notification destination failing", "personal", "warning", "ADMIN"),
+  "org.request_decided": s("operations", "Organisation request decided", "personal", "info"),
+  "campaign.finished": s("operations", "Email campaign finished", "both", "info", "MEMBER"),
+  "campaign.paused": s("operations", "Email campaign paused", "both", "warning", "MEMBER"),
+  "finance.invoice.paid": s("finance", "Invoice paid online", "both", "info", "ADMIN"),
+  "finance.payment.failed": s("finance", "Online payment failed", "both", "warning", "ADMIN"),
+  "finance.payment.refunded": s("finance", "Online payment refunded", "both", "info", "ADMIN"),
+  "system.destination_failed": s("security", "Notification destination failed", "personal", "warning", "ADMIN"),
+  "asset.downtime_started": s("operations", "Machine down", "both", "warning", "MEMBER"),
+  "stock.reorder": s("operations", "Stock below reorder level", "both", "warning", "MEMBER"),
   "notification.test": s("security", "Test notification", "broadcast"),
 } as const satisfies Record<EventType, EventSpec>;
 

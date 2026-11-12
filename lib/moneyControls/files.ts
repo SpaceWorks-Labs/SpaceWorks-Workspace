@@ -1,4 +1,5 @@
 import "server-only";
+import { superAdminFileMember } from "@/lib/accessMember";
 import { prisma } from "@/lib/db";
 import { deleteObjects, uploadWorkspaceFile } from "@/lib/storage";
 import { RECEIPT_MAX_BYTES, RECEIPT_TYPES } from "@/lib/finance/service";
@@ -108,15 +109,18 @@ export async function removeControlFile(actor: ControlsActor, fileId: string) {
 export async function mayDownloadControlFile(
   file: { id: string; workspaceId: string; folder: string },
   userId: string,
+  viaSuperAdmin = false,
 ) {
   const attachment = await prisma.moneyControlAttachment.findFirst({
     where: { workspaceId: file.workspaceId, fileId: file.id },
   });
   if (!attachment) return !file.folder.startsWith("/money-controls");
-  const member = await prisma.membership.findFirst({
-    where: { workspaceId: file.workspaceId, userId },
-    include: { workspace: true, user: { select: { id: true, name: true } } },
-  });
+  const member = viaSuperAdmin
+    ? await superAdminFileMember(file.workspaceId, userId)
+    : await prisma.membership.findFirst({
+        where: { workspaceId: file.workspaceId, userId },
+        include: { workspace: true, user: { select: { id: true, name: true } } },
+      });
   if (!member) return false;
   try {
     const row = await controlRecord(

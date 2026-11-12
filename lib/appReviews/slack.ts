@@ -20,7 +20,7 @@ async function slackCall<T extends { ok: boolean }>(config: AppReviewSlackConfig
 }
 /** Returns quickly after a durable INSERT. Never calls a store in the request path. */
 export async function receiveSlackEvent(slug: string, raw: string, timestamp: string | null, signature: string | null, now = new Date()): Promise<Response> {
-  const workspace = await prisma.workspace.findFirst({ where: { slug, archivedAt: null }, select: { id: true } });
+  const workspace = await prisma.workspace.findFirst({ where: { slug, status: "ACTIVE", archivedAt: null }, select: { id: true } });
   const config = workspace ? await prisma.appReviewSlackConfig.findUnique({ where: { workspaceId: workspace.id } }) : null;
   if (!config?.active || !verifySlackSignature(decryptSecret("app-review-slack-signing", config.signingSecretEnc), raw, timestamp, signature, now)) return Response.json({ error: "Request not verified." }, { status: 401 });
   let payload: unknown; try { payload = JSON.parse(raw); } catch { return Response.json({ error: "Invalid request." }, { status: 400 }); }
@@ -34,7 +34,7 @@ export async function receiveSlackEvent(slug: string, raw: string, timestamp: st
 }
 /** Claim the permanent marker before POST. Ambiguous failures are never auto-posted again. */
 export async function mirrorReview(workspaceId: string, reviewId: string) {
-  const review = await prisma.appReview.findFirst({ where: { workspaceId, id: reviewId, slackPostStatus: "NONE", app: { active: true, account: { active: true } }, workspace: { archivedAt: null } }, include: { app: { select: { name: true, slackChannelId: true } }, workspace: { select: { slug: true } } } });
+  const review = await prisma.appReview.findFirst({ where: { workspaceId, id: reviewId, slackPostStatus: "NONE", app: { active: true, account: { active: true } }, workspace: { status: "ACTIVE", archivedAt: null } }, include: { app: { select: { name: true, slackChannelId: true } }, workspace: { select: { slug: true } } } });
   if (!review?.app.slackChannelId) return;
   const config = await prisma.appReviewSlackConfig.findUnique({ where: { workspaceId } }); if (!config?.active) return;
   const channel = review.app.slackChannelId;
@@ -65,7 +65,7 @@ export async function processSlackEvent(workspaceId: string, eventId: string) {
   if (!config?.active) { await finish("IGNORED"); return; }
   try {
     const mapping = await prisma.appReviewSlackMember.findUnique({ where: { workspaceId_slackUserId: { workspaceId, slackUserId: event.userId } } });
-    const member = mapping ? await prisma.membership.findFirst({ where: { workspaceId, userId: mapping.userId, status: "ACTIVE", role: { not: "GUEST" }, user: { disabledAt: null }, workspace: { archivedAt: null } }, select: { userId: true } }) : null;
+    const member = mapping ? await prisma.membership.findFirst({ where: { workspaceId, userId: mapping.userId, status: "ACTIVE", role: { not: "GUEST" }, user: { disabledAt: null }, workspace: { status: "ACTIVE", archivedAt: null } }, select: { userId: true } }) : null;
     if (!member) { await finish("IGNORED", "Map this Slack account to an active workspace member in App reviews settings."); return; }
     // Restrict reads to channels that actually contain a posted review in this tenant.
     if (!await prisma.appReview.findFirst({ where: { workspaceId, slackChannelId: event.channelId, slackPostStatus: "POSTED" }, select: { id: true } })) { await finish("IGNORED"); return; }

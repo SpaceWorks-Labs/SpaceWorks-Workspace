@@ -4,6 +4,8 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { findDownloadableFile } from "@/lib/files";
 import { canAccessResource } from "@/lib/search/query";
+import { disabledEntityTypes } from "@/lib/search/entityModules";
+import { getWorkspaceModules } from "@/lib/limits/modules";
 import { canViewFinance, hasRoleAtLeast } from "@/lib/roles";
 import { userTeamIds } from "@/lib/teamAccess";
 import { hasScope, type ApiScope } from "@/lib/apiTokens/scopes";
@@ -94,7 +96,8 @@ export const searchWorkspace = defineTool({
         AND ("searchVector" @@ websearch_to_tsquery('simple', ${input.query}) OR "title" ILIKE ${like})
       ORDER BY ts_rank("searchVector", websearch_to_tsquery('simple', ${input.query})) DESC, "updatedAt" DESC
       LIMIT 200`;
-    const typed = input.types?.length ? raw.filter((hit) => input.types!.includes(hit.entityType)) : raw;
+    const off = new Set(disabledEntityTypes(await getWorkspaceModules(principal.workspace.id)));
+    const typed = (input.types?.length ? raw.filter((hit) => input.types!.includes(hit.entityType)) : raw).filter((hit) => !off.has(hit.entityType));
     const docIds = typed.filter((h) => h.entityType === "doc").map((h) => h.entityId);
     const channelIds = [...new Set(typed.map((h) => h.channelId).filter((id): id is string => Boolean(id)))];
     const [hidden, mine, readable, adminDocs] = await Promise.all([

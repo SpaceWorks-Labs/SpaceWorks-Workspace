@@ -25,7 +25,7 @@ export async function fundingReceiptAttachment(
       kind: "DONATION",
       status: "RECEIVED",
       archivedAt: null,
-      workspace: { archivedAt: null },
+      workspace: { status: "ACTIVE", archivedAt: null },
     },
   });
   if (!gift) throw new Error("That donation receipt is unavailable.");

@@ -1,6 +1,7 @@
 import "server-only";
 
 import sanitizeHtml from "sanitize-html";
+import { isInlineImageSrc } from "@/lib/tasks/inlineImages";
 
 /**
  * Task descriptions are rich text from the editor (tiptap). Everything is
@@ -9,8 +10,8 @@ import sanitizeHtml from "sanitize-html";
  */
 
 const OPTIONS: sanitizeHtml.IOptions = {
-  allowedTags: ["p", "br", "strong", "b", "em", "i", "u", "s", "code", "pre", "blockquote", "ul", "ol", "li", "h2", "h3", "h4", "hr", "a"],
-  allowedAttributes: { a: ["href", "rel", "target"], ol: ["start"] },
+  allowedTags: ["p", "br", "strong", "b", "em", "i", "u", "s", "code", "pre", "blockquote", "ul", "ol", "li", "h2", "h3", "h4", "hr", "a", "img"],
+  allowedAttributes: { a: ["href", "rel", "target"], ol: ["start"], img: ["src", "alt"] },
   allowedSchemes: ["http", "https", "mailto"],
   allowProtocolRelative: false,
   transformTags: {
@@ -19,6 +20,8 @@ const OPTIONS: sanitizeHtml.IOptions = {
     b: "strong",
     i: "em",
   },
+  /** Images only from our own authenticated file route; anything else is dropped. */
+  exclusiveFilter: (frame) => frame.tag === "img" && !isInlineImageSrc(frame.attribs.src),
   disallowedTagsMode: "discard",
 };
 
@@ -28,7 +31,7 @@ export const MAX_DESCRIPTION_HTML = 50_000;
 export function sanitizeDescription(html: string | null | undefined): string | null {
   if (!html) return null;
   const clean = sanitizeHtml(html.slice(0, MAX_DESCRIPTION_HTML * 2), OPTIONS).trim();
-  if (!clean || htmlToText(clean).length === 0) return null;
+  if (!clean || (htmlToText(clean).length === 0 && !clean.includes("<img"))) return null;
   return clean.slice(0, MAX_DESCRIPTION_HTML);
 }
 

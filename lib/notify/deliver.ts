@@ -7,15 +7,18 @@ import type { AdapterSendInput, DestinationAdapter, ExternalPersonalChannel, Sen
 import { fromDbSeverity } from "@/lib/notify/match";
 import { DM_CHANNEL_PROVIDER } from "@/lib/notify/preferences";
 import { renderMessage, type StoredEventForRender } from "@/lib/notify/render";
-import { describeOperationalError } from "@/lib/redactSensitiveText";
+import { describeOperationalError, redactSensitiveText } from "@/lib/redactSensitiveText";
 import { mayDeliverNotification } from "./access";
+import { consumeOutboundToken, limitFor } from "./rateLimit";
 
 /**
  * Worker side of notification routing: the outbox calls
  * `processNotifyDelivery` for each "notify.deliver" job. Retries back off
  * 30 s, 2 m, 10 m, 30 m, 2 h, 6 h (or the provider's Retry-After) for at most
- * six attempts. A shared destination that fails for good is marked ERROR and
- * admins get one "destination.failing" alert per destination per day.
+ * six attempts. Each destination (or member and channel) has an outbound token
+ * bucket; over the limit the delivery is rescheduled without using an attempt.
+ * A shared destination that fails for good is marked ERROR and, only when its
+ * health flips to ERROR, admins get one "system.destination_failed" alert.
  */
 
 export type NotifyJobOutcome = { status: "done" } | { status: "retry"; delayMs: number; error: string } | { status: "failed"; error: string };
@@ -114,6 +117,17 @@ export async function processNotifyDelivery(deliveryId: string, now = new Date()
       })
     : null;
 
+  const bucketKey = target.type === "destination" ? `destination:${target.destination.id}` : `personal:${target.user.id}:${target.channel}`;
+  const limit = await consumeOutboundToken(bucketKey, limitFor(target.type === "destination" ? target.destination.kind : target.channel));
+  if (!limit.allowed) {
+    const delayMs = Math.min(Math.max(limit.waitMs + 1000, 2000), 5 * 60_000);
+    await prisma.notificationDelivery.updateMany({
+      where: { id: deliveryId, status: "SENDING" },
+      data: { status: "PENDING", attempts: { decrement: 1 }, nextAttemptAt: new Date(now.getTime() + delayMs) },
+    });
+    return { status: "retry", delayMs, error: "Rate limited; will retry shortly." };
+  }
+
   const message = renderMessage(storedEvent(delivery.event), delivery.workspace);
   let result: SendResult;
   try {
@@ -153,25 +167,24 @@ export async function processNotifyDelivery(deliveryId: string, now = new Date()
 
   await finish(deliveryId, { status: "FAILED", lastError: error, nextAttemptAt: null });
   if (delivery.destination && !delivery.isTest) {
-    await prisma.notificationDestination.updateMany({ where: { id: delivery.destination.id }, data: { health: "ERROR", lastError: error } });
-    await alertAdmins(delivery.workspace, delivery.destination, error, now).catch(() => console.error("[notify] failing-destination alert could not be queued"));
+    const flipped = await prisma.notificationDestination.updateMany({ where: { id: delivery.destination.id, health: { not: "ERROR" } }, data: { health: "ERROR", lastError: error } });
+    if (flipped.count === 0) await prisma.notificationDestination.updateMany({ where: { id: delivery.destination.id }, data: { lastError: error } });
+    else await alertAdmins(delivery.workspace, delivery.destination, error).catch(() => console.error("[notify] failing-destination alert could not be queued"));
   }
   return { status: "failed", error };
 }
 
-async function alertAdmins(workspace: { id: string; slug: string }, destination: { id: string; name: string }, error: string, now: Date) {
+async function alertAdmins(workspace: { id: string; slug: string }, destination: { id: string; name: string; kind: string }, error: string) {
   const admins = await prisma.membership.findMany({ where: { workspaceId: workspace.id, status: "ACTIVE", role: { in: ["OWNER", "ADMIN"] } }, select: { userId: true } });
   if (admins.length === 0) return;
   const { dispatch } = await import("@/lib/notify/dispatch");
   await dispatch(workspace.id, {
-    type: "destination.failing",
+    type: "system.destination_failed",
     title: `Notifications to ${destination.name} are failing`,
-    body: `${error} Check the destination in notification settings.`,
+    body: "Check the destination in notification settings.",
     url: `/w/${encodeURIComponent(workspace.slug)}/settings/notifications`,
     recipients: admins.map((admin) => admin.userId),
-    dedupeKey: `destination:${destination.id}:failing:${now.toISOString().slice(0, 10)}`,
-    dedupeWindowSec: 86_400,
     resource: { type: "notification_destination", id: destination.id },
-    data: { destinationId: destination.id, error },
+    data: { destinationId: destination.id, channel: destination.kind, error: redactSensitiveText(error).slice(0, 200) },
   });
 }

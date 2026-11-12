@@ -17,6 +17,8 @@ export { assignTask, claimTask, setAssignees, unassignTask, unclaimTask } from "
 export { addComment, editComment, deleteComment } from "./service/comments";
 export { addDependency, removeDependency } from "./service/dependencies";
 export { addAttachment, removeAttachment } from "./service/attachments";
+export { deleteTaskPermanently } from "./service/permanentDelete";
+export { uploadDescriptionImage } from "./service/inlineImage";
 export { bulkUpdateTasks } from "./service/bulk";
 export { transferTask, previewTransfer } from "./service/transfer";
 export { createTaskType, deleteTaskType, listTaskTypes, listTaskTypesFor, reorderTaskTypes, setDefaultTaskType, updateTaskType } from "./service/types";

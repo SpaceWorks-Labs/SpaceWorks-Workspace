@@ -37,7 +37,7 @@ export async function proxy(request: NextRequest) {
 
   // Liveness must not depend on Redis; everything else under /api is limited.
   // The SSE stream has its own per-user limit inside the route.
-  if (pathname.startsWith("/api") && pathname !== "/api/health" && !pathname.startsWith("/api/realtime/")) {
+  if (pathname.startsWith("/api") && pathname !== "/api/health" && pathname !== "/api/metrics" && !pathname.startsWith("/api/realtime/")) {
     if (!(await checkRateLimit(request, "global"))) return tooMany(pathname.startsWith("/api/v1"));
   }
 
@@ -47,7 +47,9 @@ export async function proxy(request: NextRequest) {
   }
 
   if (pathname.startsWith("/api")) {
-    const response = NextResponse.next({ request: { headers: new Headers(request.headers) } });
+    const forwarded = new Headers(request.headers);
+    forwarded.set("x-sw-path", pathname);
+    const response = NextResponse.next({ request: { headers: forwarded } });
     response.headers.set("X-Frame-Options", "DENY");
     return response;
   }

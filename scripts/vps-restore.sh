@@ -126,12 +126,17 @@ SWW_BACKUP_PROTECT=$source_backup bash "$SWW_REPO_DIR/scripts/vps-backup.sh" --n
 [[ -n "$work" ]] || work=$(mktemp -d "$SWW_CONFIG_DIR/backups/.restore.XXXXXX")
 restore_sql="$work/restore.sql"
 {
+  # The reporting views (0.10.0+) read public tables: replace them with the
+  # backup's own, or let migrations recreate them for an older backup.
   cat <<'SQL'
+DROP SCHEMA IF EXISTS reporting CASCADE;
 DROP SCHEMA IF EXISTS public CASCADE;
 CREATE SCHEMA public AUTHORIZATION sww;
 SQL
   # A custom archive can define public itself. Exclude only that definition:
   # its separate COMMENT and ACL entries still restore, and sww owns the schema.
+  # Reporting grants name the optional sww_reporting role, which a replacement
+  # server may not have yet; they are reapplied below when it exists.
   # The private container scratch directory needs no extra host bind mount.
   # shellcheck disable=SC2016 # Expanded by the container's shell.
   compose exec postgres sh -c '
@@ -141,7 +146,9 @@ SQL
     trap '\''rm -rf -- "$stage"'\'' EXIT
     cat > "$stage/archive.dump"
     pg_restore --list "$stage/archive.dump" > "$stage/contents"
-    awk "\$4 == \"SCHEMA\" && \$5 == \"-\" && \$6 == \"public\" { print \";\" \$0; next } { print }" \
+    awk "\$4 == \"SCHEMA\" && \$5 == \"-\" && \$6 == \"public\" { print \";\" \$0; next }
+      \$4 == \"ACL\" && (\$5 == \"reporting\" || \$6 == \"SCHEMA\" && \$7 == \"reporting\") { print \";\" \$0; next }
+      \$4 == \"DEFAULT\" && \$5 == \"ACL\" && \$6 == \"reporting\" { print \";\" \$0; next } { print }" \
       "$stage/contents" > "$stage/restore.list"
     pg_restore --file=- --exit-on-error --use-list="$stage/restore.list" "$stage/archive.dump"
   ' < "$backup/database.dump"
@@ -151,6 +158,13 @@ GRANT CONNECT ON DATABASE sww TO sww_app;
 GRANT USAGE ON SCHEMA public TO sww_app;
 ALTER DEFAULT PRIVILEGES FOR ROLE sww IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO sww_app;
 ALTER DEFAULT PRIVILEGES FOR ROLE sww IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO sww_app;
+DO $reporting$ BEGIN
+  IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'sww_reporting') AND EXISTS (SELECT FROM pg_namespace WHERE nspname = 'reporting') THEN
+    GRANT USAGE ON SCHEMA reporting TO sww_reporting;
+    GRANT SELECT ON ALL TABLES IN SCHEMA reporting TO sww_reporting;
+    ALTER DEFAULT PRIVILEGES FOR ROLE sww IN SCHEMA reporting GRANT SELECT ON TABLES TO sww_reporting;
+  END IF;
+END $reporting$;
 SQL
 } > "$restore_sql"
 # A failed restore must not leave the site down; the database restore is one

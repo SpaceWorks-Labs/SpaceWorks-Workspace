@@ -12,8 +12,9 @@ configuration and recovery guides before inviting members.
 | --- | --- |
 | [Architecture](ARCHITECTURE.md) | Services, tenancy and data flows |
 | [Design](DESIGN.md) | Brand, Design-Kit tokens, accessible controls, voice and layout |
+| [Roles and access](ROLES.md) | What the super admin, owners, admins, members and guests see and do |
 | [Development](DEVELOPMENT.md) | Local installation and daily commands |
-| [Configuration](CONFIGURATION.md) | Environment and secret reference |
+| [Configuration](CONFIGURATION.md) | Environment, instance settings and secret reference |
 | [Contributing](../CONTRIBUTING.md) | Branches, changes and verification |
 | [Ownership](ROADMAP-BUILD.md) | Area boundaries and shared contracts |
 | [Audit, November 2026](AUDIT-2026-11.md) | Codebase size, findings and recommendations |
@@ -30,6 +31,8 @@ configuration and recovery guides before inviting members.
 | [Social](SOCIAL.md) | Social accounts, analytics and comments |
 | [App reviews](APP_REVIEWS.md) | Store connections and review replies |
 | [Monitoring](MONITORING.md) | Checks, incidents and status pages |
+| [Observability](OBSERVABILITY.md) | Prometheus metrics, Grafana, Metabase reporting views and signed embeds |
+| [Client observability](OBSERVABILITY-CLIENT.md) | Sentry, PostHog, Clarity and Firebase with consent, and per-workspace analytics |
 
 ## Deployment and operations
 
@@ -46,8 +49,13 @@ configuration and recovery guides before inviting members.
 | [Kubernetes](DEPLOYMENT_KUBERNETES.md) | Helm, secrets, probes and migrations |
 | [Release](PRODUCTION_RELEASE.md) | Acceptance and rollout |
 | [Operations](production-operations.md) | Monitoring, privacy and disaster recovery |
+| [Upgrading to 0.10.0](production-operations.md#upgrading-to-0100) | Migrations, new settings, webhook addresses, the reporting role and behaviour changes |
 
 ## Feature areas
+
+Organisation and platform governance
+
+- [org-governance](areas/org-governance.md): organisation requests, super-admin console, plan, limits and modules
 
 Work and collaboration
 
@@ -73,12 +81,17 @@ Money and governance
 - [moneycontrols](areas/moneycontrols.md): money and asset controls
 - [funding-tools](areas/funding-tools.md): grants, donations and impact
 - [governance-tools](areas/governance-tools.md), [govextras](areas/govextras.md) and [govextras-files](areas/govextras-files.md): compliance, board and safeguarding
+- [finance-bank-export](areas/finance-bank-export.md): bank statement import, matching and accounting exports
+- [finance-statements](areas/finance-statements.md): Receipts and Payments, Income and Expenditure, fund statements, donations in the ledger and FCRA
+- [payments](areas/payments.md): Stripe and Razorpay invoice payment links
 - [analytics](areas/analytics.md): reports and exports
 
 Product, marketing, IT and services
 
 - [product-ops](areas/product-ops.md): roadmap, releases and QA
 - [marketing-it](areas/marketing-it.md): content, assets and IT registers
+- [email-campaigns](areas/email-campaigns.md): native lists, campaigns, double opt-in and unsubscribe
+- [makerspace-ops](areas/makerspace-ops.md): machine downtime, maintenance, inductions and consumables stock
 - [social](areas/social.md): social analytics
 - [app-reviews](areas/app-reviews.md): store review handling
 - [monitor](areas/monitor.md): services monitor

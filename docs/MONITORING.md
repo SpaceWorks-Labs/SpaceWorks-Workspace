@@ -112,3 +112,7 @@ Default confirmation is three failures to open, two successes to recover. Remind
 Raw checks default to 14 days, configurable per workspace from 7–30. Hourly rollups remain 90 days, daily rollups 730 days, provider metrics seven days and heartbeat logs 30 days. Legal-hold workspaces are excluded from retention purges. Uptime is check-based `(up + degraded) / (total - maintenance)`; unknown samples do not count. p50/p95 use interpolated percentiles for raw and SQL buckets. Percentiles combined across historical buckets are approximate.
 
 Public status is opt-in. Select public names and only the monitors to publish; edit manual incident/maintenance text with public readers in mind. JSON is at `/status/<workspaceSlug>/summary.json` (also `/api/summary.json` below that path); badges at `/badge/<componentKey>`; RSS at `/feed.rss`. JSON, RSS and badge responses use a 30-second public cache and nosniff. Disable the page to stop new reads; caches can retain the previous response for their remaining lifetime.
+
+## Server metrics, Grafana and Metabase
+
+Instance metrics for Prometheus and Grafana, the read-only reporting views and Metabase embedding are covered in [OBSERVABILITY.md](OBSERVABILITY.md).

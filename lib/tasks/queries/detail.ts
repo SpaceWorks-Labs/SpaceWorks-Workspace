@@ -5,6 +5,7 @@ import { fileUrl } from "@/lib/storage";
 import { hasRoleAtLeast } from "@/lib/roles";
 import { assignableMembers, visibleTaskWhere, type TaskActor } from "@/lib/tasks/access";
 import { activityText, HIDDEN_ACTIVITY_KINDS } from "@/lib/tasks/activityText";
+import { INLINE_FOLDER } from "@/lib/tasks/inlineImages";
 import { taskReference, taskUrl } from "@/lib/tasks/links";
 import { describeRule, parseAssigneeRule, parseRRule } from "@/lib/tasks/recurrence";
 import { effectiveType } from "@/lib/tasks/taskTypes";
@@ -50,7 +51,7 @@ export async function getTaskDetail(actor: TaskActor, number: number): Promise<T
       blocking: { where: { type: "BLOCKS" }, select: { blockedTask: { select: refSelect } } },
       comments: { orderBy: { createdAt: "asc" }, take: 300, select: { id: true, authorId: true, body: true, createdAt: true, editedAt: true, deletedAt: true } },
       activities: { orderBy: { createdAt: "desc" }, take: 100, select: { id: true, actorId: true, kind: true, data: true, createdAt: true } },
-      files: { where: { deletedAt: null }, orderBy: { createdAt: "asc" }, select: { id: true, filename: true, size: true, contentType: true, uploadedById: true, createdAt: true } },
+      files: { where: { deletedAt: null, NOT: { folder: INLINE_FOLDER } }, orderBy: { createdAt: "asc" }, select: { id: true, filename: true, size: true, contentType: true, uploadedById: true, createdAt: true } },
       recurrenceRules: { orderBy: [{ active: "desc" }, { updatedAt: "desc" }], take: 1 },
       recurrence: true,
     },
@@ -76,7 +77,7 @@ export async function getTaskDetail(actor: TaskActor, number: number): Promise<T
   ];
   const [peopleMap, columns, members, labels, summary, taskTypes] = await Promise.all([
     people(personIds),
-    project ? prisma.boardColumn.findMany({ where: { projectId: project.id }, orderBy: { position: "asc" }, select: { id: true, name: true, position: true, category: true } }) : Promise.resolve([] as ColumnDTO[]),
+    project ? prisma.boardColumn.findMany({ where: { projectId: project.id }, orderBy: { position: "asc" }, select: { id: true, name: true, position: true, category: true, color: true, wipLimit: true } }) : Promise.resolve([] as ColumnDTO[]),
     assignableMembers(actor.workspace.id, project),
     workspaceLabels(actor.workspace.id),
     project ? projectSummary(project) : Promise.resolve(null),

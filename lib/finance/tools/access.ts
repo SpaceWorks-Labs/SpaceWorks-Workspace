@@ -10,11 +10,12 @@ import {
 import type { Workspace, WorkspaceRole } from "@prisma/client";
 import type { AttachmentType } from "@/lib/finance/tools-rules";
 import { recordAuditEvent } from "@/lib/audit";
+import { activeMemberOrSuperAdmin } from "@/lib/accessMember";
 
 export type FinanceActor = {
   user: { id: string; name: string | null };
   workspace: Pick<Workspace, "id" | "slug" | "name" | "currency" | "timezone">;
-  membership: { role: WorkspaceRole };
+  membership: { role: WorkspaceRole; viaSuperAdmin?: boolean };
 };
 export class FinanceError extends Error {}
 export const unavailable =
@@ -26,16 +27,7 @@ export async function financeAccess(
   mode: "VIEW" | "MANAGE" | "PAY_VIEW" | "PAY_MANAGE" | "OWNER" = "VIEW",
   client: DbClient = prisma,
 ) {
-  const member = await client.membership.findFirst({
-    where: {
-      workspaceId: actor.workspace.id,
-      userId: actor.user.id,
-      status: "ACTIVE",
-      user: { disabledAt: null },
-      workspace: { archivedAt: null },
-    },
-    include: { workspace: true },
-  });
+  const member = await activeMemberOrSuperAdmin(client, actor);
   if (!member || !hasRoleAtLeast(member.role, "MEMBER"))
     throw new FinanceError("You don't have access to do that.");
   const grant = await client.financePayrollGrant.findUnique({

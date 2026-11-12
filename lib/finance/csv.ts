@@ -8,6 +8,7 @@
  * a plain number.
  */
 
+import { FORMULA_START, neutraliseCell } from "@/lib/csv";
 import { isValidCurrency, parseMoneyToMinor } from "@/lib/format/money";
 import { isNegativeMoney, MAX_AMOUNT_MINOR, minorToDecimalString, type LedgerKindValue } from "@/lib/finance/money";
 
@@ -17,12 +18,8 @@ export const MAX_IMPORT_BYTES = 1024 * 1024;
 
 // ───────────── Writing ─────────────
 
-const FORMULA_START = /^(?:[\t\r\n]|\s*[=+\-@])/;
-const PLAIN_NUMBER = /^-?\d+(\.\d+)?$/;
-
 export function csvCell(value: string | number | null | undefined): string {
-  let text = value === null || value === undefined ? "" : String(value);
-  if (FORMULA_START.test(text) && !PLAIN_NUMBER.test(text)) text = `'${text}`;
+  const text = neutraliseCell(value === null || value === undefined ? "" : String(value));
   return /[",\r\n]/.test(text) || text !== text.trim() ? `"${text.replace(/"/g, '""')}"` : text;
 }
 

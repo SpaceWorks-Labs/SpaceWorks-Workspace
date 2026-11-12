@@ -15,7 +15,7 @@ export async function run(now: Date) {
     const rows = await prisma.governanceRecord.findMany({
       where: {
         archivedAt: null,
-        workspace: { archivedAt: null },
+        workspace: { status: "ACTIVE", archivedAt: null },
         OR: [
           { kind: {in:["INSURANCE","LICENCE","REGISTRATION"]}, status:"ACTIVE", endsOn:{not:null} },
           { kind: {in:["RISK","EMERGENCY_PLAN","SOP_REVIEW","STATUTORY_REGISTER","DRILL"]}, status:{in:["OPEN","CONTROLLED","ACTIVE","NEEDS_REVIEW","DUE","CURRENT","PLANNED"]}, dueOn:{not:null} },
@@ -61,7 +61,7 @@ export async function run(now: Date) {
             id: row.id,
             archivedAt: null,
             updatedAt: row.updatedAt,
-            workspace: { archivedAt: null },
+            workspace: { status: "ACTIVE", archivedAt: null },
           },
         });
         if (!current) return null;

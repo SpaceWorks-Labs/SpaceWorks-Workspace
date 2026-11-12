@@ -49,8 +49,11 @@ export const updateProjectSchema = z.object({
 export const projectIdSchema = z.object({ projectId: id });
 
 export const columnNameSchema = z.string().trim().min(1, "Name the column.").max(40, "Keep column names under 40 characters.");
+const columnColor = z.enum(["NEUTRAL", "SUCCESS", "WARNING", "INFO", "DANGER", "ACCENT", "HIGHLIGHT"]).nullable();
+const wipLimit = z.number().int("Use a whole number.").min(1, "The limit must be at least 1.").max(999, "Keep the limit under 1,000.").nullable();
 export const addColumnSchema = z.object({ projectId: id, name: columnNameSchema, category: category.default("IN_PROGRESS") });
-export const updateColumnSchema = z.object({ columnId: id, name: columnNameSchema, category });
+/** `color` and `wipLimit`: omitted = unchanged, null = clear. */
+export const updateColumnSchema = z.object({ columnId: id, name: columnNameSchema, category, color: columnColor.optional(), wipLimit: wipLimit.optional() });
 export const reorderColumnsSchema = z.object({ projectId: id, columnIds: z.array(id).min(1).max(30) });
 export const deleteColumnSchema = z.object({ columnId: id, moveToColumnId: id });
 
@@ -87,6 +90,9 @@ export const updateTaskSchema = z
     typeId: optionalId,
     title: taskTitleSchema.optional(),
     description: z.string().max(100_000).nullable().optional(),
+    /** The title and description the editor started from: a save is refused when someone changed them meanwhile. */
+    expectedTitle: z.string().max(200).optional(),
+    expectedDescription: z.string().max(100_000).nullable().optional(),
     priority: priority.optional(),
     dueDate: z
       .string()
@@ -104,6 +110,8 @@ export const assignTaskSchema = z.object({ taskId: id, userId: id });
 export const setLabelsSchema = z.object({ taskId: id, labelIds: ids(20) });
 export const completeTaskSchema = z.object({ taskId: id, completed: z.boolean() });
 export const archiveTaskSchema = z.object({ taskId: id, archived: z.boolean() });
+/** `confirmKey` is the project key the person typed to confirm. */
+export const deleteTaskSchema = z.object({ taskId: id, confirmKey: z.string().trim().max(10) });
 export const taskIdSchema = z.object({ taskId: id });
 
 export const commentBodySchema = z.string().trim().min(1, "Write a comment first.").max(5000, "Keep comments under 5,000 characters.");

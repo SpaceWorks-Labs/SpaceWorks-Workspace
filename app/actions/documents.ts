@@ -37,7 +37,7 @@ export async function documentAction(
   operation: string,
   form: FormData,
 ): Promise<ActionResult<{ id: string }>> {
-  const actor = await getWorkspaceForAction(slug, "ADMIN");
+  const actor = await getWorkspaceForAction(slug, "ADMIN", { module: "knowledge" });
   if (!actor) return actionError(NOT_ALLOWED);
   if (await isActionRateLimited("apiWrite", `documents:${actor.user.id}`))
     return actionError(RATE_LIMITED);

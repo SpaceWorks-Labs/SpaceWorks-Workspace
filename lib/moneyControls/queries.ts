@@ -195,7 +195,7 @@ export async function loadControlsView(
 
   const viewActor: ControlsActor = {
     user: { id: actor.user.id, name: actor.user.name },
-    membership: { role: actor.membership.role },
+    membership: { role: actor.membership.role, viaSuperAdmin: actor.membership.viaSuperAdmin },
     workspace: {
       id: actor.workspace.id,
       slug: actor.workspace.slug,

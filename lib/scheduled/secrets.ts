@@ -1,4 +1,5 @@
 import "server-only";
+import { workspacesWithoutModule } from "@/lib/modules-server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { dispatch } from "@/lib/notify/dispatch";
@@ -6,9 +7,11 @@ import { environmentAccess } from "@/lib/secrets/access";
 import { resumeRotations } from "@/lib/secrets/rotation";
 import { audit } from "@/lib/secrets/mutations";
 export async function run(now = new Date()) {
+  const off = await workspacesWithoutModule("secrets");
   await resumeRotations();
   await prisma.cliDeviceCode.deleteMany({ where: { expiresAt: { lte: now } } });
   const workspaces = await prisma.workspace.findMany({
+    where: { id: { notIn: off } },
     select: {
       id: true,
       slug: true,

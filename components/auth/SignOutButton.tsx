@@ -3,6 +3,7 @@
 import { signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 
-export function SignOutButton({ label = "Sign out" }: { label?: string }) {
-  return <Button variant="secondary" onClick={() => void signOut({ callbackUrl: "/login" })}>{label}</Button>;
+/** `callbackUrl`: where to land after signing out (an app path), e.g. back on an invitation. */
+export function SignOutButton({ label = "Sign out", callbackUrl = "/login" }: { label?: string; callbackUrl?: string }) {
+  return <Button variant="secondary" onClick={() => void signOut({ callbackUrl })}>{label}</Button>;
 }

@@ -1,4 +1,5 @@
 import "server-only";
+import { workspacesWithoutModule } from "@/lib/modules-server";
 import { prisma } from "@/lib/db";
 import { dispatch } from "@/lib/notify";
 import { queueMonthlyReport } from "@/lib/analytics/email";
@@ -6,11 +7,13 @@ import { querySchema } from "@/lib/analytics/metrics";
 import { localDate } from "@/lib/finance/dates";
 /** One generic reminder per adjustment/date, claimed under the tenant lock. */
 export async function run(now = new Date()) {
+  const off = await workspacesWithoutModule("analytics");
   let cursor: string | undefined;
   for (;;) {
     const workspaces = await prisma.workspace.findMany({
       where: {
         archivedAt: null,
+        id: { notIn: off },
         OR: [
           { analyticsAdjustments: { some: {} } },
           { analyticsPresets: { some: { shared: true } } },

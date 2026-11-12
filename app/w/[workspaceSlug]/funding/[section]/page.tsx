@@ -3,6 +3,7 @@ import { requireWorkspace } from "@/lib/permissions";
 import { canViewFunding } from "@/lib/roles";
 import { loadFunding, type Filters } from "@/lib/funding/service";
 import { SECTIONS, SECTION_KINDS, type Kind, type Section } from "@/lib/funding/schema";
+import { loadLedgerChoices } from "@/lib/funding/service/ledger-link-queries";
 import { FundingScreen } from "@/components/funding/Screen";
 export const metadata = { title: "Funding tools" };
 export default async function Page({ params, searchParams }: PageProps<"/w/[workspaceSlug]/funding/[section]">) {
@@ -16,5 +17,6 @@ export default async function Page({ params, searchParams }: PageProps<"/w/[work
   const create = typeof query.new === "string" && SECTION_KINDS[section].includes(query.new as Kind) ? query.new as Kind : undefined;
   const data = await loadFunding(actor, section, filters, edit);
   if (edit && !data.selected) notFound();
-  return <FundingScreen slug={workspaceSlug} timezone={actor.workspace.timezone} currency={actor.workspace.currency} section={section} filters={filters} data={data} create={create} />;
+  const ledger = section === "donations" ? await loadLedgerChoices(actor) : undefined;
+  return <FundingScreen slug={workspaceSlug} timezone={actor.workspace.timezone} currency={actor.workspace.currency} section={section} filters={filters} data={data} create={create} ledger={ledger} />;
 }

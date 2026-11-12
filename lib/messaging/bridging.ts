@@ -19,7 +19,7 @@ export async function bridgeInbound(connection: MessagingConnection, message: In
   return true;
 }
 export async function bridgeOutbound() {
-  const bridges = await prisma.bridgedChannel.findMany({ where: { enabled: true, direction: { in: ["OUTBOUND", "BOTH"] }, connection: { status: "ACTIVE", lastVerifiedAt: { not: null }, workspace: { archivedAt: null } }, workspaceChannel: { kind: "PUBLIC", teamId: null, archivedAt: null } }, include: { connection: true }, take: 100 });
+  const bridges = await prisma.bridgedChannel.findMany({ where: { enabled: true, direction: { in: ["OUTBOUND", "BOTH"] }, connection: { status: "ACTIVE", lastVerifiedAt: { not: null }, workspace: { status: "ACTIVE", archivedAt: null } }, workspaceChannel: { kind: "PUBLIC", teamId: null, archivedAt: null } }, include: { connection: true }, take: 100 });
   for (const bridge of bridges) {
     const messages = await prisma.message.findMany({ where: { workspaceId: bridge.workspaceId, channelId: bridge.workspaceChannelId, origin: null, deletedAt: null, createdAt: { gte: bridge.createdAt }, bridged: { none: { bridgedChannelId: bridge.id } } }, include: { author: { select: { name: true } } }, orderBy: { createdAt: "asc" }, take: 20 });
     for (const message of messages) {

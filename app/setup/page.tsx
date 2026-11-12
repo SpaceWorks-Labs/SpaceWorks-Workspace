@@ -10,8 +10,8 @@ export const metadata: Metadata = { title: "Set up Space Works" };
 export default async function SetupPage() {
   if (!(await isSetupOpen())) redirect("/login");
   return (
-    <AuthFrame title="Set up your workspace." description="Create the first account and your community's workspace. You can invite the crew next." accent={"Start the\nbuild."}>
-      <SetupForm defaultTimeZone="Asia/Kolkata" />
+    <AuthFrame title="Set up your workspace." description="Create the first account and your community's workspace. This account owns the workspace; you can invite the crew next." accent={"Start the\nbuild."}>
+      <SetupForm defaultTimeZone="Asia/Kolkata" adminEmailConfigured={Boolean(process.env.SUPER_ADMIN_EMAIL?.trim())} />
     </AuthFrame>
   );
 }

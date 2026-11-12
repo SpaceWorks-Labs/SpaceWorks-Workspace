@@ -2,6 +2,9 @@ import "server-only";
 
 import { prisma } from "@/lib/db";
 import { decryptSecret, encryptSecret } from "@/lib/crypto";
+import { AUTH_SETTING_KEYS } from "@/lib/instanceSettings/keys-auth";
+import { LIMIT_SETTING_KEYS } from "@/lib/instanceSettings/keys-limits";
+import { OBSERVABILITY_SETTING_KEYS } from "@/lib/instanceSettings/keys-observability";
 
 /**
  * Instance-wide settings managed by the super-admin (/admin/settings).
@@ -22,6 +25,9 @@ export const INSTANCE_SETTING_KEYS = {
   "google.clientSecret": { secret: true, env: "AUTH_GOOGLE_SECRET" },
   "ai.anthropicApiKey": { secret: true, env: "ANTHROPIC_API_KEY" },
   "ai.model": { secret: false, env: "ASSISTANT_MODEL" },
+  ...AUTH_SETTING_KEYS,
+  ...OBSERVABILITY_SETTING_KEYS,
+  ...LIMIT_SETTING_KEYS,
 } as const;
 
 export type InstanceSettingKey = keyof typeof INSTANCE_SETTING_KEYS;

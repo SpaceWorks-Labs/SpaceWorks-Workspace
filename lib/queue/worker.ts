@@ -5,6 +5,7 @@ import { deliverOutboxBatch } from "@/lib/outbox";
 import { recordHeartbeatSuccess } from "@/lib/operationalHeartbeat";
 import { SCHEDULED_JOBS } from "@/lib/scheduled";
 import { describeOperationalError } from "@/lib/redactSensitiveText";
+import { recordJobResult } from "@/lib/observability/metrics/jobs";
 import { queueConnection } from "./client";
 import { QUEUE_NAMES, queueConcurrency, type QueueJob } from "./definitions";
 
@@ -51,7 +52,8 @@ export function createWorkers(options: { prefix?: string; redisUrl?: string; pro
       }
     }, { connection: queueConnection(true, options.redisUrl), prefix: options.prefix ?? process.env.JOBS_QUEUE_PREFIX ?? "sww:jobs", concurrency: queueConcurrency(name), maxStalledCount: 2 });
     worker.on("error", () => console.error(`[queue] ${name} worker error`));
-    worker.on("failed", () => console.error(`[queue] ${name} job failed`));
+    worker.on("failed", () => { recordJobResult(name, "failed"); console.error(`[queue] ${name} job failed`); });
+    worker.on("completed", () => recordJobResult(name, "completed"));
     return worker;
   });
   return {

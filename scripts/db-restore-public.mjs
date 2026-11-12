@@ -3,9 +3,10 @@ import { createReadStream, createWriteStream } from "node:fs";
 import { pipeline } from "node:stream/promises";
 import path from "node:path";
 
-// This CLI restores the application's public schema. Refuse other user schemas
-// rather than silently preserving residue or dropping unrelated applications.
-const otherSchemas = "SELECT EXISTS (SELECT 1 FROM pg_namespace WHERE nspname <> 'public' AND nspname <> 'information_schema' AND nspname !~ '^pg_')";
+// This CLI restores the application's public schema and its `reporting` views
+// (0.10.0+). Refuse other user schemas rather than silently preserving residue
+// or dropping unrelated applications.
+const otherSchemas = "SELECT EXISTS (SELECT 1 FROM pg_namespace WHERE nspname NOT IN ('public', 'reporting', 'information_schema') AND nspname !~ '^pg_')";
 
 export async function restorePublicArchive({ archive, directory, environment, run, commandOutput, fail }) {
   const contents = await commandOutput("pg_restore", ["--list", archive], environment);
@@ -13,6 +14,8 @@ export async function restorePublicArchive({ archive, directory, environment, ru
     if (line.startsWith(";")) return line;
     const fields = line.trim().split(/\s+/);
     if (fields[3] !== "SCHEMA" || fields[4] !== "-") return line;
+    // The archive's reporting schema is recreated after the target's is dropped.
+    if (fields[5] === "reporting") return line;
     if (fields[5] !== "public") fail("Restore supports only public-schema application backups.");
     // Preserve separate schema COMMENT entries; --no-privileges remains the
     // documented CLI policy, unlike the VPS restore's runtime-role ACL policy.
@@ -31,7 +34,7 @@ export async function restorePublicArchive({ archive, directory, environment, ru
     // Materialize the entire archive before psql: a failed producer must never
     // allow a valid SQL prefix to commit just because a pipe reached EOF.
     await run("pg_restore", ["--no-owner", "--no-privileges", "--exit-on-error", `--use-list=${selection}`, `--file=${payload}`, archive], environment);
-    await writeFile(complete, `DO $restore_guard$ BEGIN IF (${otherSchemas}) THEN RAISE EXCEPTION 'Restore refuses other user schemas'; END IF; END $restore_guard$;\nDROP SCHEMA IF EXISTS public CASCADE;\nCREATE SCHEMA public AUTHORIZATION CURRENT_USER;\nREVOKE ALL ON SCHEMA public FROM PUBLIC;\n`, { mode: 0o600 });
+    await writeFile(complete, `DO $restore_guard$ BEGIN IF (${otherSchemas}) THEN RAISE EXCEPTION 'Restore refuses other user schemas'; END IF; END $restore_guard$;\nDROP SCHEMA IF EXISTS reporting CASCADE;\nDROP SCHEMA IF EXISTS public CASCADE;\nCREATE SCHEMA public AUTHORIZATION CURRENT_USER;\nREVOKE ALL ON SCHEMA public FROM PUBLIC;\n`, { mode: 0o600 });
     await pipeline(createReadStream(payload), createWriteStream(complete, { flags: "a" }));
     await appendFile(complete, "\nREVOKE ALL ON SCHEMA public FROM PUBLIC;\n");
     // Credentials and the validated database name stay in the private PG

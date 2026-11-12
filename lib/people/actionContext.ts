@@ -5,6 +5,7 @@ import { z } from "zod";
 import { actionError, NOT_ALLOWED, RATE_LIMITED, type ActionResult } from "@/lib/actionResult";
 import { isActionRateLimited } from "@/lib/actionRateLimit";
 import { getWorkspaceForAction, type WorkspaceContext } from "@/lib/permissions";
+import type { ModuleKey } from "@/lib/modules";
 
 /**
  * Shared front half of every people/teams/rota/contacts Server Action:
@@ -15,10 +16,10 @@ import { getWorkspaceForAction, type WorkspaceContext } from "@/lib/permissions"
 
 const slugSchema = z.string().min(1).max(64);
 
-export async function actionContext(slug: unknown): Promise<WorkspaceContext | ActionResult<never>> {
+export async function actionContext(slug: unknown, module: ModuleKey = "people"): Promise<WorkspaceContext | ActionResult<never>> {
   const parsed = slugSchema.safeParse(slug);
   if (!parsed.success) return actionError(NOT_ALLOWED);
-  const ctx = await getWorkspaceForAction(parsed.data, "GUEST");
+  const ctx = await getWorkspaceForAction(parsed.data, "GUEST", { module });
   if (!ctx) return actionError(NOT_ALLOWED);
   if (await isActionRateLimited("action", ctx.user.id)) return actionError(RATE_LIMITED);
   return ctx;

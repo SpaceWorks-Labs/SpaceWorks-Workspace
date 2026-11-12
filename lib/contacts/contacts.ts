@@ -11,6 +11,7 @@ import { dispatch } from "@/lib/notify/dispatch";
 import { idSchema } from "@/lib/validation";
 import { userTeamIds, hiddenTeamIds, teamScopeFilter } from "@/lib/teamAccess";
 import { isActiveMember, type PeopleActor } from "@/lib/people/context";
+import { blocklistSubscribersForContacts } from "@/lib/campaigns/blocklist";
 import { duplicateContacts, duplicateOrganisations, normalizeDomain, exportCsv, exportVCard, parseCsv } from "./formats";
 
 export const STAGES = ["Prospect", "Qualified", "Proposal", "Negotiation", "Won", "Lost"] as const;
@@ -88,6 +89,7 @@ export async function saveContact(actor: PeopleActor, input: unknown, id: string
     const data = { ...fields, ownerId: fields.ownerId ?? actor.user.id, emails: email ? [{ type: "work", value: email.toLowerCase(), primary: true }] : [], phones: phone ? [{ type: "work", e164: phone, sensitive: sensitivePhone }] : [], nextFollowUpAt: nextFollowUpAt ? new Date(nextFollowUpAt) : null };
     const row = old ? await tx.contact.update({ where: { id: old.id, workspaceId: actor.workspace.id }, data }) : await tx.contact.create({ data: { ...data, workspaceId: actor.workspace.id, createdById: actor.user.id } });
     if (organisationId) await tx.contactOrgRole.upsert({ where: { contactId_organisationId: { contactId: row.id, organisationId } }, create: { contactId: row.id, organisationId, isPrimary: true }, update: {} });
+    if (row.doNotContact) await blocklistSubscribersForContacts(tx, actor.workspace.id, [row.id]);
     await audit(tx, actor, old ? "updated" : "created", "Contact", row.id); await index(tx, actor, "contact", row, row.displayName);
     await recordActivity({ workspaceId: actor.workspace.id, actorId: actor.user.id, verb: old ? "updated" : "created", entityType: "contact", entityId: row.id, summary: "Updated a relationship contact", visibility: "PRIVATE" }, tx);
     return row;
@@ -114,7 +116,7 @@ export async function deleteRelationship(actor: PeopleActor, input: unknown): Pr
   await prisma.$transaction(async tx => {
     const where = { workspaceId: actor.workspace.id, id: p.data.id, deletedAt: null };
     const row = p.data.type === "contact" ? await tx.contact.updateMany({ where, data: { deletedAt: new Date() } }) : await tx.organisation.updateMany({ where, data: { deletedAt: new Date() } });
-    if (row.count) { await removeSearchDocument(p.data.type, p.data.id, tx); await audit(tx, actor, "deleted", p.data.type, p.data.id); }
+    if (row.count) { if (p.data.type === "contact") await blocklistSubscribersForContacts(tx, actor.workspace.id, [p.data.id]); await removeSearchDocument(p.data.type, p.data.id, tx); await audit(tx, actor, "deleted", p.data.type, p.data.id); }
   }); return { ok: true };
 }
 export async function addInteraction(actor: PeopleActor, input: unknown): Promise<ActionResult> {

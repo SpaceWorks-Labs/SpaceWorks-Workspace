@@ -108,7 +108,7 @@ export async function login(page: Page, core: CoreFixture, who: "owner" | "membe
   const slug = who === "outsider" ? core.foreignSlug : core.slug;
   const destination = `/w/${slug}/${route}`;
   await page.goto(`/login?callbackUrl=${encodeURIComponent(destination)}`);
-  await page.getByLabel("Email", { exact: true }).fill(core[who].email);
+  await page.getByLabel("Username or email", { exact: true }).fill(core[who].email);
   await page.getByLabel("Password", { exact: true }).fill(core.password);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(page).toHaveURL(url => url.pathname === destination);

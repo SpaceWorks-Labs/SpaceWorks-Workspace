@@ -92,6 +92,24 @@ export const envSchema = z.object({
   QUEUE_DOCUMENTS_CONCURRENCY: optionalString(z.coerce.number().int().min(1).max(64)),
   MONITOR_ALLOW_PRIVATE_TARGETS: optionalString(z.enum(["true", "false"])),
   MONITOR_MAX_PER_WORKSPACE: optionalString(z.coerce.number().int().min(1).max(10_000)),
+  // Sign-in providers, observability and instance defaults (all optional, all off by default).
+  AUTH_GITHUB_ID: optionalString(z.string().min(1)),
+  AUTH_GITHUB_SECRET: optionalString(z.string().min(1)),
+  AUTH_APPLE_ID: optionalString(z.string().min(1)),
+  AUTH_APPLE_TEAM_ID: optionalString(z.string().min(1)),
+  AUTH_APPLE_KEY_ID: optionalString(z.string().min(1)),
+  AUTH_APPLE_PRIVATE_KEY: optionalString(z.string().min(1)),
+  SENTRY_DSN: optionalString(z.string().url()),
+  SENTRY_ENVIRONMENT: optionalString(z.string().min(1)),
+  SENTRY_TRACES_SAMPLE_RATE: optionalString(z.coerce.number().min(0).max(1)),
+  POSTHOG_KEY: optionalString(z.string().min(1)),
+  POSTHOG_HOST: optionalString(z.string().url()),
+  CLARITY_PROJECT_ID: optionalString(z.string().regex(/^[a-z0-9]{4,32}$/i, "must be a Clarity project id")),
+  METRICS_TOKEN: optionalString(secret),
+  METABASE_SECRET_KEY: optionalString(z.string().min(16)),
+  OBS_CSP_PROVIDERS: optionalString(z.string()),
+  OBS_CSP_CONNECT_ORIGINS: optionalString(z.string()),
+  OBS_CSP_FRAME_ORIGINS: optionalString(z.string()),
 });
 
 export type AppEnv = z.infer<typeof envSchema>;

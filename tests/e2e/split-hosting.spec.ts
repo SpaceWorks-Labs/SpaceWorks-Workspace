@@ -22,7 +22,7 @@ test.afterAll(async () => {
 test("renders shared UI, writes through thin actions and consumes direct stream tickets", async ({ page, request, baseURL }) => {
   test.setTimeout(120_000);
   await page.goto(`/login?callbackUrl=/w/${slug}/chat/general`);
-  await page.getByLabel("Email", { exact: true }).fill(email);
+  await page.getByLabel("Username or email", { exact: true }).fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(page).toHaveURL(`/w/${slug}/chat/general`);

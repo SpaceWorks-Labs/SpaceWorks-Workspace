@@ -1,5 +1,6 @@
 import "server-only";
 import { SCHEDULED_JOBS } from "@/lib/scheduled";
+import { recordBeatSchedules } from "@/lib/observability/metrics/jobs";
 import { getQueues, type Queues } from "./client";
 import { JOB_OPTIONS, QUEUE_NAMES, scheduleDefinitions, type JobDefinition } from "./definitions";
 
@@ -16,5 +17,6 @@ export async function syncSchedules(queues: Queues = getQueues(), registry: read
       if (item.key.startsWith("registry-") && !desired.some(next => next.id === item.key)) await queues[name].removeJobScheduler(item.key);
     }
   }
+  recordBeatSchedules(definitions.length);
   return { schedules: definitions.length };
 }

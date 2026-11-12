@@ -148,8 +148,8 @@ export const canManageMessaging = (m: RoleHolder) => atLeast(m, "ADMIN");
 /** Link one's own Telegram/Slack/… account (guests: not yet). */
 export const canLinkExternalAccounts = (m: RoleHolder) => atLeast(m, "MEMBER");
 
-/** Workspace-wide export (zip). */
-export const canExportWorkspace = (m: RoleHolder) => atLeast(m, "OWNER");
+/** Workspace-wide export (zip): admins and owners, like the other data controls (docs/areas/platform-shell.md). */
+export const canExportWorkspace = (m: RoleHolder) => atLeast(m, "ADMIN");
 
 /** App reviews: members triage and reply; admins manage store credentials. */
 export const canViewAppReviews = (m: RoleHolder) => atLeast(m, "MEMBER");
@@ -170,8 +170,10 @@ export const canScheduleMeetings = (m: RoleHolder) => atLeast(m, "MEMBER");
 export const canManageCalendarDeadlines = (m: RoleHolder) => atLeast(m, "ADMIN");
 /** Payroll requires an explicit tenant grant; role alone never grants it. */
 export type PayrollGrant = { manage: boolean } | null | undefined;
-export const canViewPayroll = (m: RoleHolder, grant: PayrollGrant) => atLeast(m, "MEMBER") && grant != null;
-export const canManagePayroll = (m: RoleHolder, grant: PayrollGrant) => canViewPayroll(m, grant) && grant?.manage === true;
+export const canViewPayroll = (m: ({ role: WorkspaceRole; viaSuperAdmin?: boolean }) | null | undefined, grant: PayrollGrant) =>
+  atLeast(m, "MEMBER") && (m?.viaSuperAdmin === true || grant != null);
+export const canManagePayroll = (m: ({ role: WorkspaceRole; viaSuperAdmin?: boolean }) | null | undefined, grant: PayrollGrant) =>
+  canViewPayroll(m, grant) && (m?.viaSuperAdmin === true || grant?.manage === true);
 
 /** Issued money documents and donor tax identities stay restricted to finance administrators. */
 export const canIssueFinancialDocuments = (m: RoleHolder) => atLeast(m, "ADMIN");

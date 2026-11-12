@@ -1,4 +1,6 @@
 import type { WorkspaceRole } from "@prisma/client";
+import type { ModuleKey, ModuleSettings } from "@/lib/modules";
+import { isModuleEnabled, moduleRouteForPath } from "@/lib/modules";
 import { canViewFinance, hasRoleAtLeast } from "@/lib/roles";
 
 /**
@@ -11,6 +13,8 @@ export type NavRequirement = "finance" | "payroll";
 export type NavItemConfig = {
   key: string;
   label: string;
+  /** Feature module this item belongs to (lib/modules.ts); core is always on. */
+  module: ModuleKey;
   /** Path below /w/<slug>; "" is the workspace home. */
   path: string;
   minRole: WorkspaceRole;
@@ -26,69 +30,69 @@ export const NAV_GROUPS: readonly NavGroupConfig[] = [
     key: "home",
     label: null,
     items: [
-      { key: "home", label: "Home", path: "", minRole: "GUEST", exact: true },
-      { key: "my-tasks", label: "My tasks", path: "/my-tasks", minRole: "MEMBER" },
-      { key: "calendar", label: "Calendar", path: "/calendar", minRole: "MEMBER", exact: true },
-      { key: "notepad", label: "Notepad", path: "/notepad", minRole: "GUEST" },
-      { key: "search", label: "Search", path: "/search", minRole: "GUEST" },
-      { key: "analytics", label: "Reports & analytics", path: "/analytics", minRole: "MEMBER" },
+      { key: "home", label: "Home", path: "", minRole: "GUEST", exact: true, module: "core" },
+      { key: "my-tasks", label: "My tasks", path: "/my-tasks", minRole: "MEMBER", module: "core" },
+      { key: "calendar", label: "Calendar", path: "/calendar", minRole: "GUEST", exact: true, module: "core" },
+      { key: "notepad", label: "Notepad", path: "/notepad", minRole: "GUEST", module: "core" },
+      { key: "search", label: "Search", path: "/search", minRole: "GUEST", module: "core" },
+      { key: "analytics", label: "Reports & analytics", path: "/analytics", minRole: "MEMBER", module: "analytics" },
     ],
   },
   {
     key: "work",
     label: "Work",
     items: [
-      { key: "projects", label: "Projects", path: "/projects", minRole: "GUEST" },
-      { key: "project-blockers", label: "Blockers", path: "/projects/blockers", minRole: "GUEST" },
-      { key: "cycles", label: "Cycles", path: "/cycles", minRole: "MEMBER" },
-      { key: "goals", label: "Goals", path: "/goals", minRole: "MEMBER" },
-      { key: "meetings", label: "Meetings", path: "/meetings", minRole: "GUEST" },
-      { key: "decisions", label: "Decisions", path: "/meetings/decisions", minRole: "GUEST" },
-      { key: "sign-offs", label: "Sign-offs", path: "/sign", minRole: "GUEST" },
-      { key: "product-ops", label: "Product and engineering", path: "/product-ops", minRole: "MEMBER" },
+      { key: "projects", label: "Projects", path: "/projects", minRole: "GUEST", module: "projects" },
+      { key: "project-blockers", label: "Blockers", path: "/projects/blockers", minRole: "GUEST", module: "projects" },
+      { key: "cycles", label: "Cycles", path: "/cycles", minRole: "MEMBER", module: "projects" },
+      { key: "goals", label: "Goals", path: "/goals", minRole: "MEMBER", module: "projects" },
+      { key: "meetings", label: "Meetings", path: "/meetings", minRole: "GUEST", module: "meetings" },
+      { key: "decisions", label: "Decisions", path: "/meetings/decisions", minRole: "GUEST", module: "meetings" },
+      { key: "sign-offs", label: "Sign-offs", path: "/sign", minRole: "GUEST", module: "meetings" },
+      { key: "product-ops", label: "Product and engineering", path: "/product-ops", minRole: "MEMBER", module: "projects" },
     ],
   },
   {
     key: "chat",
     label: "Chat",
     items: [
-      { key: "channels", label: "Channels", path: "/chat", minRole: "GUEST" },
-      { key: "dms", label: "Direct messages", path: "/dm", minRole: "MEMBER" },
-      { key: "assistant", label: "Assistant", path: "/assistant", minRole: "MEMBER" },
-      { key: "boardroom", label: "Boardroom", path: "/boardroom", minRole: "MEMBER" },
+      { key: "channels", label: "Channels", path: "/chat", minRole: "GUEST", module: "chat" },
+      { key: "dms", label: "Direct messages", path: "/dm", minRole: "MEMBER", module: "chat" },
+      { key: "assistant", label: "Assistant", path: "/assistant", minRole: "MEMBER", module: "assistant" },
+      { key: "boardroom", label: "Boardroom", path: "/boardroom", minRole: "MEMBER", module: "assistant" },
     ],
   },
   {
     key: "knowledge",
     label: "Knowledge",
     items: [
-      { key: "docs", label: "Docs", path: "/docs", minRole: "GUEST" },
-      { key: "files", label: "Files", path: "/files", minRole: "GUEST" },
-      { key: "templates", label: "Templates", path: "/templates", minRole: "MEMBER" },
-      { key: "forms", label: "Forms", path: "/forms", minRole: "MEMBER" },
-      { key: "links", label: "Links", path: "/links", minRole: "GUEST" },
-      { key: "documents", label: "Official documents", path: "/documents", minRole: "ADMIN" },
+      { key: "docs", label: "Docs", path: "/docs", minRole: "GUEST", module: "knowledge" },
+      { key: "files", label: "Files", path: "/files", minRole: "GUEST", module: "knowledge" },
+      { key: "templates", label: "Templates", path: "/templates", minRole: "MEMBER", module: "knowledge" },
+      { key: "forms", label: "Forms", path: "/forms", minRole: "MEMBER", module: "knowledge" },
+      { key: "links", label: "Links", path: "/links", minRole: "GUEST", module: "knowledge" },
+      { key: "documents", label: "Official documents", path: "/documents", minRole: "ADMIN", module: "knowledge" },
     ],
   },
   {
     key: "community",
     label: "Community",
     items: [
-      { key: "announcements", label: "Announcements", path: "/announcements", minRole: "GUEST" },
-      { key: "activity", label: "Activity", path: "/activity", minRole: "GUEST" },
-      { key: "changelog", label: "Changelog", path: "/changelog", minRole: "GUEST" },
-      { key: "polls", label: "Polls", path: "/polls", minRole: "MEMBER" },
-      { key: "ideas", label: "Ideas", path: "/ideas", minRole: "MEMBER" },
+      { key: "announcements", label: "Announcements", path: "/announcements", minRole: "GUEST", module: "community" },
+      { key: "activity", label: "Activity", path: "/activity", minRole: "GUEST", module: "community" },
+      { key: "changelog", label: "Changelog", path: "/changelog", minRole: "GUEST", module: "community" },
+      { key: "polls", label: "Polls", path: "/polls", minRole: "MEMBER", module: "community" },
+      { key: "ideas", label: "Ideas", path: "/ideas", minRole: "MEMBER", module: "community" },
     ],
   },
   {
     key: "people",
     label: "People",
     items: [
-      { key: "members", label: "Members", path: "/members", minRole: "GUEST" },
-      { key: "teams", label: "Teams", path: "/teams", minRole: "GUEST" },
-      { key: "org-people", label: "Organisation", path: "/organisation", minRole: "MEMBER" },
-      { key: "my-onboarding", label: "Onboarding", path: "/onboarding", minRole: "GUEST" },
+      { key: "members", label: "Members", path: "/members", minRole: "GUEST", module: "core" },
+      { key: "teams", label: "Teams", path: "/teams", minRole: "GUEST", module: "people" },
+      { key: "org-people", label: "Organisation", path: "/organisation", minRole: "MEMBER", module: "people" },
+      { key: "my-onboarding", label: "Onboarding", path: "/onboarding", minRole: "GUEST", module: "people" },
     ],
   },
   {
@@ -96,13 +100,13 @@ export const NAV_GROUPS: readonly NavGroupConfig[] = [
     collapsedByDefault: true,
     label: "Operations",
     items: [
-      { key: "safety", label: "Safety & facilities", path: "/safety", minRole: "MEMBER" },
-      { key: "safeguarding", label: "Safeguarding", path: "/safeguarding", minRole: "MEMBER" },
-      { key: "governance", label: "Governance", path: "/governance", minRole: "ADMIN" },
-      { key: "rota", label: "Rota", path: "/rota", minRole: "MEMBER" },
-      { key: "leave", label: "Leave", path: "/leave", minRole: "MEMBER" },
-      { key: "volunteering", label: "Volunteer hours", path: "/volunteering", minRole: "MEMBER" },
-      { key: "hiring", label: "Hiring", path: "/hiring", minRole: "ADMIN" },
+      { key: "safety", label: "Safety & facilities", path: "/safety", minRole: "MEMBER", module: "operations" },
+      { key: "safeguarding", label: "Safeguarding", path: "/safeguarding", minRole: "MEMBER", module: "operations" },
+      { key: "governance", label: "Governance", path: "/governance", minRole: "ADMIN", module: "operations" },
+      { key: "rota", label: "Rota", path: "/rota", minRole: "MEMBER", module: "people" },
+      { key: "leave", label: "Leave", path: "/leave", minRole: "MEMBER", module: "people" },
+      { key: "volunteering", label: "Volunteer hours", path: "/volunteering", minRole: "MEMBER", module: "people" },
+      { key: "hiring", label: "Hiring", path: "/hiring", minRole: "ADMIN", module: "people" },
     ],
   },
   {
@@ -110,14 +114,15 @@ export const NAV_GROUPS: readonly NavGroupConfig[] = [
     collapsedByDefault: true,
     label: "Support & IT",
     items: [
-      { key: "helpdesk", label: "Help desk", path: "/helpdesk", minRole: "MEMBER" },
-      { key: "requests", label: "Requests", path: "/requests", minRole: "MEMBER" },
-      { key: "services", label: "Services", path: "/services", minRole: "MEMBER" },
-      { key: "catalogue", label: "Service catalogue", path: "/catalogue", minRole: "MEMBER" },
-      { key: "assets", label: "Assets", path: "/assets", minRole: "MEMBER" },
-      { key: "it", label: "IT administration", path: "/it", minRole: "MEMBER" },
-      { key: "vault", label: "Vault", path: "/vault", minRole: "MEMBER" },
-      { key: "secrets", label: "Secrets", path: "/secrets", minRole: "MEMBER" },
+      { key: "helpdesk", label: "Help desk", path: "/helpdesk", minRole: "MEMBER", module: "helpdesk" },
+      { key: "requests", label: "Requests", path: "/requests", minRole: "MEMBER", module: "helpdesk" },
+      { key: "services", label: "Services", path: "/services", minRole: "MEMBER", module: "services" },
+      { key: "catalogue", label: "Service catalogue", path: "/catalogue", minRole: "MEMBER", module: "services" },
+      { key: "assets", label: "Assets", path: "/assets", minRole: "MEMBER", module: "services" },
+      { key: "it", label: "IT administration", path: "/it", minRole: "MEMBER", module: "services" },
+      { key: "stock", label: "Stock", path: "/stock", minRole: "MEMBER", module: "services" },
+      { key: "vault", label: "Vault", path: "/vault", minRole: "MEMBER", module: "vault" },
+      { key: "secrets", label: "Secrets", path: "/secrets", minRole: "MEMBER", module: "secrets" },
     ],
   },
   {
@@ -125,13 +130,14 @@ export const NAV_GROUPS: readonly NavGroupConfig[] = [
     collapsedByDefault: true,
     label: "Outreach",
     items: [
-      { key: "contacts", label: "Contacts", path: "/contacts", minRole: "MEMBER" },
-      { key: "organisations", label: "Companies", path: "/contacts/organisations", minRole: "MEMBER" },
-      { key: "pipeline", label: "Pipeline", path: "/contacts/pipeline", minRole: "MEMBER" },
-      { key: "marketing", label: "Marketing", path: "/marketing", minRole: "MEMBER" },
-      { key: "social", label: "Social", path: "/social", minRole: "MEMBER" },
-      { key: "app-reviews", label: "App reviews", path: "/app-reviews", minRole: "MEMBER" },
-      { key: "seo", label: "SEO", path: "/seo", minRole: "ADMIN" },
+      { key: "contacts", label: "Contacts", path: "/contacts", minRole: "MEMBER", module: "outreach" },
+      { key: "organisations", label: "Companies", path: "/contacts/organisations", minRole: "MEMBER", module: "outreach" },
+      { key: "pipeline", label: "Pipeline", path: "/contacts/pipeline", minRole: "MEMBER", module: "outreach" },
+      { key: "marketing", label: "Marketing", path: "/marketing", minRole: "MEMBER", module: "outreach" },
+      { key: "campaigns", label: "Email campaigns", path: "/campaigns", minRole: "MEMBER", module: "campaigns" },
+      { key: "social", label: "Social", path: "/social", minRole: "MEMBER", module: "social" },
+      { key: "app-reviews", label: "App reviews", path: "/app-reviews", minRole: "MEMBER", module: "social" },
+      { key: "seo", label: "SEO", path: "/seo", minRole: "ADMIN", module: "social" },
     ],
   },
   {
@@ -139,12 +145,12 @@ export const NAV_GROUPS: readonly NavGroupConfig[] = [
     collapsedByDefault: true,
     label: "Finance",
     items: [
-      { key: "finance", label: "Finance", path: "/finance", minRole: "MEMBER", requires: "finance" },
-      { key: "staff-advances", label: "Staff advances", path: "/finance/advances", minRole: "MEMBER" },
-      { key: "payroll", label: "Payroll", path: "/finance/payroll", minRole: "MEMBER", requires: "payroll" },
-      { key: "subscriptions", label: "Subscriptions", path: "/subscriptions", minRole: "MEMBER" },
-      { key: "funding", label: "Funding and impact", path: "/funding", minRole: "ADMIN" },
-      { key: "money-controls", label: "Money controls", path: "/money-controls", minRole: "ADMIN" },
+      { key: "finance", label: "Finance", path: "/finance", minRole: "MEMBER", requires: "finance", module: "finance" },
+      { key: "staff-advances", label: "Staff advances", path: "/finance/advances", minRole: "MEMBER", module: "finance" },
+      { key: "payroll", label: "Payroll", path: "/finance/payroll", minRole: "MEMBER", requires: "payroll", module: "finance" },
+      { key: "subscriptions", label: "Subscriptions", path: "/subscriptions", minRole: "MEMBER", module: "finance" },
+      { key: "funding", label: "Funding and impact", path: "/funding", minRole: "ADMIN", module: "finance" },
+      { key: "money-controls", label: "Money controls", path: "/money-controls", minRole: "ADMIN", module: "finance" },
     ],
   },
   {
@@ -152,15 +158,19 @@ export const NAV_GROUPS: readonly NavGroupConfig[] = [
     collapsedByDefault: true,
     label: "Settings",
     items: [
-      { key: "settings", label: "Workspace", path: "/settings", minRole: "ADMIN" },
-      { key: "integrations", label: "Integrations", path: "/settings/integrations", minRole: "ADMIN" },
-      { key: "messaging", label: "Messaging", path: "/settings/messaging", minRole: "ADMIN" },
-      { key: "notification-routing", label: "Notification rules", path: "/settings/notifications", minRole: "ADMIN" },
-      { key: "webhooks", label: "Webhooks", path: "/settings/notifications#webhooks", minRole: "ADMIN" },
-      { key: "cloud-accounts", label: "Cloud accounts", path: "/settings/cloud-accounts", minRole: "ADMIN" },
-      { key: "retention", label: "Retention", path: "/settings/retention", minRole: "ADMIN" },
-      { key: "app-reviews-settings", label: "App review settings", path: "/app-reviews/settings", minRole: "ADMIN" },
-      { key: "onboarding", label: "Onboarding templates", path: "/settings/onboarding", minRole: "ADMIN" },
+      { key: "settings", label: "Workspace", path: "/settings", minRole: "ADMIN", module: "core" },
+      { key: "integrations", label: "Integrations", path: "/settings/integrations", minRole: "ADMIN", module: "integrations" },
+      { key: "messaging", label: "Messaging", path: "/settings/messaging", minRole: "ADMIN", module: "integrations" },
+      { key: "notification-routing", label: "Notification rules", path: "/settings/notifications", minRole: "ADMIN", module: "core" },
+      { key: "webhooks", label: "Webhooks", path: "/settings/notifications#webhooks", minRole: "ADMIN", module: "integrations" },
+      { key: "cloud-accounts", label: "Cloud accounts", path: "/settings/cloud-accounts", minRole: "ADMIN", module: "integrations" },
+      { key: "retention", label: "Retention", path: "/settings/retention", minRole: "ADMIN", module: "core" },
+      { key: "app-reviews-settings", label: "App review settings", path: "/app-reviews/settings", minRole: "ADMIN", module: "social" },
+      { key: "onboarding", label: "Onboarding templates", path: "/settings/onboarding", minRole: "ADMIN", module: "people" },
+      { key: "plan", label: "Plan & limits", path: "/settings/plan", minRole: "OWNER", module: "core" },
+      { key: "payments", label: "Payments", path: "/settings/payments", minRole: "ADMIN", module: "core" },
+      { key: "email-sending", label: "Email sending", path: "/settings/email", minRole: "ADMIN", module: "core" },
+      { key: "connected-analytics", label: "Connected analytics", path: "/settings/analytics", minRole: "ADMIN", module: "analytics" },
     ],
   },
   {
@@ -168,17 +178,21 @@ export const NAV_GROUPS: readonly NavGroupConfig[] = [
     collapsedByDefault: true,
     label: "Preferences",
     items: [
-      { key: "notification-preferences", label: "Notification preferences", path: "/notifications/preferences", minRole: "GUEST" },
-      { key: "notification-accounts", label: "Connected accounts", path: "/notifications/accounts", minRole: "MEMBER" },
-      { key: "calendar-subscribe", label: "Personal calendar feed", path: "/calendar/subscribe", minRole: "GUEST" },
+      { key: "notification-preferences", label: "Notification preferences", path: "/notifications/preferences", minRole: "GUEST", module: "core" },
+      { key: "notification-accounts", label: "Connected accounts", path: "/notifications/accounts", minRole: "MEMBER", module: "core" },
+      { key: "calendar-subscribe", label: "Personal calendar feed", path: "/calendar/subscribe", minRole: "GUEST", module: "core" },
     ],
   },
 ];
 
 export type NavContext = {
+  /** `canViewPayroll` for this member (a tenant grant, or the super admin); role alone never shows payroll. */
   payrollAccess?: boolean;
+  /** Per-workspace module switches; omitted means every module is on. */
+  enabledModules?: ModuleSettings | null;
   role: WorkspaceRole;
-  workspace: { financeVisibleToMembers: boolean };
+  /** A SUSPENDED organisation only opens its settings home and plan page to owners and admins. */
+  workspace: { financeVisibleToMembers: boolean; status?: string };
 };
 
 export type ResolvedNavItem = { key: string; label: string; href: string; exact: boolean };
@@ -188,9 +202,21 @@ export function workspaceBasePath(slug: string) {
   return `/w/${encodeURIComponent(slug)}`;
 }
 
+/** Paths a suspended organisation still serves (see `passesWorkspaceGate`). */
+export const SUSPENDED_PATHS: readonly string[] = ["/settings", "/settings/plan"];
+
+/** Is a module-owned path switched off, including sub-areas such as "finance.payroll"? */
+export function modulePathEnabled(path: string, module: ModuleKey, settings: ModuleSettings | null | undefined) {
+  if (settings && !isModuleEnabled(settings, module)) return false;
+  const sub = moduleRouteForPath(`/w/_${path.split("#")[0]}`)?.sub;
+  return !(sub && settings?.disabledModules.includes(`${module}.${sub}`));
+}
+
 function allowed(item: NavItemConfig, context: NavContext) {
+  if (context.workspace.status === "SUSPENDED" && !SUSPENDED_PATHS.includes(item.path)) return false;
+  if (!modulePathEnabled(item.path, item.module, context.enabledModules)) return false;
   if (!hasRoleAtLeast(context.role, item.minRole)) return false;
-  if (item.requires === "payroll") return context.role === "OWNER" || context.payrollAccess === true;
+  if (item.requires === "payroll") return context.payrollAccess === true;
   if (item.requires === "finance") return canViewFinance({ role: context.role }, context.workspace);
   return true;
 }

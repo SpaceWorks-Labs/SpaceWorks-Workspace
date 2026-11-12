@@ -32,11 +32,13 @@ type FieldProps = {
 };
 
 /** Label above, control, then helper or error text, all wired with ids and ARIA. */
-export function Field({ label, optional, helperText, error, hideLabel, className, id, required, children }: FieldProps) {
+export function Field({ label, optional, helperText, error, hideLabel, className, id, required, children: rawChildren }: FieldProps) {
   const generatedId = useId();
-  const controlId = id ?? (children.props.id as string | undefined) ?? generatedId;
+  const children = resolveLazy(rawChildren);
+  const childProps = isValidElement<Record<string, unknown>>(children) ? children.props : undefined;
+  const controlId = id ?? (childProps?.id as string | undefined) ?? generatedId;
   const describedBy = error || helperText ? `${controlId}-description` : undefined;
-  const control = isValidElement(children)
+  const control = isValidElement<Record<string, unknown>>(children)
     ? cloneElement(children, {
         id: controlId,
         "aria-invalid": error ? true : (children.props["aria-invalid"] as boolean | undefined),
@@ -63,6 +65,19 @@ export function Field({ label, optional, helperText, error, hideLabel, className
   );
 }
 
+const LAZY = Symbol.for("react.lazy");
+type LazyNode = { $$typeof: symbol; _payload: unknown; _init: (payload: unknown) => ReactNode };
+
+/**
+ * A control passed from a Server Component can reach the server render as a lazy
+ * reference. Resolve it the way React does (suspending while it loads) so the
+ * server and client both clone the same element and wire the same ids.
+ */
+function resolveLazy(node: ReactNode): ReactNode {
+  const lazy = node as unknown as LazyNode | null;
+  return lazy && typeof lazy === "object" && lazy.$$typeof === LAZY ? resolveLazy(lazy._init(lazy._payload)) : node;
+}
+
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(function Input({ className, type, ...props }, ref) {
   const inputType = type ?? (props.name === "q" ? "search" : undefined);
   return <input ref={ref} type={inputType} className={cn(controlClasses, inputType === "search" && searchClasses, className)} {...props} />;
@@ -83,7 +98,7 @@ export const PrefixInput = forwardRef<HTMLInputElement, InputHTMLAttributes<HTML
   ref,
 ) {
   return (
-    <div className="flex min-h-11 w-full overflow-hidden rounded-md border border-line-strong bg-panel transition-colors duration-[120ms] ease-yy hover:border-ink focus-within:border-accent focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--yy-focus)] has-[[aria-invalid=true]]:border-danger-fg">
+    <div className="flex min-h-11 w-full overflow-hidden rounded-md border border-line-strong bg-panel transition-colors duration-[var(--sw-dur-fast)] ease-yy hover:border-ink focus-within:border-accent focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--yy-focus)] has-[[aria-invalid=true]]:border-danger-fg">
       <span className="flex shrink-0 items-center border-r border-line bg-surface px-3 text-sm text-ink-muted">{prefix}</span>
       <input ref={ref} className={cn("min-w-0 flex-1 bg-transparent px-3.5 py-[9px] text-base text-ink placeholder:text-ink-muted outline-none", className)} {...props} />
     </div>

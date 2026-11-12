@@ -134,6 +134,7 @@ export async function authenticateServiceToken(
     row.revokedAt ||
     (row.expiresAt && row.expiresAt <= now) ||
     row.workspace.archivedAt ||
+    row.workspace.status !== "ACTIVE" ||
     !ipAllowed(ip, row.ipAllowlist)
   )
     return null;

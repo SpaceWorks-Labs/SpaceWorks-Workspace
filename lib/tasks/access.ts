@@ -22,7 +22,7 @@ import type { TaskSource } from "@/lib/tasks/capabilities";
 export type TaskActor = {
   user: { id: string; name: string | null };
   workspace: { id: string; slug: string; name: string; timezone: string };
-  membership: { role: WorkspaceRole };
+  membership: { role: WorkspaceRole; viaSuperAdmin?: boolean };
   /** Where the change came from (history provenance); web when absent. */
   via?: { source: TaskSource; client?: string };
 };

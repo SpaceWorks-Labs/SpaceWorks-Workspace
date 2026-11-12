@@ -10,7 +10,7 @@ import { attachOrgFiles, fileKind } from "@/lib/orgPeople/files";
 import { revalidatePath } from "@/lib/frontend/cache";
 async function action(slug: string, admin: boolean, work: (actor: OrgActor) => Promise<unknown>): Promise<ActionResult<string>> {
   if (!z.string().min(1).max(64).safeParse(slug).success) return actionError("This workspace is unavailable.");
-  const actor = await getWorkspaceForAction(slug, "MEMBER");
+  const actor = await getWorkspaceForAction(slug, "MEMBER", { module: "people" });
   if (!actor || !(admin ? canManageOrgPeople(actor.membership) : canViewOrgPeople(actor.membership))) return actionError("You do not have access to this action.");
   if (await isActionRateLimited("action", actor.user.id)) return actionError("Too many changes. Try again shortly.");
   try {

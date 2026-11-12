@@ -5,6 +5,7 @@ import { assignableMembers, visibleTaskWhere, type TaskActor } from "@/lib/tasks
 import type { BoardData, BoardTask } from "@/lib/tasks/types";
 import { effectiveType, type TaskTypeRef } from "@/lib/tasks/taskTypes";
 import { listTaskTypesFor } from "@/lib/tasks/service/types";
+import { INLINE_FOLDER } from "@/lib/tasks/inlineImages";
 import { iso } from "./formatters";
 import {
   permissionsFor,
@@ -36,7 +37,7 @@ const boardTaskSelect = {
     select: {
       subtasks: { where: { archivedAt: null } },
       comments: { where: { deletedAt: null } },
-      files: { where: { deletedAt: null } },
+      files: { where: { deletedAt: null, NOT: { folder: INLINE_FOLDER } } },
       recurrenceRules: { where: { active: true } },
     },
   },
@@ -61,6 +62,7 @@ async function toBoardTasks(actor: TaskActor, project: Project, rows: BoardTaskR
     position: row.position,
     assigneeIds: row.assignees.map((a) => a.userId),
     labelIds: row.labels.map((l) => l.labelId),
+    creatorId: row.creatorId,
     ...taskRights(actor, { creatorId: row.creatorId, project }, row.assignees.map((a) => a.userId)),
     subtaskCount: row._count.subtasks,
     subtaskDone: doneBy.get(row.id) ?? 0,
@@ -78,7 +80,7 @@ export async function getBoardData(actor: TaskActor, key: string): Promise<Board
   if (!project) return null;
   const [summary, columns, rows, members, labels, taskTypes] = await Promise.all([
     projectSummary(project),
-    prisma.boardColumn.findMany({ where: { projectId: project.id }, orderBy: { position: "asc" }, select: { id: true, name: true, position: true, category: true } }),
+    prisma.boardColumn.findMany({ where: { projectId: project.id }, orderBy: { position: "asc" }, select: { id: true, name: true, position: true, category: true, color: true, wipLimit: true } }),
     prisma.task.findMany({ where: { projectId: project.id, parentId: null, archivedAt: null }, orderBy: [{ position: "asc" }, { number: "asc" }], select: boardTaskSelect, take: 2000 }),
     assignableMembers(actor.workspace.id, project),
     workspaceLabels(actor.workspace.id),
@@ -87,12 +89,36 @@ export async function getBoardData(actor: TaskActor, key: string): Promise<Board
   return { project: summary, columns, tasks: await toBoardTasks(actor, project, rows, taskTypes), members, labels, taskTypes, permissions: permissionsFor(actor, project) };
 }
 
-/** Archived tasks of a project, newest first (for the "Archived" view). */
-export async function listArchivedTasks(actor: TaskActor, projectId: string) {
-  return prisma.task.findMany({
-    where: { AND: [await visibleTaskWhere(actor), { projectId, archivedAt: { not: null }, parentId: null }] },
+export type ArchivedTaskDTO = { id: string; number: number; title: string; archivedAt: string; archivedBy: string | null; canRestore: boolean };
+
+/**
+ * Archived tasks of a project, newest archive first (the "Archived" tab).
+ * `canRestore` follows the per-task edit rules; deleting for good is a project-level right.
+ */
+export async function listArchivedTasks(actor: TaskActor, project: Project): Promise<ArchivedTaskDTO[]> {
+  const rows = await prisma.task.findMany({
+    where: { AND: [await visibleTaskWhere(actor), { projectId: project.id, archivedAt: { not: null }, parentId: null }] },
     orderBy: { archivedAt: "desc" },
-    take: 100,
-    select: { id: true, number: true, title: true, archivedAt: true },
+    take: 200,
+    select: {
+      id: true,
+      number: true,
+      title: true,
+      archivedAt: true,
+      creatorId: true,
+      assignees: { select: { userId: true } },
+      activities: { where: { kind: "archived" }, orderBy: { createdAt: "desc" }, take: 1, select: { actorId: true } },
+    },
   });
+  const actorIds = [...new Set(rows.flatMap((row) => row.activities.map((activity) => activity.actorId).filter((id): id is string => Boolean(id))))];
+  const users = actorIds.length ? await prisma.user.findMany({ where: { id: { in: actorIds } }, select: { id: true, name: true } }) : [];
+  const names = new Map(users.map((user) => [user.id, user.name]));
+  return rows.map((row) => ({
+    id: row.id,
+    number: row.number,
+    title: row.title,
+    archivedAt: row.archivedAt!.toISOString(),
+    archivedBy: row.activities[0]?.actorId ? (names.get(row.activities[0].actorId) ?? null) : null,
+    canRestore: taskRights(actor, { creatorId: row.creatorId, project }, row.assignees.map((a) => a.userId)).canEdit,
+  }));
 }

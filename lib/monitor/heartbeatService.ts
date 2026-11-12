@@ -30,7 +30,7 @@ export async function handlePing(input: { token: string; action?: string; body?:
   const notFound: PingResult = { status: 404, body: "Not found" };
   const action = parsePingAction(input.action);
   if (!action || typeof input.token !== "string" || input.token.length < 20 || input.token.length > 100) return notFound;
-  const monitor = await prisma.monitor.findUnique({ where: { heartbeatTokenHash: sha256Hex(input.token), workspace: { archivedAt: null } }, select: { id: true, type: true, enabled: true, config: true } });
+  const monitor = await prisma.monitor.findUnique({ where: { heartbeatTokenHash: sha256Hex(input.token), workspace: { status: "ACTIVE", archivedAt: null } }, select: { id: true, type: true, enabled: true, config: true } });
   if (!monitor || monitor.type !== "HEARTBEAT") return notFound;
   if (!(await withinLimit(`hb:${monitor.id}`, PING_RATE_LIMIT_PER_MIN, 60_000))) return { status: 429, body: "Too many pings. Send at most 10 a minute." };
   const now = input.now ?? new Date();
@@ -63,7 +63,7 @@ export async function handlePing(input: { token: string; action?: string; body?:
 /** Mark overdue heartbeats DOWN (one sample per missed period) and runs that never finished. */
 export async function sweepHeartbeats(now = new Date()): Promise<number> {
   const candidates = await prisma.monitor.findMany({
-    where: { workspace: { archivedAt: null }, type: "HEARTBEAT", enabled: true, expectedNextAt: { lte: now } },
+    where: { workspace: { status: "ACTIVE", archivedAt: null }, type: "HEARTBEAT", enabled: true, expectedNextAt: { lte: now } },
     select: { id: true, name: true, tags: true, useWorkspaceRules: true, config: true, expectedNextAt: true, lastPingAt: true, lastStatus: true, workspace: { select: { id: true, slug: true } } },
     take: 200,
   });
@@ -97,7 +97,7 @@ export async function sweepHeartbeats(now = new Date()): Promise<number> {
     }
   }
 
-  const longRunners = await prisma.monitor.findMany({ where: { workspace: { archivedAt: null }, type: "HEARTBEAT", enabled: true }, select: { id: true, config: true }, take: 500 });
+  const longRunners = await prisma.monitor.findMany({ where: { workspace: { status: "ACTIVE", archivedAt: null }, type: "HEARTBEAT", enabled: true }, select: { id: true, config: true }, take: 500 });
   for (const monitor of longRunners) {
     const config = heartbeatConfig(monitor.config);
     if (!config.maxRunSec) continue;

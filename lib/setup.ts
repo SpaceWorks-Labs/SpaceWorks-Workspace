@@ -13,6 +13,7 @@ export async function isSetupOpen() {
 export type SetupInput = {
   name: string;
   email: string;
+  username?: string;
   password: string;
   workspaceName: string;
   workspaceSlug: string;
@@ -30,7 +31,7 @@ export async function performSetup(input: SetupInput): Promise<{ ok: true; userI
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('sww:first-run-setup'))`;
     if ((await tx.user.count()) > 0) return { ok: false as const, error: "Setup is already complete. Sign in instead." };
     const user = await tx.user.create({
-      data: { name: input.name.trim(), email: input.email.trim().toLowerCase(), passwordHash, emailVerified: new Date() },
+      data: { name: input.name.trim(), email: input.email.trim().toLowerCase(), username: input.username ?? null, passwordHash, emailVerified: new Date() },
       select: { id: true },
     });
     const workspace = await createWorkspaceWithDefaults(tx, {

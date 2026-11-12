@@ -4,10 +4,28 @@ import { activeNavKey, NAV_GROUPS, navForMember } from "@/lib/nav";
 const keys = (groups: ReturnType<typeof navForMember>) => groups.flatMap((group) => group.items.map((item) => item.key));
 const workspace = { financeVisibleToMembers: false };
 
+describe("navigation by module", () => {
+  const ctx = { role: "OWNER" as const, workspace };
+  it("shows everything when no module settings are given", () => {
+    expect(keys(navForMember("kochi", ctx))).toEqual(expect.arrayContaining(["campaigns", "stock", "plan", "payments", "email-sending", "connected-analytics"]));
+  });
+  it("hides items of disabled modules but never core", () => {
+    const visible = keys(navForMember("kochi", { ...ctx, enabledModules: { disabledModules: ["finance", "campaigns", "core"], enabledModules: [] } }));
+    for (const key of ["finance", "payroll", "campaigns", "funding"]) expect(visible).not.toContain(key);
+    expect(visible).toEqual(expect.arrayContaining(["home", "settings", "projects"]));
+  });
+  it("gates the new items by role", () => {
+    const admin = keys(navForMember("kochi", { role: "ADMIN", workspace }));
+    expect(admin).not.toContain("plan");
+    expect(admin).toContain("payments");
+    expect(keys(navForMember("kochi", { role: "MEMBER", workspace }))).toEqual(expect.arrayContaining(["campaigns", "stock"]));
+  });
+});
+
 describe("navigation by role", () => {
-  it("shows every area to owners", () => {
+  it("shows every area to owners with a payroll grant", () => {
     const all = NAV_GROUPS.flatMap((group) => group.items.map((item) => item.key));
-    expect(keys(navForMember("kochi", { role: "OWNER", workspace }))).toEqual(all);
+    expect(keys(navForMember("kochi", { role: "OWNER", workspace, payrollAccess: true }))).toEqual(all);
   });
 
   it("hides settings and operations management from members", () => {

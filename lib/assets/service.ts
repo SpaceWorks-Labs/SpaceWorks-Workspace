@@ -3,7 +3,7 @@ import { z } from "zod";
 import { randomToken } from "@/lib/crypto";
 import { prisma } from "@/lib/db";
 import { type OpsActor } from "@/lib/approvals/context";
-import { guard, parse, id, title, optionalId, optionalDate, memberRef, lockAsset, OpsError, note, searchable } from "@/lib/approvals/ops";
+import { guard, parse, id, title, optionalId, optionalDate, minor, memberRef, lockAsset, OpsError, note, searchable } from "@/lib/approvals/ops";
 
 export async function listAssets(actor: OpsActor) {
  await guard(actor);
@@ -25,7 +25,7 @@ export async function saveAsset(actor: OpsActor, input: unknown) {
  });
 }
 export async function logMaintenance(actor: OpsActor, input: unknown) {
- await guard(actor, true); const v = parse(z.object({ assetId: id, type: z.enum(["REPAIR", "SERVICE", "INSPECTION", "NOTE"]), note: z.string().trim().min(1).max(2000), nextDueAt: optionalDate }), input);
+ await guard(actor, true); const v = parse(z.object({ assetId: id, type: z.enum(["REPAIR", "SERVICE", "INSPECTION", "NOTE"]), note: z.string().trim().min(1).max(2000), costMinor: z.preprocess(v => v === "" ? undefined : v, minor.optional()), nextDueAt: optionalDate }), input);
  await prisma.$transaction(async tx => { await lockAsset(tx, actor.workspace.id, v.assetId); await tx.assetMaintenanceLog.create({ data: { ...v, byUserId: actor.user.id } }); await note(actor, "asset", v.assetId, "maintained", tx); });
 }
 export async function saveKey(actor: OpsActor, input: unknown) {

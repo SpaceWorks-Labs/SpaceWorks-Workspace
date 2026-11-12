@@ -168,6 +168,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/dist ./dist
+# Release name for Sentry and the metrics build-info series.
+COPY --from=builder --chown=nextjs:nodejs /app/VERSION ./VERSION
 
 # Prisma CLI for the optional MIGRATE_ON_START=1 path (root-owned, read-only).
 COPY --from=prisma-cli /opt/prisma-cli/node_modules /opt/prisma-cli/node_modules

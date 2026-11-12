@@ -8,7 +8,7 @@ import { currentOnCall } from "./onCall";
 import { EventBatch, incidentResponders } from "./notify";
 
 export async function maintenanceEvents(now: Date) {
-  const windows = await prisma.maintenanceWindow.findMany({ where: { workspace: { archivedAt: null } } });
+  const windows = await prisma.maintenanceWindow.findMany({ where: { workspace: { status: "ACTIVE", archivedAt: null } } });
   for (const window of windows) {
     const active = activeOccurrence(window, now), next = nextOccurrence(window, now), ended = recentlyEndedOccurrence(window, new Date(now.getTime() - 120000), now);
     const events = [active ? { type: "maintenance.started" as const, occurrence: active } : null, next && next.start.getTime() - now.getTime() <= 86400000 ? { type: "maintenance.scheduled" as const, occurrence: next } : null, ended ? { type: "maintenance.ended" as const, occurrence: ended } : null].filter(e => e !== null);

@@ -49,7 +49,7 @@ function selectorMemberWhere(workspaceId: string, selector: PeopleSelector): Pri
   if (selector.roles?.length) or.push({ role: { in: selector.roles } });
   if (selector.teamIds?.length) or.push({ user: { teamMemberships: { some: { teamId: { in: selector.teamIds }, team: { workspaceId } } } } });
   if (or.length === 0) return null;
-  return { workspaceId, status: "ACTIVE", user: { disabledAt: null }, workspace: { archivedAt: null }, OR: or };
+  return { workspaceId, status: "ACTIVE", user: { disabledAt: null }, workspace: { status: "ACTIVE", archivedAt: null }, OR: or };
 }
 
 export async function resolveSelectorMembers(workspaceId: string, selector: PeopleSelector, client: DbClient = prisma) {

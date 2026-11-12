@@ -36,7 +36,7 @@ export async function recurringCostAction(
   operation: string,
   form: FormData,
 ): Promise<ActionResult<string>> {
-  const actor = await getWorkspaceForAction(slug, "MEMBER");
+  const actor = await getWorkspaceForAction(slug, "MEMBER", { module: "finance" });
   if (!actor) return actionError(NOT_ALLOWED);
   try {
     const access = await controlsAccess(actor);

@@ -1,11 +1,24 @@
 import { validateRuntimeEnvironment } from "@/lib/env";
+import { initServerSentry } from "@/lib/observability/sentry/server";
 import { createServer } from "node:http";
 import { hostname } from "node:os";
 import { prisma } from "@/lib/db";
 import { getQueues, closeQueues } from "@/lib/queue/client";
+import { metricsAuthorized } from "@/lib/observability/metrics/auth";
+import { renderProcessMetrics } from "@/lib/observability/metrics/render";
+
+/** Token-protected Prometheus metrics for this process. Anything unauthorised is a bodyless 404. */
+async function serveMetrics(authorization: string | undefined, response: import("node:http").ServerResponse) {
+  try {
+    if (!(await metricsAuthorized(authorization ?? null))) { response.writeHead(404).end(); return; }
+    const { body, contentType } = await renderProcessMetrics();
+    response.writeHead(200, { "Cache-Control": "no-store", "Content-Type": contentType }).end(body);
+  } catch { response.writeHead(404).end(); }
+}
 
 export async function runProcess(role: "worker" | "beat", start: () => Promise<{ stop: () => Promise<unknown>; healthy: () => Promise<boolean> }>) {
   validateRuntimeEnvironment();
+  await initServerSentry(role); // best effort; never blocks startup
   const queues = getQueues(true);
   const client = await queues.scheduled.client;
   const key = `sww:jobs:heartbeat:${role}:${hostname()}:${process.pid}`;
@@ -26,6 +39,7 @@ export async function runProcess(role: "worker" | "beat", start: () => Promise<{
   await pulse();
   const timer = setInterval(() => void pulse(), 10_000);
   const server = createServer((request, response) => {
+    if (request.url === "/metrics") { void serveMetrics(request.headers.authorization, response); return; }
     if (request.url !== "/health") { response.writeHead(404).end(); return; }
     const healthy = !stopping && Date.now() - lastSuccess < 30_000;
     response.writeHead(healthy ? 200 : 503, { "Cache-Control": "no-store", "Content-Type": "application/json" });

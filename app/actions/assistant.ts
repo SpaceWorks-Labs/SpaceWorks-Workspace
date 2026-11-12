@@ -27,7 +27,7 @@ const slugSchema = z.string().min(1).max(64);
 async function context(slug: unknown, minRole: "MEMBER" | "ADMIN") {
   const parsed = slugSchema.safeParse(slug);
   if (!parsed.success) return null;
-  const ctx = await getWorkspaceForAction(parsed.data, minRole);
+  const ctx = await getWorkspaceForAction(parsed.data, minRole, { module: "assistant" });
   if (!ctx || !canContribute(ctx.membership) || !hasRoleAtLeast(ctx.membership.role, minRole)) return null;
   return ctx;
 }

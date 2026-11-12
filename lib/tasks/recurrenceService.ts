@@ -157,7 +157,7 @@ type DueRule = Prisma.TaskRecurrenceGetPayload<{ include: typeof dueRuleInclude 
  */
 export async function generateRecurringTasks(now: Date = new Date(), limit = 50): Promise<number> {
   const rules = await prisma.taskRecurrence.findMany({
-    where: { active: true, nextRunAt: { lte: now }, workspace: { archivedAt: null } },
+    where: { active: true, nextRunAt: { lte: now }, workspace: { status: "ACTIVE", archivedAt: null } },
     orderBy: { nextRunAt: "asc" },
     take: limit,
     include: dueRuleInclude,

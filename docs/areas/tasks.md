@@ -10,15 +10,17 @@ dependencies. Ownership row "1. tasks" in [ROADMAP-BUILD.md](../ROADMAP-BUILD.md
 | `/w/[slug]/projects` | GUEST+ | Project cards with progress, owner, team; status tabs (`?status=open\|ACTIVE\|PAUSED\|DONE\|ARCHIVED\|all`); "New project" for members |
 | `/w/[slug]/projects/[key]` | GUEST+ | Board (default) or list (`?view=list`), filters in the URL, side panel (`?task=12`) |
 | `/w/[slug]/projects/[key]/overview` | GUEST+ | Stats, columns, upcoming due, workload, recent activity |
+| `/w/[slug]/projects/[key]/archived` | GUEST+ | Archived tasks: Restore (anyone who can edit the task), "Delete…" for good (ADMIN or project owner) |
 | `/w/[slug]/projects/[key]/settings` | ADMIN or project owner | Details, owner, team, status, dates, task types; archive / restore |
 | `/w/[slug]/projects/[key]/[number]` | GUEST+ | Full task page (old project keys redirect to the current one) |
 | `/w/[slug]/projects/[key]/tasks/[number]` | GUEST+ | Alias → canonical task page |
 | `/w/[slug]/t/[ref]` | GUEST+ | Short link (`BOT-12`, `12`); tasks without a project live here |
 | `/w/[slug]/my-tasks` | MEMBER+ | Assigned to me, grouped overdue / today / this week / later / no date, quick complete with undo |
 
-Board URL state: `assignee=me,none,<userId>`, `label=<id>`, `priority=URGENT,HIGH`,
-`due=overdue|today|week|scheduled|none`, `q=`, `view=list`, `sort=manual|due|priority|number|updated|title`,
-`group=column|assignee|priority|label|due|none`, `task=<number>`.
+Board URL state: `assignee=me,none,<userId>`, `creator=me,<userId>`, `label=<id>`, `priority=URGENT,HIGH`,
+`due=overdue|today|week|scheduled|none`, `q=`, `view=list`,
+`sort=manual|due|priority|number|updated|title|status|assignee|created`, `dir=desc` (reverses the sort),
+`group=column|assignee|priority|label|due|none` (list grouping; on the board `assignee`/`priority` make swimlanes), `task=<number>`.
 
 ## Code
 
@@ -197,3 +199,68 @@ List view group headers (when grouped) and My Tasks due buckets toggle with the 
 (see `docs/DESIGN.md` 4.16); the count stays visible when closed. List groups are remembered per project, group-by and
 group; collapsing a group deselects its rows and its rows are not selectable while closed. My Tasks: "No due date"
 starts closed, the rest open.
+
+## Follow-up features (archived, WIP, views, images, shortcuts)
+
+### Archived tab and permanent delete
+
+`/projects/[key]/archived` (tab "Archived" in `ProjectTabs`) lists archived top-level tasks (`listArchivedTasks(actor, project)`,
+newest archive first, with who archived them). Restore uses `setTaskArchived` (per-task edit rule). "Delete…" is
+`deleteTaskPermanently` (`lib/tasks/service/permanentDelete.ts`, action `deleteTaskPermanentlyAction`): ADMIN or the project
+owner only (`canManageProject`), only for archived top-level tasks, not in an archived project, and the person must type the project key
+(`confirmKey`, case-insensitive). One transaction: files of the task and its subtasks are soft-deleted (objects removed after commit), search documents and
+`ActivityEvent` rows removed, audit `task.deleted` (`number`, `projectKey`, `subtasks`, `files`), the row deleted (comments,
+history, assignees, labels, dependencies, repeat rules, milestone and meeting links cascade). Realtime `task.removed` follows.
+
+### Columns: colour and soft WIP limit
+
+`BoardColumn.color` (`LabelTone`) and `wipLimit` are edited in the column's "Edit column" dialog (`updateColumn`: omitted = unchanged,
+`null` = clear; limit 1-999). The header dot uses the colour (else the category, `components/tasks/columnTone.ts`); with a limit the count reads
+`total/limit` (`lib/tasks/wip.ts`), the header is tinted `warning` when over it and a screen-reader sentence says so. The limit never blocks a move.
+
+### List, sorting, filters
+
+- Creator filter (`creator=`, "Me" + members) next to Assignee; `BoardTask.creatorId` feeds it.
+- Sorts `status` (board column order), `assignee` (first assignee's name, unassigned last), `created` (oldest first); `dir=desc` reverses any sort
+  except Board order. List column headers (Task, Status, Priority, Assignees, Due) are buttons (`SortHeader`): a click sorts, a second click
+  reverses, `aria-sort` reports it. The Task column (key + title) is sticky on horizontal scroll (token backgrounds).
+- Due-date quick picks (`dueQuickPicks`, `DueQuickPicks`): Today, Tomorrow, Next week (the coming Monday) and Clear, in the list's due cell and the task properties.
+
+### Board: swimlanes, density, shortcuts
+
+- "Group: Assignee/Priority" on the board renders one `BoardLane` per `groupTasks` group, each lane a row of the same columns in a collapsible
+  section (`sw:collapse:swimlanes`). Every lane has its own drag context, so a drop only changes the column (never the lane's assignee or priority);
+  keyboard drag, the Move menu and quick add still work. Column management (edit, add) shows in the first lane only. A task with several assignees
+  appears in each lane.
+- Card density: Comfortable / Compact toggle (`useDensity`, `localStorage` `sww.tasks.density`); compact cards drop labels and counters.
+- Shortcuts (`useTaskShortcuts`, rules in `lib/tasks/shortcuts.ts`): `/` focuses the search field, `j` / `k` move focus to the next / previous card.
+  Ignored while typing, with any menu, dialog or listbox open, or while a card is picked up for a keyboard drag.
+
+### Saved task views
+
+"Views" popover in the filter bar (`TaskViews`, `lib/tasks/views.ts`, actions `app/actions/taskViews.ts`) on the shared `SavedView` model
+(`entityType: "task"`, `query.projectKey`, `{ view, filters, sort, dir, groupBy }`). Private to the owner, or shared with the workspace (members and up).
+Everyone who can see the project sees its shared views; the owner removes their own views, an admin can remove a shared one. Same name replaces the view; at most 30 per person and project.
+
+### Task page
+
+- "Copy link" button in the task header (the `taskUrl` helper, toast). History groups consecutive description saves by the same person within ten minutes
+  into one row ("updated the description (3 saves)", `lib/tasks/historyGroups.ts`).
+- Stale-edit callout: `updateTask` accepts `expectedTitle` / `expectedDescription` (the value the editor started from) and refuses a save over someone
+  else's change with a `conflict` field error. The title editor and the description editor show an inline Callout with Reload when that happens, or when
+  a change arrives (realtime) while the editor holds unsaved text.
+- Description images (`lib/tasks/inlineImages.ts`, `service/inlineImage.ts`, `uploadDescriptionImageAction`): paste, drop or the toolbar "Image" button upload through
+  `uploadWorkspaceFile` as private task files in the reserved folder `/tasks/inline` (not counted or listed as attachments, max 30 per task, PNG/JPEG/WebP/GIF, same
+  gate as editing the description) and the HTML carries only `<img src="/api/files/<id>">`. The sanitiser keeps `img` only for that exact src pattern;
+  `/api/files/[id]` applies the usual membership and private-team checks.
+
+### MCP / REST
+
+`sw_list_tasks`: `includeArchived` (never for scheduled jobs), `creator` and `assignee` accept `me`, a member id or a member email (active members of the workspace only);
+tasks carry `archived`. `sw_get_task`: `activity` (newest first, `activityLimit`), `comments` (all, oldest first, paged by `commentLimit` / `commentCursor` /
+`nextCommentCursor`) plus the old `latestComments`. `sw_archive_task` with `archived: false` restores. `sw_list_projects`: `columns` (name, category, color, wipLimit) and `taskTypes`.
+REST: `GET /api/v1/tasks?includeArchived=true&creator=…`, `GET /api/v1/tasks/{ref}?commentLimit=…`.
+
+### Search
+
+Typing a task key in full (`BOT-1`) ranks that task first, ahead of `BOT-10` and `BOT-12` (`lib/search/query.ts`).

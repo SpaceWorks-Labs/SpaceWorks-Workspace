@@ -4,7 +4,7 @@ import { actionContext, isFailure, refreshArea } from "@/lib/people/actionContex
 import { addInteraction, deleteRelationship, exportOrganisations, exportRelationships, importContacts, importOrganisations, linkRecord, saveContact, saveDeal, saveOrganisation } from "@/lib/contacts/contacts";
 import { idSchema } from "@/lib/validation";
 export async function mutateContacts(slug: string, operation: string, input: unknown): Promise<ActionResult<unknown>> {
-  const ctx = await actionContext(slug); if (isFailure(ctx)) return ctx;
+  const ctx = await actionContext(slug, "outreach"); if (isFailure(ctx)) return ctx;
   let result: ActionResult<unknown>;
   const data = input as { id?: unknown };
   const id = data?.id ? idSchema.safeParse(data.id) : null;
@@ -24,11 +24,11 @@ export async function mutateContacts(slug: string, operation: string, input: unk
   if (result.ok) refreshArea(ctx.workspace.slug, "contacts", "organisations", "pipeline"); return result;
 }
 export async function exportContactsAction(slug: string, format: "csv" | "vcard", id?: string) {
-  const ctx = await actionContext(slug); if (isFailure(ctx)) return ctx;
+  const ctx = await actionContext(slug, "outreach"); if (isFailure(ctx)) return ctx;
   if (format !== "csv" && format !== "vcard") return actionError("Choose CSV or vCard.");
   return exportRelationships(ctx, format, id);
 }
 export async function exportOrganisationsAction(slug: string) {
-  const ctx = await actionContext(slug); if (isFailure(ctx)) return ctx;
+  const ctx = await actionContext(slug, "outreach"); if (isFailure(ctx)) return ctx;
   return exportOrganisations(ctx);
 }

@@ -35,6 +35,8 @@ import {
   validateLabels,
 } from "./helpers";
 
+/** Returned (with a `conflict` field error) when the title or description changed since the editor opened. */
+export const EDIT_CONFLICT = "Someone changed this while you were editing. Reload to see their version.";
 const WRONG_TYPE = "That type isn't available on this project. Reload and try again.";
 
 /* ---------- Create ---------- */
@@ -143,6 +145,10 @@ export async function updateTask(actor: TaskActor, input: unknown): Promise<Acti
   const found = await loadEditableTask(actor, parsed.data.taskId, { action: "edit" });
   if ("error" in found) return actionError(found.error);
   const { task } = found;
+  // Edit-conflict guard: the editor sends the values it started from; a save over someone else's change is refused.
+  if ((parsed.data.expectedTitle !== undefined && parsed.data.title !== undefined && parsed.data.expectedTitle !== task.title) || (parsed.data.expectedDescription !== undefined && parsed.data.description !== undefined && (parsed.data.expectedDescription ?? null) !== (task.description ?? null))) {
+    return actionError(EDIT_CONFLICT, { conflict: [EDIT_CONFLICT] });
+  }
   const data: Prisma.TaskUpdateInput = {};
   const history: Array<[string, Prisma.InputJsonValue]> = [];
   if (parsed.data.title !== undefined && parsed.data.title !== task.title) {

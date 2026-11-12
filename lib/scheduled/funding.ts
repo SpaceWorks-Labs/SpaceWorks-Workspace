@@ -1,18 +1,20 @@
 import "server-only";
+import { workspacesWithoutModule } from "@/lib/modules-server";
 import { prisma } from "@/lib/db";
 import { dispatch } from "@/lib/notify";
 import { dayInZone, sectionFor } from "@/lib/funding/schema";
 import { donationSummary, object, pledgeDue } from "@/lib/funding/analytics";
 /** Every replica can tick: workspace locks and durable event keys claim each deadline once per phase. */
 export async function run(now: Date) {
+  const off = await workspacesWithoutModule("finance");
   let cursor: string | undefined;
   for (;;) {
-    const workspaces = await prisma.workspace.findMany({ where: { archivedAt: null, fundingRecords: { some: { archivedAt: null } } }, select: { id: true, slug: true, timezone: true }, orderBy: { id: "asc" }, take: 25, ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}) });
+    const workspaces = await prisma.workspace.findMany({ where: { status: "ACTIVE", archivedAt: null, id: { notIn: off }, fundingRecords: { some: { archivedAt: null } } }, select: { id: true, slug: true, timezone: true }, orderBy: { id: "asc" }, take: 25, ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}) });
     if (!workspaces.length) break;
     for (const workspace of workspaces) {
       const results = await prisma.$transaction(async tx => {
         await tx.$queryRaw`SELECT id FROM "Workspace" WHERE id=${workspace.id} AND "archivedAt" IS NULL FOR NO KEY UPDATE`;
-        if (!await tx.workspace.findFirst({ where: { id: workspace.id, archivedAt: null }, select: { id: true } })) return [];
+        if (!await tx.workspace.findFirst({ where: { id: workspace.id, status: "ACTIVE", archivedAt: null }, select: { id: true } })) return [];
         const rows = await tx.fundingRecord.findMany({ where: { workspaceId: workspace.id, archivedAt: null } });
         const gifts = rows.filter(r => r.kind === "DONATION");
         const admins = await tx.membership.findMany({ where: { workspaceId: workspace.id, status: "ACTIVE", role: { in: ["ADMIN", "OWNER"] }, user: { disabledAt: null } }, select: { userId: true } });

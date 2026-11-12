@@ -10,7 +10,7 @@ import { operate } from "@/lib/productOps/operations";
 import { attachFile, detachFile } from "@/lib/productOps/files";
 import { id } from "@/lib/productOps/schema";
 async function run<T>(slug: string, fn: (actor: Actor) => Promise<T>, bucket: "action" | "upload" = "action"): Promise<ActionResult<T>> {
- const actor = await getWorkspaceForAction(slug, "MEMBER");
+ const actor = await getWorkspaceForAction(slug, "MEMBER", { module: "projects" });
  if (!actor || !canManageProductOps(actor.membership)) return { ok: false, error: NOT_ALLOWED };
  if (await isActionRateLimited(bucket, actor.user.id)) return { ok: false, error: RATE_LIMITED };
  try { const data = await fn(actor); revalidatePath(`/w/${actor.workspace.slug}/product-ops`, "layout"); return { ok: true, data }; }

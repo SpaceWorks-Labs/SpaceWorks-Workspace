@@ -9,7 +9,7 @@ export const NOT_AVAILABLE = "That conversation isn't available.";
 export async function context(slug: unknown): Promise<ChatContext | null> {
   const parsed = slugSchema.safeParse(slug);
   if (!parsed.success) return null;
-  return getWorkspaceForAction(parsed.data, "GUEST");
+  return getWorkspaceForAction(parsed.data, "GUEST", { module: "chat" });
 }
 
 export function revalidateChat(slug: string) {

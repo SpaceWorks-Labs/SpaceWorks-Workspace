@@ -1,4 +1,5 @@
 import "server-only";
+import { workspacesWithoutModule } from "@/lib/modules-server";
 import { prisma } from "@/lib/db";
 import { dispatch } from "@/lib/notify";
 import { localDate } from "@/lib/finance/dates";
@@ -6,11 +7,13 @@ import { sectionFor } from "@/lib/moneyControls/rules";
 import { canReadMoneyControl } from "@/lib/roles";
 /** Persisted claims, live record checks and transaction locks deduplicate replica reminders. */
 export async function run(now: Date) {
+  const off = await workspacesWithoutModule("finance");
   let cursor: string | undefined;
   for (;;) {
     const rows = await prisma.moneyControlRecord.findMany({
       where: {
-        workspace: { archivedAt: null },
+        workspace: { status: "ACTIVE", archivedAt: null },
+        workspaceId: { notIn: off },
         dueOn: { not: null },
         status: {
           notIn: [
@@ -50,7 +53,7 @@ export async function run(now: Date) {
               workspaceId: row.workspaceId,
               id: row.id,
               updatedAt: row.updatedAt,
-              workspace: { archivedAt: null },
+              workspace: { status: "ACTIVE", archivedAt: null },
             },
           }))
         )

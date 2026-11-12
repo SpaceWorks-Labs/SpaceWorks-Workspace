@@ -1,5 +1,6 @@
 import type { WorkspaceRole } from "@prisma/client";
 import type { z } from "zod";
+import type { ModuleKey } from "@/lib/modules";
 import type { ApiScope } from "@/lib/apiTokens/scopes";
 import type { Principal, ToolChannel } from "@/lib/assistant/principal";
 
@@ -27,6 +28,8 @@ export type ToolDefinition<S extends z.ZodType = z.ZodType> = {
   /** Scope an API token needs (an array means any one of them); null keeps the tool away from tokens (MCP and /api/v1). */
   scope: ApiScope | readonly ApiScope[] | null;
   minRole: WorkspaceRole;
+  /** Module that must be on for the workspace (defaults from `TOOL_MODULE`; none means core). */
+  module?: ModuleKey;
   /** Extra gate (finance visibility, services, web search configured). */
   available?: (principal: Principal) => boolean;
   run: (ctx: ToolContext, input: z.output<S>) => Promise<ToolResult>;

@@ -51,7 +51,7 @@ export async function saveMoneyControlAction(
   slug: string,
   form: FormData,
 ): Promise<ActionResult<{ id: string }>> {
-  const actor = await getWorkspaceForAction(slug, "MEMBER");
+  const actor = await getWorkspaceForAction(slug, "MEMBER", { module: "finance" });
   if (!actor) return actionError(NOT_ALLOWED);
   if (await isActionRateLimited("apiWrite", `money-controls:${actor.user.id}`))
     return actionError(RATE_LIMITED);
@@ -96,7 +96,7 @@ export async function transitionMoneyControlAction(
   slug: string,
   form: FormData,
 ): Promise<ActionResult<{ id: string }>> {
-  const actor = await getWorkspaceForAction(slug, "MEMBER");
+  const actor = await getWorkspaceForAction(slug, "MEMBER", { module: "finance" });
   if (!actor) return actionError(NOT_ALLOWED);
   if (await isActionRateLimited("apiWrite", `money-controls:${actor.user.id}`))
     return actionError(RATE_LIMITED);
@@ -122,7 +122,7 @@ export async function uploadMoneyControlFilesAction(
   slug: string,
   form: FormData,
 ) {
-  const actor = await getWorkspaceForAction(slug, "MEMBER");
+  const actor = await getWorkspaceForAction(slug, "MEMBER", { module: "finance" });
   if (!actor) return actionError(NOT_ALLOWED);
   if (await isActionRateLimited("upload", `money-controls:${actor.user.id}`))
     return actionError(RATE_LIMITED);
@@ -145,7 +145,7 @@ export async function removeMoneyControlFileAction(
   slug: string,
   fileId: string,
 ) {
-  const actor = await getWorkspaceForAction(slug, "MEMBER");
+  const actor = await getWorkspaceForAction(slug, "MEMBER", { module: "finance" });
   if (!actor) return actionError(NOT_ALLOWED);
   if (await isActionRateLimited("apiWrite", `money-controls:${actor.user.id}`))
     return actionError(RATE_LIMITED);
@@ -158,7 +158,7 @@ export async function removeMoneyControlFileAction(
   }
 }
 export async function reconcileMoneyMovementAction(slug: string, id: string) {
-  const actor = await getWorkspaceForAction(slug, "MEMBER");
+  const actor = await getWorkspaceForAction(slug, "MEMBER", { module: "finance" });
   if (!actor) return actionError(NOT_ALLOWED);
   if (await isActionRateLimited("apiWrite", `money-controls:${actor.user.id}`))
     return actionError(RATE_LIMITED);

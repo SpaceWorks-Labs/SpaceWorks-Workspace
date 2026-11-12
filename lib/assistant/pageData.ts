@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { formatRelativeTime } from "@/lib/format/datetime";
 import { isSuperAdminEmail } from "@/lib/permissions";
 import { getAssistantSettings } from "@/lib/instanceSettings";
+import { USAGE_TITLE_PREFIX } from "@/lib/assistant/usage";
 import { describePending, pendingCalls, toChatItems } from "@/lib/assistant/chat";
 
 /** Data for the assistant chat pages (server components). */
@@ -11,7 +12,7 @@ export async function loadChatPage(input: { workspaceId: string; timeZone: strin
   const [settings, conversations] = await Promise.all([
     getAssistantSettings(),
     prisma.assistantConversation.findMany({
-      where: { workspaceId: input.workspaceId, userId: input.userId },
+      where: { workspaceId: input.workspaceId, userId: input.userId, NOT: { title: { startsWith: USAGE_TITLE_PREFIX } } },
       orderBy: { updatedAt: "desc" },
       take: 100,
       select: { id: true, title: true, updatedAt: true },

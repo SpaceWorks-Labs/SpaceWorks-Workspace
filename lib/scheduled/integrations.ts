@@ -12,7 +12,7 @@ export async function run(now: Date): Promise<void> {
   await dispatchGithubEvents();
   await sendRoutingReminders(now);
   const cutoff = new Date(now.getTime() - 86400000);
-  const sites = await prisma.seoSite.findMany({ where: { verified: true, connection: { provider: "GOOGLE", status: "ACTIVE" }, workspace: { archivedAt: null }, OR: [{ lastSyncedAt: null }, { lastSyncedAt: { lt: cutoff } }] }, orderBy: { lastSyncedAt: "asc" }, take: 5 });
+  const sites = await prisma.seoSite.findMany({ where: { verified: true, connection: { provider: "GOOGLE", status: "ACTIVE" }, workspace: { status: "ACTIVE", archivedAt: null }, OR: [{ lastSyncedAt: null }, { lastSyncedAt: { lt: cutoff } }] }, orderBy: { lastSyncedAt: "asc" }, take: 5 });
   for (const site of sites) {
     // Compare-and-set is a lease; failed syncs are eligible again after one day.
     const claimed = await prisma.seoSite.updateMany({ where: { id: site.id, workspaceId: site.workspaceId, lastSyncedAt: site.lastSyncedAt }, data: { lastSyncedAt: now } });

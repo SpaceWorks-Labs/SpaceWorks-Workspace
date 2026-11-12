@@ -7,7 +7,9 @@ import { mayDownloadDocumentFile } from "@/lib/documents/files";
 import { canDownloadOpsFile } from "@/lib/opsGaps/attachments";
 import { mayDownloadFinanceFile } from "@/lib/finance/tools/files";
 
+import type { WorkspaceRole } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { isSuperAdminEmail, superAdminMembership } from "@/lib/workspaceGate";
 import { decideAccess } from "@/lib/chat/access";
 import { canViewFinance, hasRoleAtLeast } from "@/lib/roles";
 import { hiddenTeamIds } from "@/lib/teamAccess";
@@ -34,23 +36,34 @@ export async function findDownloadableFile(fileId: string, userId: string) {
       task: { select: { project: { select: { teamId: true } } } },
       _count: { select: { ledgerReceipts: true } },
       messageAttachments: { select: { message: { select: { channel: { select: { id: true, kind: true, teamId: true, archivedAt: true } } } } } },
-      workspace: { select: { archivedAt: true, financeVisibleToMembers: true } },
+      workspace: { select: { archivedAt: true, status: true, financeVisibleToMembers: true } },
     },
   });
   if (!file || file.deletedAt || file.workspace.archivedAt) return null;
-  const membership = await prisma.membership.findUnique({
+  // A suspended, pending or rejected organisation serves no member downloads; only the super admin (below) still reads it.
+  const row = file.workspace.status !== "ACTIVE" ? null : await prisma.membership.findUnique({
     where: { userId_workspaceId: { userId, workspaceId: file.workspaceId } },
     select: { role: true, status: true, user: { select: { disabledAt: true } } },
   });
-  if (!membership || membership.status !== "ACTIVE" || membership.user.disabledAt) return null;
+  let membership: { role: WorkspaceRole; viaSuperAdmin?: boolean } | null = row && row.status === "ACTIVE" && !row.user.disabledAt ? { role: row.role } : null;
+  // Not an active member: only the super admin (fresh MFA proof; audited once per 12h) gets in, silently.
+  if (!membership) {
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true, disabledAt: true } });
+    if (!user || user.disabledAt || !isSuperAdminEmail(user.email)) return null;
+    const workspace = await prisma.workspace.findUnique({ where: { id: file.workspaceId } });
+    const synthetic = workspace && (await superAdminMembership(workspace, { id: userId, email: user.email }, true));
+    if (!synthetic) return null;
+    membership = { role: synthetic.role, viaSuperAdmin: true };
+  }
+  const viaSuperAdmin = membership.viaSuperAdmin === true;
   const { canDownloadAnalyticsFile } = await import("@/lib/analytics/files");
-  if (!await canDownloadAnalyticsFile(file,userId,membership.role)) return null;
+  if (!await canDownloadAnalyticsFile(file, userId, membership.role)) return null;
   const { canDownloadMarketingItFile } = await import("@/lib/marketingIt/files");
   if (!await canDownloadMarketingItFile(file, { user: { id: userId }, workspace: { id: file.workspaceId, slug: "", timezone: "UTC" }, membership })) return null;
   if (file.folder === "/governance" || file.folder.startsWith("/governance/") || file.governanceAttachments.length) {
     if (!hasRoleAtLeast(membership.role, "ADMIN")) return null;
   }
-  if (!(await mayDownloadDocumentFile(file, userId))) return null;
+  if (!(await mayDownloadDocumentFile(file, userId, viaSuperAdmin))) return null;
   if (file.folder === "/funding" || file.folder.startsWith("/funding/") || await prisma.fundingAttachment.count({ where: { workspaceId: file.workspaceId, fileId: file.id } })) {
     if (!hasRoleAtLeast(membership.role, "ADMIN") || !await prisma.fundingAttachment.findFirst({ where: { workspaceId: file.workspaceId, fileId: file.id, record: { workspaceId: file.workspaceId, archivedAt: null } }, select: { id: true } })) return null;
   }
@@ -64,11 +77,11 @@ export async function findDownloadableFile(fileId: string, userId: string) {
     const { recordAuditEvent } = await import("@/lib/audit");
     await recordAuditEvent({workspaceId:file.workspaceId,actorId:userId,action:"safeguarding.file_viewed",targetType:"safeguarding",targetId:caseFiles[0].caseId});
   }
-  if (!(await canDownloadOrgFile(file, userId, membership.role))) return null;
-  if (!(await canDownloadProductFile(file, userId, membership.role))) return null;
-  if (!(await canDownloadOpsFile(file,userId,membership.role))) return null;
-  if (!(await mayDownloadFinanceFile(file, userId))) return null;
-  if (!(await mayDownloadControlFile(file, userId))) return null;
+  if (!(await canDownloadOrgFile(file, userId, membership.role, viaSuperAdmin))) return null;
+  if (!(await canDownloadProductFile(file, userId, membership.role, viaSuperAdmin))) return null;
+  if (!(await canDownloadOpsFile(file, userId, membership.role, viaSuperAdmin))) return null;
+  if (!(await mayDownloadFinanceFile(file, userId, viaSuperAdmin))) return null;
+  if (!(await mayDownloadControlFile(file, userId, viaSuperAdmin))) return null;
   if (file.doc?.visibility === "ADMINS" && !hasRoleAtLeast(membership.role, "ADMIN")) return null;
   const taskTeamId = file.task?.project?.teamId;
   if (taskTeamId && (await hiddenTeamIds(file.workspaceId, { userId, role: membership.role })).includes(taskTeamId)) return null;
@@ -84,7 +97,7 @@ export async function findDownloadableFile(fileId: string, userId: string) {
   if (calendarFile && calendarRecords.length === 0) return null;
   if (!(await canReadRequestReceipt(file.id, file.workspaceId, userId, membership.role))) return null;
   if (file._count.ledgerReceipts > 0 && !canViewFinance(membership, file.workspace)) return null;
-  if (file.messageAttachments.length > 0 && !(await canReadAnyChannel(file.workspaceId, userId, membership.role, file.messageAttachments.map((a) => a.message.channel)))) return null;
+  if (!viaSuperAdmin && file.messageAttachments.length > 0 && !(await canReadAnyChannel(file.workspaceId, userId, membership.role, file.messageAttachments.map((a) => a.message.channel)))) return null;
   return file;
 }
 

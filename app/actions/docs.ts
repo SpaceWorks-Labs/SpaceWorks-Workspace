@@ -35,7 +35,7 @@ const slugSchema = z.string().min(1).max(64);
 async function actor(slug: unknown): Promise<DocsActor | null> {
   const parsed = slugSchema.safeParse(slug);
   if (!parsed.success) return null;
-  const ctx = await getWorkspaceForAction(parsed.data, "GUEST");
+  const ctx = await getWorkspaceForAction(parsed.data, "GUEST", { module: "knowledge" });
   if (!ctx) return null;
   return { workspace: ctx.workspace, user: ctx.user, membership: ctx.membership };
 }

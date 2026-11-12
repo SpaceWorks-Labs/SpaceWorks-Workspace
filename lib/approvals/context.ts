@@ -14,7 +14,7 @@ import { hasRoleAtLeast } from "@/lib/roles";
 export type OpsActor = {
   user: { id: string; name: string | null };
   workspace: { id: string; slug: string; name: string; timezone: string; currency?: string; costsVisibleToMembers?: boolean; financeVisibleToMembers?: boolean };
-  membership: { role: WorkspaceRole };
+  membership: { role: WorkspaceRole; viaSuperAdmin?: boolean };
 };
 
 export const isAdmin = (actor: { membership: { role: WorkspaceRole } }) => hasRoleAtLeast(actor.membership.role, "ADMIN");

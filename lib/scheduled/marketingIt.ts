@@ -6,12 +6,12 @@ import { dayInZone, object, path } from "@/lib/marketingIt/schema";
 export async function run(now: Date) {
  let cursor: string | undefined;
  for (;;) {
-  const workspaces = await prisma.workspace.findMany({ where: { archivedAt: null }, select: { id: true, slug: true, timezone: true, createdAt: true }, orderBy: { id: "asc" }, take: 25, ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}) });
+  const workspaces = await prisma.workspace.findMany({ where: { status: "ACTIVE", archivedAt: null }, select: { id: true, slug: true, timezone: true, createdAt: true }, orderBy: { id: "asc" }, take: 25, ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}) });
   if (!workspaces.length) break;
   for (const ws of workspaces) {
    const events = await prisma.$transaction(async tx => {
     await tx.$queryRaw`SELECT id FROM "Workspace" WHERE id=${ws.id} AND "archivedAt" IS NULL FOR NO KEY UPDATE`;
-    if (!await tx.workspace.findFirst({ where: { id: ws.id, archivedAt: null } })) return [];
+    if (!await tx.workspace.findFirst({ where: { id: ws.id, status: "ACTIVE", archivedAt: null } })) return [];
     const members = await tx.membership.findMany({ where: { workspaceId: ws.id, status: "ACTIVE", user: { disabledAt: null }, role: { in: ["OWNER", "ADMIN", "MEMBER"] } }, select: { userId: true, role: true } });
     const admins = members.filter(m => m.role !== "MEMBER").map(m => m.userId);
     const rows = await tx.marketingItRecord.findMany({ where: { workspaceId: ws.id, archivedAt: null, kind: { in: ["CONTENT", "PROPOSAL", "REVIEW", "RESTORE"] } } });

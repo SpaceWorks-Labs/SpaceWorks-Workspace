@@ -11,7 +11,7 @@ export async function run(now: Date) {
       status: "SCHEDULED",
       reminderSentAt: null,
       startsAt: { gt: now, lte: new Date(now.getTime() + 7 * 86400000) },
-      workspace: { archivedAt: null },
+      workspace: { status: "ACTIVE", archivedAt: null },
     },
     include: { workspace: true },
     take: 500,
@@ -49,7 +49,7 @@ export async function run(now: Date) {
     where: {
       reminderSentAt: null,
       startsAt: { gt: now, lte: new Date(now.getTime() + 7 * 86400000) },
-      workspace: { archivedAt: null },
+      workspace: { status: "ACTIVE", archivedAt: null },
     },
     include: { workspace: true },
     take: 500,
@@ -92,7 +92,7 @@ export async function run(now: Date) {
 export async function syncConnectedCalendars(now: Date) {
   const bindings = await prisma.calendarMeetingSync.findMany({
     where: {
-      workspace: { archivedAt: null },
+      workspace: { status: "ACTIVE", archivedAt: null },
       OR: [
         { lastSyncedAt: null },
         { lastSyncedAt: { lt: new Date(now.getTime() - 5 * 60000) } },
@@ -110,7 +110,7 @@ export async function syncConnectedCalendars(now: Date) {
         status: "ACTIVE",
         role: { not: "GUEST" },
         user: { disabledAt: null },
-        workspace: { archivedAt: null },
+        workspace: { status: "ACTIVE", archivedAt: null },
       },
       include: { user: true, workspace: true },
     });

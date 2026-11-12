@@ -8,7 +8,10 @@ import type { Principal, ToolChannel } from "@/lib/assistant/principal";
 import { CHAT_TOOLS } from "@/lib/assistant/tools/chat";
 import { DOC_TOOLS } from "@/lib/assistant/tools/docs";
 import { KNOWLEDGE_TOOLS } from "@/lib/assistant/tools/knowledge";
+import { TOOL_MODULE } from "@/lib/assistant/tools/modules";
 import { toolAccess } from "@/lib/assistant/tools/policy";
+import { getWorkspaceModules } from "@/lib/limits/modules";
+import { isModuleEnabled, type ModuleSettings } from "@/lib/modules";
 import { TASK_TOOLS } from "@/lib/assistant/tools/tasks";
 import { ToolError, type ToolDefinition, type ToolResult } from "@/lib/assistant/tools/types";
 import { WORKSPACE_TOOLS } from "@/lib/assistant/tools/workspace";
@@ -21,7 +24,7 @@ export type { ToolResult } from "@/lib/assistant/tools/types";
  * the MCP server and the REST API. Order is fixed so the tool list (and with
  * it the prompt cache prefix) is deterministic.
  */
-export const ALL_TOOLS: readonly ToolDefinition[] = [...SOCIAL_TOOLS, ...APP_REVIEW_TOOLS, ...TASK_TOOLS, ...CHAT_TOOLS, ...DOC_TOOLS, ...WORKSPACE_TOOLS, ...KNOWLEDGE_TOOLS] as unknown as ToolDefinition[];
+export const ALL_TOOLS: readonly ToolDefinition[] = ([...SOCIAL_TOOLS, ...APP_REVIEW_TOOLS, ...TASK_TOOLS, ...CHAT_TOOLS, ...DOC_TOOLS, ...WORKSPACE_TOOLS, ...KNOWLEDGE_TOOLS] as unknown as ToolDefinition[]).map((tool) => (tool.module || !TOOL_MODULE[tool.name] ? tool : { ...tool, module: TOOL_MODULE[tool.name] }));
 
 const BY_NAME = new Map<string, ToolDefinition>(ALL_TOOLS.map((tool) => [tool.name, tool]));
 
@@ -33,9 +36,14 @@ export function isWriteTool(name: string): boolean {
   return BY_NAME.get(name)?.write ?? false;
 }
 
-/** Tools this principal may call (writes optional; jobs never get them). */
-export function toolsFor(principal: Principal, options: { includeWrites?: boolean; requireMcp?: boolean } = {}): ToolDefinition[] {
-  return ALL_TOOLS.filter((tool) => (options.includeWrites ?? true ? true : !tool.write) && toolAccess(tool, principal, options).ok);
+/** Tools this principal may call (writes optional; jobs never get them). Pass `modules` to hide tools of disabled modules (or use `toolsForWorkspace`). */
+export function toolsFor(principal: Principal, options: { includeWrites?: boolean; requireMcp?: boolean; modules?: ModuleSettings } = {}): ToolDefinition[] {
+  return ALL_TOOLS.filter((tool) => (options.includeWrites ?? true ? true : !tool.write) && toolAccess(tool, principal, options).ok && (!options.modules || !tool.module || isModuleEnabled(options.modules, tool.module)));
+}
+
+/** `toolsFor` with the workspace's module switches applied. */
+export async function toolsForWorkspace(principal: Principal, options: { includeWrites?: boolean; requireMcp?: boolean } = {}): Promise<ToolDefinition[]> {
+  return toolsFor(principal, { ...options, modules: await getWorkspaceModules(principal.workspace.id) });
 }
 
 /** JSON Schema of a tool's input (what Anthropic tool definitions and MCP tools/list publish). */
@@ -61,6 +69,7 @@ export async function executeTool(
 ): Promise<ExecuteOutcome> {
   const tool = BY_NAME.get(name);
   if (!tool) return { ok: false, error: `There is no tool called ${name}.`, code: "not_found" };
+  if (tool.module && !isModuleEnabled(await getWorkspaceModules(principal.workspace.id), tool.module)) return { ok: false, tool, error: "That isn't available in this workspace.", code: "not_found" };
   const access = toolAccess(tool, principal, { requireMcp: options.requireMcp });
   if (!access.ok) return { ok: false, tool, error: access.reason, code: "forbidden" };
   const parsed = tool.input.safeParse(rawInput ?? {});

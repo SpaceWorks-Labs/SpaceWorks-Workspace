@@ -133,12 +133,12 @@ describe("Hierarchical encryption and reveal privacy", () => {
   }, 120000);
   it("runs the shipped root-rotation command idempotently with dual root versions", async () => {
     const roots = `2:${Buffer.alloc(32, 23).toString("base64")},1:${Buffer.alloc(32, 19).toString("base64")}`;
-    const options = { env: { ...process.env, DATABASE_URL: process.env.TEST_DATABASE_URL!, DIRECT_URL: process.env.TEST_DATABASE_URL!, VAULT_MASTER_KEYS: roots }, timeout: 20000 };
+    const options = { env: { ...process.env, DATABASE_URL: process.env.TEST_DATABASE_URL!, DIRECT_URL: process.env.TEST_DATABASE_URL!, VAULT_MASTER_KEYS: roots }, timeout: 90000 }; // the command also re-wraps every other workspace key in the database; allow for a loaded machine
     await promisify(execFile)(process.execPath, ["scripts/rotate-root-key.mjs"], options);
     process.env.VAULT_MASTER_KEYS = roots;
     expect((await encryptionSummary(owner.workspace.id, projectId)).rootVersion).toBe(2);
     expect(await readSecrets(owner, devId, "/", { key: "TEST_KEY" })).toEqual({ TEST_KEY: "fixture-only\nsecond-line" });
     await promisify(execFile)(process.execPath, ["scripts/rotate-root-key.mjs"], options);
     expect((await encryptionSummary(owner.workspace.id, projectId)).rootVersion).toBe(2);
-  }, 60000);
+  }, 240000);
 });

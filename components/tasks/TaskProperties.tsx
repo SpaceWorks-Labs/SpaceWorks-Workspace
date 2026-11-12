@@ -19,6 +19,7 @@ import { toDateInputValue } from "@/lib/tasks/localDate";
 import type { TaskDetailDTO } from "@/lib/tasks/types";
 import { effectiveType } from "@/lib/tasks/taskTypes";
 import { DueChip, PriorityChip, TypeChip } from "./bits";
+import { DueQuickPicks } from "./DueQuickPicks";
 import { MultiSelect } from "./MultiSelect";
 import { RepeatControl } from "./RepeatControl";
 import type { RunAction } from "./useTaskRunner";
@@ -166,7 +167,7 @@ export function TaskProperties({ slug, task, canEdit, run }: {
       </Property>
       <Property label="Due date">
         {canEdit ? (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-2">
             <input
               type="date"
               aria-label="Due date"
@@ -174,11 +175,7 @@ export function TaskProperties({ slug, task, canEdit, run }: {
               value={toDateInputValue(task.dueAt ? new Date(task.dueAt) : null, task.timeZone)}
               onChange={(event) => void run(() => updateTaskAction(slug, { taskId: task.id, dueDate: event.target.value || null }))}
             />
-            {task.dueAt ? (
-              <Button variant="quiet" size="sm" onClick={() => void run(() => updateTaskAction(slug, { taskId: task.id, dueDate: null }))}>
-                Clear
-              </Button>
-            ) : null}
+            <DueQuickPicks timeZone={task.timeZone} hasDate={Boolean(task.dueAt)} onPick={(value) => void run(() => updateTaskAction(slug, { taskId: task.id, dueDate: value || null }))} />
           </div>
         ) : (
           <div className="pt-2">{task.dueAt ? <DueChip dueAt={task.dueAt} completedAt={task.completedAt} timeZone={task.timeZone} size="md" /> : <span className="text-body-ui text-ink-muted">No due date</span>}</div>

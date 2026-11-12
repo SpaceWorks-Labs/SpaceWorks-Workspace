@@ -37,7 +37,7 @@ export type AuthenticatedToken = { principal: Principal; scopes: ApiScope[] };
 /**
  * Resolve `Authorization: Bearer sww_…` to a principal, or null for anything
  * invalid (wrong format, unknown prefix, wrong secret, revoked, expired,
- * archived workspace, creator gone or demoted). Callers answer 401 for null.
+ * archived or non-ACTIVE workspace, creator gone or demoted). Callers answer 401 for null.
  */
 export async function authenticateApiToken(authorization: string | null, now = new Date()): Promise<AuthenticatedToken | null> {
   const raw = bearerToken(authorization);
@@ -54,11 +54,11 @@ export async function authenticateApiToken(authorization: string | null, now = n
       expiresAt: true,
       lastUsedAt: true,
       createdById: true,
-      workspace: { select: { id: true, slug: true, name: true, timezone: true, currency: true, financeVisibleToMembers: true, archivedAt: true } },
+      workspace: { select: { id: true, slug: true, name: true, timezone: true, currency: true, financeVisibleToMembers: true, archivedAt: true, status: true } },
     },
   });
   if (!token || !safeEqual(token.secretHash, sha256Hex(parsed.secret))) return null;
-  if (token.revokedAt || (token.expiresAt && token.expiresAt <= now) || token.workspace.archivedAt || !token.createdById) return null;
+  if (token.revokedAt || (token.expiresAt && token.expiresAt <= now) || token.workspace.archivedAt || token.workspace.status !== "ACTIVE" || !token.createdById) return null;
 
   const membership = await prisma.membership.findUnique({
     where: { userId_workspaceId: { userId: token.createdById, workspaceId: token.workspace.id } },
@@ -71,8 +71,9 @@ export async function authenticateApiToken(authorization: string | null, now = n
   }
 
   const scopes = normalizeScopes(token.scopes);
-  const { archivedAt: _archived, ...workspace } = token.workspace;
+  const { archivedAt: _archived, status: _status, ...workspace } = token.workspace;
   void _archived;
+  void _status;
   return {
     scopes,
     principal: {

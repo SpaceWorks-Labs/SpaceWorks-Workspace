@@ -14,7 +14,7 @@ import { draftReply } from "@/lib/appReviews/draft";
 
 async function mutate<T>(slug: string, manage: boolean, fn: (ctx: WorkspaceContext) => Promise<ActionResult<T>>, assistant = false): Promise<ActionResult<T>> {
   if (!z.string().min(1).max(64).safeParse(slug).success) return actionError(NOT_ALLOWED);
-  const ctx = await getWorkspaceForAction(slug, manage ? "ADMIN" : "MEMBER");
+  const ctx = await getWorkspaceForAction(slug, manage ? "ADMIN" : "MEMBER", { module: "social" });
   if (!ctx || !(manage ? canManageAppReviews(ctx.membership) : canViewAppReviews(ctx.membership))) return actionError(NOT_ALLOWED);
   if (await isActionRateLimited(assistant ? "assistant" : "action", ctx.user.id)) return actionError(RATE_LIMITED);
   try {

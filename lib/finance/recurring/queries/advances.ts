@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/db";
+import { activeMemberOrSuperAdmin } from "@/lib/accessMember";
 import { canManageFinance, canReadStaffAdvance } from "@/lib/roles";
 import {
   FinanceError,
@@ -15,15 +16,7 @@ export async function advancesView(
   q: RecurringQuery = {},
   exporting = false,
 ) {
-  const member = await prisma.membership.findFirst({
-    where: {
-      workspaceId: actor.workspace.id,
-      userId: actor.user.id,
-      status: "ACTIVE",
-      user: { disabledAt: null },
-      workspace: { archivedAt: null },
-    },
-  });
+  const member = await activeMemberOrSuperAdmin(prisma, actor);
   const grant = await prisma.financePayrollGrant.findUnique({
     where: {
       workspaceId_userId: {

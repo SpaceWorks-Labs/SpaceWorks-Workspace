@@ -7,23 +7,16 @@ import {
   canViewPayroll,
   hasRoleAtLeast,
 } from "@/lib/roles";
+import { activeMemberOrSuperAdmin } from "@/lib/accessMember";
 import { FinanceError, type FinanceActor } from "@/lib/finance/tools/access";
+import { payrollDisabled } from "@/lib/finance/tools/payrollGate";
 import type { MoneyControlRecord } from "@prisma/client";
 export type ControlsActor = FinanceActor;
 export async function controlsAccess(
   actor: ControlsActor,
   client: DbClient = prisma,
 ) {
-  const member = await client.membership.findFirst({
-    where: {
-      workspaceId: actor.workspace.id,
-      userId: actor.user.id,
-      status: "ACTIVE",
-      user: { disabledAt: null },
-      workspace: { archivedAt: null },
-    },
-    include: { workspace: true },
-  });
+  const member = await activeMemberOrSuperAdmin(client, actor);
   if (!member || !hasRoleAtLeast(member.role, "MEMBER"))
     throw new FinanceError("You don't have access to do that.");
   const grant = await client.financePayrollGrant.findUnique({
@@ -34,11 +27,13 @@ export async function controlsAccess(
       },
     },
   });
+  // The super admin can switch the finance.payroll sub-area off; then nobody sees or changes payroll records.
+  const payrollOn = !(await payrollDisabled(actor.workspace.id));
   return {
     member,
     manage: canManageMoneyControls(member),
-    payrollView: canViewPayroll(member, grant),
-    payrollManage: canManagePayroll(member, grant),
+    payrollView: payrollOn && canViewPayroll(member, grant),
+    payrollManage: payrollOn && canManagePayroll(member, grant),
   };
 }
 export async function controlRecord(

@@ -8,7 +8,7 @@ import { listMyTasks } from "@/lib/tasks/queries";
 /** Loader for My Tasks tabs (switching tabs and realtime refetch). Reads only; mutations reuse app/actions/tasks.ts. */
 export async function loadMyTasksTabAction(slug: string, tab: string): Promise<MyTaskItem[] | null> {
   const parsed = z.string().min(1).max(64).safeParse(slug);
-  const ctx = parsed.success ? await getWorkspaceForAction(parsed.data, "GUEST") : null;
+  const ctx = parsed.success ? await getWorkspaceForAction(parsed.data, "GUEST", { module: "core" }) : null;
   if (!ctx) return null;
   return listMyTasks(ctx, new Date(), parseMyTasksTab(tab));
 }

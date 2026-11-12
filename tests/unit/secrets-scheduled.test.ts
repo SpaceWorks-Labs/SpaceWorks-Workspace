@@ -14,6 +14,7 @@ vi.mock("@/lib/notify/dispatch", () => ({ dispatch: mocks.dispatch }));
 vi.mock("@/lib/secrets/access", () => ({ environmentAccess: mocks.access }));
 vi.mock("@/lib/secrets/rotation", () => ({ resumeRotations: mocks.resume }));
 vi.mock("@/lib/secrets/mutations", () => ({ audit: vi.fn() }));
+vi.mock("@/lib/modules-server", () => ({ workspacesWithoutModule: async () => [] }));
 import { run } from "@/lib/scheduled/secrets";
 
 beforeEach(() => vi.resetAllMocks());

@@ -6,7 +6,7 @@ test.skip(
 test.beforeEach(async ({ page }) => {
   await page.goto("/login");
   await page
-    .getByLabel("Email", { exact: true })
+    .getByLabel("Username or email", { exact: true })
     .fill("owner@tinkerspace.test");
   await page
     .getByLabel("Password", { exact: true })

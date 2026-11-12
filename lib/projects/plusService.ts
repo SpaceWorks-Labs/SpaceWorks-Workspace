@@ -2,6 +2,7 @@ import "server-only";
 
 import type { Prisma, Project } from "@prisma/client";
 import { prisma, type DbClient } from "@/lib/db";
+import { activeMemberOrSuperAdmin } from "@/lib/accessMember";
 import { actionError, NOT_ALLOWED, validationError, type ActionResult } from "@/lib/actionResult";
 import { recordAuditEvent } from "@/lib/audit";
 import { recordActivity } from "@/lib/activity";
@@ -17,8 +18,9 @@ import { milestoneSchema, removeMilestoneSchema, statusUpdateSchema, taskPlanSch
 
 /** Re-resolve authority so stale callers cannot retain access after suspension or a role change. */
 export async function projectActor(actor: TaskActor, client: DbClient = prisma): Promise<TaskActor | null> {
-  const member = await client.membership.findFirst({ where: { workspaceId: actor.workspace.id, userId: actor.user.id, status: "ACTIVE", user: { disabledAt: null }, workspace: { archivedAt: null } }, include: { workspace: true, user: { select: { id: true, name: true } } } });
-  return member ? { user: member.user, workspace: member.workspace, membership: { role: member.role } } : null;
+  const member = await activeMemberOrSuperAdmin(client, actor);
+  if (!member) return null;
+  return { user: actor.user, workspace: member.workspace, membership: { role: member.role, ...(member.viaSuperAdmin ? { viaSuperAdmin: true } : {}) } };
 }
 async function planProject(actor: TaskActor, projectId: string, tx: Prisma.TransactionClient) {
   await tx.$queryRaw`SELECT id FROM "Project" WHERE id=${projectId} AND "workspaceId"=${actor.workspace.id} FOR UPDATE`;

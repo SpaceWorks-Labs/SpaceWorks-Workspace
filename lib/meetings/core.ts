@@ -2,6 +2,7 @@ import "server-only";
 import type { Prisma, Visibility } from "@prisma/client";
 import { prisma, type DbClient, type Tx } from "@/lib/db";
 import type { TaskActor } from "@/lib/tasks/access";
+import { activeMemberOrSuperAdmin } from "@/lib/accessMember";
 import { canContribute, hasRoleAtLeast } from "@/lib/roles";
 import { hiddenTeamIds, teamScopeFilter, userTeamIds } from "@/lib/teamAccess";
 import { recordAuditEvent } from "@/lib/audit";
@@ -33,15 +34,7 @@ export async function assertActor(
   client: DbClient = prisma,
   contribute = true,
 ) {
-  const member = await client.membership.findFirst({
-    where: {
-      workspaceId: actor.workspace.id,
-      userId: actor.user.id,
-      status: "ACTIVE",
-      user: { disabledAt: null },
-      workspace: { archivedAt: null },
-    },
-  });
+  const member = await activeMemberOrSuperAdmin(client, actor);
   ensure(
     member &&
       member.role === actor.membership.role &&

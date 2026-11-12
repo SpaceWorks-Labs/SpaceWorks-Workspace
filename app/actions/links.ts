@@ -31,7 +31,7 @@ export async function saveLink(
   slug: string,
   input: unknown,
 ): Promise<ActionResult> {
-  const ctx = await shellContext(slug, "MEMBER");
+  const ctx = await shellContext(slug, "MEMBER", "apiWrite", "knowledge");
   if (!ctx || !canContribute(ctx.membership))
     return actionError("You don't have access to add links.");
   const parsed = schema.safeParse(input);
@@ -104,7 +104,7 @@ export async function linkState(
   slug: string,
   input: unknown,
 ): Promise<ActionResult> {
-  const ctx = await shellContext(slug);
+  const ctx = await shellContext(slug, "GUEST", "apiWrite", "knowledge");
   const parsed = z
     .object({
       id: z.string().min(1).max(64),

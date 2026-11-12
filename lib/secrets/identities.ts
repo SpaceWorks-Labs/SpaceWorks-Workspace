@@ -46,7 +46,7 @@ export async function manageIdentity(actor: SecretsActor, environmentId: string,
     const row = await tx.secretIdentity.findFirst({ where: { id, workspaceId: actor.workspace.id, projectId: env.projectId } });
     if (!row || row.revokedAt) throw new SecretsError("That identity is unavailable.");
     // Project administration is required to change a project identity, even when its current grant is elsewhere.
-    if (!(await tx.membership.findFirst({ where: { workspaceId: row.workspaceId, userId: actor.user.id, role: { in: ["OWNER", "ADMIN"] }, status: "ACTIVE" } }))) throw new SecretsError("Ask a workspace admin to manage this identity.");
+    if (!actor.membership.viaSuperAdmin && !(await tx.membership.findFirst({ where: { workspaceId: row.workspaceId, userId: actor.user.id, role: { in: ["OWNER", "ADMIN"] }, status: "ACTIVE" } }))) throw new SecretsError("Ask a workspace admin to manage this identity.");
     const production = await tx.secretIdentityPermission.findFirst({ where: { workspaceId: row.workspaceId, identityId: row.id, role: { not: "NONE" }, environmentId: { in: (await tx.secretEnvironment.findMany({ where: { workspaceId: row.workspaceId, projectId: row.projectId, production: true }, select: { id: true } })).map(e => e.id) } } });
     if (production) await requireSecretsMfa(actor, true, false, tx);
     let issuedCredential: string | undefined;
@@ -87,7 +87,7 @@ export async function universalLogin(clientId: string, clientSecret: string, ip:
     if (!identity) return null;
     await tx.$queryRaw`SELECT "id" FROM "SecretIdentity" WHERE "workspaceId"=${identity.workspaceId} AND "id"=${identity.id} FOR UPDATE`;
     const row = await tx.secretIdentity.findUniqueOrThrow({ where: { id: identity.id } });
-    if (row.revokedAt || identity.workspace.archivedAt || row.lockedUntil && row.lockedUntil > now) { await audit(tx, row.workspaceId, row.projectId, null, "identity_login_denied", undefined, row.id); return null; }
+    if (row.revokedAt || identity.workspace.archivedAt || identity.workspace.status !== "ACTIVE" || row.lockedUntil && row.lockedUntil > now) { await audit(tx, row.workspaceId, row.projectId, null, "identity_login_denied", undefined, row.id); return null; }
     const [credentialId, secret, extra] = clientSecret.split(".");
     const credential = credentialId ? await tx.secretIdentityCredential.findFirst({ where: { workspaceId: row.workspaceId, identityId: row.id, id: credentialId } }) : null;
     const creator = await tx.membership.findFirst({ where: { workspaceId: row.workspaceId, userId: row.createdById, status: "ACTIVE", role: { not: "GUEST" }, user: { disabledAt: null } } });
@@ -117,7 +117,7 @@ export async function identityToken(raw: string, ip: string, projectId?: string,
     const token = await tx.secretIdentityToken.findUniqueOrThrow({ where: { id: found.id }, include: { credential: true, identity: { include: { workspace: true, permissions: true } } } });
     if (!safeEqual(token.tokenHash, hash)) return null;
     const row = token.identity;
-    if (token.revokedAt || token.expiresAt <= now || token.maxExpiresAt <= now || token.remainingUses === 0 || token.credential.revokedAt || token.credential.expiresAt && token.credential.expiresAt <= now || row.revokedAt || row.workspace.archivedAt || !ipAllowed(ip, row.tokenIps) || projectId && projectId !== row.projectId) { await audit(tx, row.workspaceId, row.projectId, null, "identity_token_denied", undefined, token.id); return null; }
+    if (token.revokedAt || token.expiresAt <= now || token.maxExpiresAt <= now || token.remainingUses === 0 || token.credential.revokedAt || token.credential.expiresAt && token.credential.expiresAt <= now || row.revokedAt || row.workspace.archivedAt || row.workspace.status !== "ACTIVE" || !ipAllowed(ip, row.tokenIps) || projectId && projectId !== row.projectId) { await audit(tx, row.workspaceId, row.projectId, null, "identity_token_denied", undefined, token.id); return null; }
     const member = await tx.membership.findFirst({ where: { workspaceId: row.workspaceId, userId: row.createdById, status: "ACTIVE", role: { not: "GUEST" }, user: { disabledAt: null } }, include: { user: true } });
     if (!member) { await audit(tx, row.workspaceId, row.projectId, null, "identity_token_denied", undefined, token.id); return null; }
     if (renew) {

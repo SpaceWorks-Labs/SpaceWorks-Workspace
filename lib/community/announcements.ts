@@ -217,7 +217,7 @@ export async function deleteAnnouncement(actor: CommunityActor, id: string): Pro
 /** Scheduler: send announcements whose publish time has come (idempotent across replicas). */
 export async function publishDueAnnouncements(now: Date) {
   const due = await prisma.announcement.findMany({
-    where: { publishedAt: { gt: new Date(now.getTime() - ANNOUNCEMENT_CATCH_UP_MS), lte: now }, workspace: { archivedAt: null } },
+    where: { publishedAt: { gt: new Date(now.getTime() - ANNOUNCEMENT_CATCH_UP_MS), lte: now }, workspace: { status: "ACTIVE", archivedAt: null } },
     orderBy: { publishedAt: "asc" },
     take: 100,
     select: { id: true, title: true, body: true, publishedAt: true, authorId: true, workspace: { select: { id: true, slug: true, name: true } } },

@@ -1,4 +1,5 @@
 import "server-only";
+import { workspacesWithoutModule } from "@/lib/modules-server";
 import { purgeExpiredStagedFiles } from "@/lib/finance/tools/files";
 import { prisma, type Tx } from "@/lib/db";
 import { recordAuditEvent } from "@/lib/audit";
@@ -123,8 +124,9 @@ export async function remindReceipt(actor: FinanceActor, input: unknown) {
   return v.entryId;
 }
 export async function run(now: Date): Promise<void> {
+  const off = await workspacesWithoutModule("finance");
   const workspaces = await prisma.workspace.findMany({
-    where: { archivedAt: null },
+    where: { archivedAt: null, id: { notIn: off } },
     select: { id: true, slug: true, timezone: true },
   });
   for (const ws of workspaces) {

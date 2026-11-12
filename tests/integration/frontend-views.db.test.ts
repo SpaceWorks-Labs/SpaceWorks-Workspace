@@ -41,6 +41,6 @@ describe("guarded frontend view contracts", () => {
   });
   it("requires the independent fresh admin MFA proof", async () => {
     session.id = ownerId; vi.stubEnv("SUPER_ADMIN_EMAIL", `owner${domain}`);
-    await expect(loadAdminOverviewPage()).rejects.toThrow("REDIRECT:/admin-mfa");
+    await expect(loadAdminOverviewPage({ searchParams: Promise.resolve({}) })).rejects.toThrow("REDIRECT:/admin-mfa");
   });
 });

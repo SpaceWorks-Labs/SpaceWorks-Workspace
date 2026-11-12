@@ -22,12 +22,13 @@ Drive, Search Console), a GitHub App and a Telegram bot. It is an original
 Space Works product, licensed AGPL-3.0-or-later.
 
 Stack: Next.js 16 App Router (`output: "standalone"`), React 19, TypeScript,
-PostgreSQL 16 with Prisma 6, Auth.js v5 (JWT sessions, credentials + optional
-Google/instance OIDC, TOTP MFA), Tailwind CSS 4 + Radix primitives, Redis (rate limits and
+PostgreSQL 16 with Prisma 6, Auth.js v5 (JWT sessions, username or email + password
+with SMTP email verification, optional GitHub/Google/Apple and instance OIDC, TOTP MFA), Tailwind CSS 4 + Radix primitives, Redis (rate limits and
 realtime fan-out), S3-compatible private storage (Silo locally, Cloudflare R2
 in the cloud), Nodemailer through an outbox, Vitest and Playwright.
 
-"Internal" means: every route needs a session except `/login`, `/setup`
+"Internal" means: every route needs a session except the landing page at `/`
+for signed-out visitors (`components/landing/`, pure rendering), `/login`, `/setup`
 (first run only), `/forgot-password`, `/reset-password/[token]`,
 `/invite/[token]`, opted-in status pages, public forms, personal feed and
 heartbeat capabilities, integration webhooks and health endpoints.
@@ -45,6 +46,10 @@ Tenancy is strict: `Workspace` is the tenant boundary.
 | `components/ui/` | Brand primitives: button, field, select, choice, dialog, menu, tabs, table, display |
 | `components/chrome/` | App shell, auth frame, simple shell, colour-mode toggle |
 | `components/<area>/` | Feature UI for work, chat, knowledge, people, operations, collaboration, services, reviews and integrations |
+| `lib/modules.ts`, `lib/limits/` | Module registry and the module gate; effective per-organisation limits (`getEffectiveLimits`, `assertWithinLimit`, `lib/seatLimits.ts`) |
+| `lib/accessMember.ts`, `lib/workspaceGate.ts` | Super-admin-aware access for per-area helpers; the status and module gate behind `requireWorkspace` |
+| `lib/orgRequests/`, `lib/payments/`, `lib/campaigns/`, `lib/makerspace/`, `lib/observability/` | Organisation requests and plan; Stripe/Razorpay invoice links; native email campaigns; downtime, inductions and stock; metrics, client analytics, Metabase |
+| `lib/email/workspaceTransport.ts` | Per-workspace SMTP transport (`getEmailTransportFor`, `getFromFor`) |
 | `lib/` | Area services; `lib/search` live access checks, `lib/notify` routing, `lib/shell` platform services and retention writers |
 | `scripts/seed/` | Automatically loaded per-area demo seed modules |
 | `docs/areas/` | Implemented area contracts, operations and known limits |
@@ -132,10 +137,32 @@ action, e.g. "No projects yet. Start one for the next build night."
   only when `financeVisibleToMembers`. ADMIN manages members, invites, labels,
   channels, finance, API tokens and integrations. OWNER can also delete
   the workspace and transfer ownership. Use the helpers in `lib/roles.ts`.
+  [docs/ROLES.md](docs/ROLES.md) is the role × area matrix; a nav item or
+  settings tab (`lib/nav.ts`, `lib/settingsTabs.ts`) uses the same `minRole`
+  as its page (`tests/unit/role-guards.test.ts`), and every shell surface is
+  filtered through `navContextFor` (`lib/navContext.ts`).
 - A workspace always keeps one ACTIVE owner (`lib/membership.ts` locks owner
   rows). Admins never act on other admins or owners.
 - Super-admin is the user whose email equals `SUPER_ADMIN_EMAIL`, plus a fresh
-  TOTP step-up (`/admin-mfa`, 10 minutes). Everyone else gets `notFound()`.
+  TOTP step-up (`/admin-mfa`, 10 minutes). Everyone else gets `notFound()`. The
+  super admin has silent access to every organisation through a synthetic OWNER
+  membership (`viaSuperAdmin`, never stored), audited in the instance audit log
+  only.
+- Per-area access helpers must use `activeMemberOrSuperAdmin`
+  (`lib/accessMember.ts`), never re-read `Membership` directly for the actor.
+- New workspace pages are module-gated automatically: `proxy.ts` sets `x-sw-path`
+  and `requireWorkspace` / `getWorkspaceForAction` check it against
+  `lib/modules.ts`. A Server Action can be posted from any page, so every
+  action in a switchable module passes `{ module }` to `getWorkspaceForAction`
+  (or to its area helper: `runAction`, `collaborationAction` and the others use
+  `moduleForArea`). API routes outside `/w` do the same. Add a new module or
+  route prefix in `lib/modules.ts` and `lib/nav.ts` together.
+- Non-ACTIVE organisations (PENDING, REJECTED, SUSPENDED) are closed everywhere,
+  not only on pages. Any lookup that checks `workspace.archivedAt` for a live
+  organisation also checks `status: "ACTIVE"`, except purge and cleanup jobs.
+- Creates that consume a limit (members, guests, projects, storage, file size,
+  API tokens, webhooks, assistant tokens, emails) call `assertWithinLimit` from
+  `lib/limits` before writing.
 - Bearer capabilities (invitation, password reset, API tokens, OAuth state,
   account link codes, heartbeat tokens, calendar feed tokens) are random and
   stored only as SHA-256 hashes. Never log
@@ -171,7 +198,12 @@ navigation config), `lib/instanceSettings.ts` (`getAssistantSettings`,
 `getEmailSettings`, `getGoogleSsoSettings`), `lib/notify` (`dispatch`,
 `setScopedDestinations`, the event catalogue and destination adapters),
 `lib/search/documents.ts`, `lib/activity.ts`, `lib/teamAccess.ts` and
-`lib/scheduled/<area>.ts` (periodic jobs).
+`lib/scheduled/<area>.ts` (periodic jobs). Governance and money services:
+`lib/modules.ts` + `lib/limits`, `lib/accessMember.ts`, `lib/workspaceGate.ts`,
+`lib/orgRequests`, `lib/seatLimits.ts`, `lib/payments`, `lib/campaigns`,
+`lib/makerspace`, `lib/observability` and `lib/email/workspaceTransport.ts`.
+Instance settings keys live in `lib/instanceSettings/keys-*.ts`; see
+[docs/CONFIGURATION.md](docs/CONFIGURATION.md).
 
 Tasks: every task write (app, assistant, MCP, REST) goes through
 `lib/tasks/service` and its single gate `loadEditableTask(actor, id, { action })`

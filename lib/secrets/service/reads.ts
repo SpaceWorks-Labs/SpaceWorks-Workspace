@@ -108,7 +108,7 @@ export async function readSecrets(
           userId: actor.user.id,
           status: "ACTIVE",
           user: { disabledAt: null },
-          workspace: { archivedAt: null },
+          workspace: { status: "ACTIVE", archivedAt: null },
         },
       });
       if (env && membership)

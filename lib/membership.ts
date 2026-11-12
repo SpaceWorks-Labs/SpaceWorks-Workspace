@@ -4,6 +4,7 @@ import type { Membership, MembershipStatus, WorkspaceRole } from "@prisma/client
 import { prisma, type Tx } from "@/lib/db";
 import { recordAuditEvent } from "@/lib/audit";
 import { assignableRoles, canActOnMember } from "@/lib/roles";
+import { assertSeatAvailable, lockWorkspace } from "@/lib/seatLimits";
 
 type Result = { ok: true } | { ok: false; error: string };
 
@@ -40,6 +41,11 @@ export async function changeMemberRole(input: { actor: Membership; membershipId:
     if (target.role === "OWNER" && !(await hasAnotherActiveOwner(tx, actor.workspaceId, target.id))) {
       return { ok: false as const, error: LAST_OWNER_ERROR };
     }
+    if (target.status === "ACTIVE" && (target.role === "GUEST") !== (input.role === "GUEST")) {
+      await lockWorkspace(tx, actor.workspaceId);
+      const seat = await assertSeatAvailable(tx, actor.workspaceId, input.role);
+      if (!seat.ok) return { ok: false as const, error: seat.error };
+    }
     await tx.membership.update({ where: { id: target.id }, data: { role: input.role } });
     await recordAuditEvent({
       client: tx,
@@ -65,6 +71,11 @@ export async function setMemberStatus(input: { actor: Membership; membershipId: 
     if (target.status === input.status) return { ok: true as const };
     if (input.status === "SUSPENDED" && target.role === "OWNER" && !(await hasAnotherActiveOwner(tx, actor.workspaceId, target.id))) {
       return { ok: false as const, error: LAST_OWNER_ERROR };
+    }
+    if (input.status === "ACTIVE" && target.status !== "ACTIVE") {
+      await lockWorkspace(tx, actor.workspaceId);
+      const seat = await assertSeatAvailable(tx, actor.workspaceId, target.role);
+      if (!seat.ok) return { ok: false as const, error: seat.error };
     }
     await tx.membership.update({ where: { id: target.id }, data: { status: input.status } });
     await recordAuditEvent({

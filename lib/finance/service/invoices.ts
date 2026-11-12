@@ -4,8 +4,8 @@ import { actionError, type ActionResult } from "@/lib/actionResult";
 import { recordAuditEvent } from "@/lib/audit";
 import { nextWorkspaceSequence } from "@/lib/counters";
 import { prisma, type DbClient, type Tx } from "@/lib/db";
-import { enqueueEmail } from "@/lib/outbox";
-import { assertOpen, lockFinance } from "@/lib/finance/tools/access";
+import { enqueueInvoiceEmail } from "@/lib/outbox";
+import { assertOpen, FinanceError, lockFinance } from "@/lib/finance/tools/access";
 import { parseMoneyToMinor } from "@/lib/format/money";
 import { dateOnly, localDate } from "@/lib/finance/dates";
 import {
@@ -30,7 +30,6 @@ import {
   financeActivity,
   checkCategory,
 } from "./mutation-helpers";
-import { renderInvoiceEmail } from "./invoice-email";
 
 // ───────────── Invoices ─────────────
 
@@ -133,7 +132,7 @@ export async function sendInvoice(ctx: Ctx, invoiceId: string, options: { email:
       if (changed.count === 0) return actionError("That invoice changed. Refresh and try again.");
     }
     if (options.email && invoice.clientEmail) {
-      await enqueueEmail(tx, { workspaceId: workspace.id, to: invoice.clientEmail, ...renderInvoiceEmail({ ...invoice, workspaceName: workspace.name, timeZone: workspace.timezone }) });
+      await enqueueInvoiceEmail(tx, { workspaceId: workspace.id, invoiceId: invoice.id, to: invoice.clientEmail });
     }
     await recordAuditEvent({ action: "finance.invoice_sent", workspaceId: workspace.id, actorId: user.id, targetType: "invoice", targetId: invoice.id, metadata: { emailed: options.email }, client: tx });
     await invoiceChanged(tx, ctx, { ...invoice, status: "SENT" }, "sent");
@@ -173,10 +172,38 @@ export async function markInvoicePaid(ctx: Ctx, invoiceId: string, options: { pa
   });
 }
 
+export type SettleOutcome = { status: "PAID" } | { status: "REVIEW"; reason: string };
+
+/**
+ * System-actor settlement for a verified online payment (called from the
+ * payment webhook, inside its transaction). Same guarantees as markInvoicePaid
+ * (finance lock, row lock, one idempotent INCOME entry), but it never throws
+ * for business reasons: a mismatch, a non-SENT invoice or a signed-off month
+ * returns REVIEW and changes nothing, so a human decides.
+ */
+export async function settleInvoiceFromPayment(tx: Tx, input: { workspaceId: string; invoiceId: string; amountMinor: number; currency: string; paidOn: string; provider: string; paymentId: string }): Promise<SettleOutcome> {
+  await lockFinance(tx, input.workspaceId);
+  const invoice = await lockedInvoice(tx, input.workspaceId, input.invoiceId);
+  if (!invoice) return { status: "REVIEW", reason: "The invoice no longer exists." };
+  if (invoice.status !== "SENT") return { status: "REVIEW", reason: invoice.status === "PAID" ? "The invoice was already paid." : "The invoice is not open for payment." };
+  if (invoice.totalMinor !== input.amountMinor || invoice.currency !== input.currency) return { status: "REVIEW", reason: "The amount paid does not match the invoice total." };
+  try {
+    await assertOpen(tx, input.workspaceId, dateOnly(input.paidOn));
+  } catch (error) {
+    if (error instanceof FinanceError) return { status: "REVIEW", reason: "That finance month is signed off." };
+    throw error;
+  }
+  const claimed = await tx.invoice.updateMany({ where: { id: invoice.id, workspaceId: input.workspaceId, status: "SENT" }, data: { status: "PAID", paidAt: dateOnly(input.paidOn) } });
+  if (claimed.count === 0) return { status: "REVIEW", reason: "The invoice changed while paying." };
+  await postInvoiceIncome(tx, { ...invoice, workspaceId: input.workspaceId }, { paidOn: input.paidOn, categoryId: null, actorId: null });
+  await recordAuditEvent({ action: "finance.invoice_paid", workspaceId: input.workspaceId, actorId: null, targetType: "invoice", targetId: invoice.id, metadata: { totalMinor: invoice.totalMinor, via: input.provider, paymentId: input.paymentId }, client: tx });
+  return { status: "PAID" };
+}
+
 async function postInvoiceIncome(
   tx: Tx,
   invoice: { id: string; workspaceId: string; number: string; clientName: string; totalMinor: number; currency: string },
-  options: { paidOn: string; categoryId: string | null; actorId: string },
+  options: { paidOn: string; categoryId: string | null; actorId: string | null },
 ) {
   await tx.ledgerEntry.createMany({
     data: [

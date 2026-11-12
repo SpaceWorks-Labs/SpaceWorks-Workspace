@@ -39,7 +39,7 @@ export function ListRow({ task, ctx, selected, onSelect }: { task: BoardTask; ct
   const editable = data.permissions.canEdit && task.canEdit;
   const hint = lockedHint(data);
   return (
-    <TR className={cn("sw-row-in", selected && "bg-accent-soft")}>
+    <TR className={cn("sw-row-in group", selected && "bg-accent-soft")}>
       <TD className="w-12">
         {isSelectable(data, task) ? (
           <Checkbox
@@ -59,7 +59,7 @@ export function ListRow({ task, ctx, selected, onSelect }: { task: BoardTask; ct
       <TD className="w-12">
         <Checkbox checked={Boolean(task.completedAt)} disabled={!editable} aria-label={`${task.completedAt ? "Reopen" : "Complete"} ${reference}`} onCheckedChange={(checked) => ctx.onComplete(task, checked === true)} />
       </TD>
-      <TD className="min-w-[260px]">
+      <TD className={cn("sticky left-0 z-[1] min-w-[260px] border-r border-line bg-panel transition-colors duration-[var(--sw-dur-fast)] group-hover:bg-subtle", selected && "bg-accent-soft group-hover:bg-accent-soft")}>
         <button type="button" onClick={() => ctx.onOpen(task.number)} className="flex flex-col items-start gap-1 text-left">
           <span className={cn("font-medium text-ink underline-offset-4 hover:underline", task.completedAt && "text-ink-muted line-through")}>
             <span className="mr-2 text-caption font-semibold tabular-nums text-ink-muted">{reference}</span>

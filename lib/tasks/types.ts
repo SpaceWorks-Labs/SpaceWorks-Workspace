@@ -6,7 +6,16 @@ import type { ColumnCategory, LabelTone, ProjectStatus, TaskPriority } from "@pr
 export type PersonRef = { id: string; name: string | null; image: string | null };
 export type LabelRef = { id: string; name: string; tone: LabelTone };
 
-export type ColumnDTO = { id: string; name: string; position: number; category: ColumnCategory };
+export type ColumnDTO = {
+  id: string;
+  name: string;
+  position: number;
+  category: ColumnCategory;
+  /** Optional header tint (a LabelTone). */
+  color?: LabelTone | null;
+  /** Soft work-in-progress limit: the header tints when the count goes over it. */
+  wipLimit?: number | null;
+};
 
 export type BoardTask = {
   id: string;
@@ -22,6 +31,8 @@ export type BoardTask = {
   position: number;
   assigneeIds: string[];
   labelIds: string[];
+  /** Who created the task (the creator filter). */
+  creatorId?: string | null;
   /** Per-task rights for the viewer (lib/tasks/capabilities). */
   canEdit: boolean;
   canClaim: boolean;

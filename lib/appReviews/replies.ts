@@ -14,7 +14,7 @@ export type ReplyOutcome = { state: "PUBLISHED" | "PENDING" | "UNKNOWN"; duplica
 /** A permanent attempt claim precedes the network request. Never retry ambiguous sends. */
 export async function sendReviewReply(input: ReplyInput): Promise<ActionResult<ReplyOutcome>> {
   const claim = await prisma.$transaction(async tx => {
-    const member = await tx.membership.findFirst({ where: { workspaceId: input.workspaceId, userId: input.actorId, status: "ACTIVE", role: { not: "GUEST" }, user: { disabledAt: null }, workspace: { archivedAt: null } }, select: { userId: true } });
+    const member = await tx.membership.findFirst({ where: { workspaceId: input.workspaceId, userId: input.actorId, status: "ACTIVE", role: { not: "GUEST" }, user: { disabledAt: null }, workspace: { status: "ACTIVE", archivedAt: null } }, select: { userId: true } });
     if (!member) return { error: "You don't have access to reply to this review." };
     await tx.$queryRaw`SELECT id FROM "AppReview" WHERE "workspaceId" = ${input.workspaceId} AND id = ${input.reviewId} FOR UPDATE`;
     const review = await tx.appReview.findFirst({ where: { workspaceId: input.workspaceId, id: input.reviewId }, include: { app: { include: { account: true } }, workspace: { select: { slug: true } } } });

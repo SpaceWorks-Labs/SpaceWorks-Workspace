@@ -23,7 +23,7 @@ const slugSchema = z.string().min(1).max(64);
 async function context(slug: unknown) {
   const parsed = slugSchema.safeParse(slug);
   if (!parsed.success) return null;
-  return getWorkspaceForAction(parsed.data, "GUEST");
+  return getWorkspaceForAction(parsed.data, "GUEST", { module: "core" });
 }
 
 function revalidateSettings(slug: string) {
@@ -138,6 +138,7 @@ export async function removeMemberAction(slug: string, input: unknown): Promise<
 export async function leaveWorkspaceAction(slug: string): Promise<ActionResult> {
   const ctx = await context(slug);
   if (!ctx) return actionError(NOT_ALLOWED);
+  if (ctx.membership.viaSuperAdmin) return actionError("You're viewing this organisation as the instance admin, so there is nothing to leave.");
   const result = await removeMember({ actor: ctx.membership, membershipId: ctx.membership.id });
   if (!result.ok) return actionError(result.error);
   revalidatePath("/", "layout");

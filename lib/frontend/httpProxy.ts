@@ -5,7 +5,7 @@ import { backendHeaders, backendUrl } from "./request";
 import { backendOrigin, frontendOrigin } from "./config";
 
 const blocked = /^\/api\/(?:frontend(?:\/|$)|internal(?:\/|$)|health\/db(?:\/|$))/i;
-const forwardedRequestHeaders = ["accept", "content-type", "authorization", "user-agent", "if-none-match", "range", "if-range", "x-sw-client", "x-auth-return-redirect", "x-hub-signature-256", "x-github-delivery", "x-github-event", "x-slack-request-timestamp", "x-slack-signature", "x-signature-timestamp", "x-signature-ed25519", "x-telegram-bot-api-secret-token", "mcp-protocol-version", "mcp-session-id", "last-event-id"];
+const forwardedRequestHeaders = ["accept", "content-type", "authorization", "user-agent", "if-none-match", "range", "if-range", "x-sw-client", "x-auth-return-redirect", "x-hub-signature-256", "x-github-delivery", "x-github-event", "x-slack-request-timestamp", "x-slack-signature", "x-signature-timestamp", "x-signature-ed25519", "x-telegram-bot-api-secret-token", "stripe-signature", "x-razorpay-signature", "x-razorpay-event-id", "x-webhook-secret", "mcp-protocol-version", "mcp-session-id", "last-event-id"];
 const forwardedResponseHeaders = ["content-type", "cache-control", "etag", "content-disposition", "content-range", "accept-ranges", "retry-after", "vary", "x-content-type-options", "referrer-policy", "x-accel-buffering", "content-security-policy", "permissions-policy", "www-authenticate", "allow", "mcp-session-id"];
 
 export async function proxyBackendResource(request: Request) { return proxyRequest(request, true); }
@@ -18,11 +18,17 @@ async function proxyRequest(request: Request, resource: boolean) {
   const safe = request.method === "GET" || request.method === "HEAD" || request.method === "OPTIONS";
   // These endpoints authenticate signed provider payloads or hashed heartbeat
   // capabilities on the backend. They never inherit browser session authority.
-  const provider = /^\/api\/(?:integrations\/(?:github\/webhook|(?:slack|discord|telegram|whatsapp|mattermost)\/[^/]+\/.+)|app-reviews\/slack\/events|hb\/[^/]+(?:\/[^/]+)?)$/.test(url.pathname);
+  // Payment and bounce webhooks, one-click unsubscribe (RFC 8058) and embedded
+  // subscribe forms are posted by third parties; signatures, secrets or signed
+  // tokens authorise them on the backend.
+  const provider = /^\/api\/(?:integrations\/(?:github\/webhook|(?:slack|discord|telegram|whatsapp|mattermost)\/[^/]+\/.+)|app-reviews\/slack\/events|hb\/[^/]+(?:\/[^/]+)?|payments\/(?:stripe|razorpay)\/[^/]+|public\/campaigns\/(?:subscribe|unsubscribe\/[^/]+|webhooks\/(?:ses|postmark)\/[^/]+))$/.test(url.pathname);
+  // Sign in with Apple returns by a cross-site form POST (response_mode=form_post).
+  // It keeps its cookies: Auth.js checks them against the posted state and nonce.
+  const formPostCallback = request.method === "POST" && url.pathname === "/api/auth/callback/apple";
   // CLI endpoints authenticate device codes or bearer tokens, never browser cookies.
   const cli = url.pathname.startsWith("/api/cli/") || url.pathname.startsWith("/api/v1/auth/universal/");
   const machine = provider || cli || (url.pathname.startsWith("/api/v1/") || url.pathname === "/api/mcp") && request.headers.get("authorization")?.startsWith("Bearer ");
-  if (!safe && !machine && request.headers.get("origin") !== frontendOrigin()) return new NextResponse("Not found", { status: 404, headers: { "Cache-Control": "no-store" } });
+  if (!safe && !machine && !formPostCallback && request.headers.get("origin") !== frontendOrigin()) return new NextResponse("Not found", { status: 404, headers: { "Cache-Control": "no-store" } });
   const outgoing = await backendHeaders(request.headers);
   if (provider || cli) outgoing.delete("cookie");
   for (const name of forwardedRequestHeaders) {

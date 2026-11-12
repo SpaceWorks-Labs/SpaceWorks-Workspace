@@ -55,6 +55,14 @@ describe("complete public-schema archive restore", () => {
     expect(result.remaining).toEqual([]);
   });
 
+  it("replaces the reporting views together with the public schema", async () => {
+    const result = await fixture({ contents: `${toc}7; 2615 9 SCHEMA - reporting owner\n8; 1259 10 VIEW reporting v_tasks owner\n` });
+    expect(result.failure).toBeUndefined();
+    expect(result.selection).toContain("\n7; 2615 9 SCHEMA - reporting owner");
+    expect(result.applied).toContain("DROP SCHEMA IF EXISTS reporting CASCADE;\nDROP SCHEMA IF EXISTS public CASCADE;");
+    expect(result.applied).toContain("NOT IN ('public', 'reporting', 'information_schema')");
+  });
+
   it("never applies a truncated but valid SQL prefix after archive generation fails", async () => {
     const result = await fixture({ generationFailure: true });
     expect(result.failure).toBeInstanceOf(Error);

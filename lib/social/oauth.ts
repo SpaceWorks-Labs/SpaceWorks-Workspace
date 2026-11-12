@@ -38,7 +38,7 @@ export async function beginSocial(ctx: WorkspaceContext, platform: SocialPlatfor
 export async function consumeSocialState(state: string, userId: string, platform: SocialPlatform) {
   if (!state || state.length > 128) return null;
   return prisma.$transaction(async tx => {
-    const row = await tx.oAuthState.findFirst({ where: { stateHash: sha256Hex(state), userId, provider: oauthProvider(platform), expiresAt: { gt: new Date() }, workspace: { archivedAt: null } } });
+    const row = await tx.oAuthState.findFirst({ where: { stateHash: sha256Hex(state), userId, provider: oauthProvider(platform), expiresAt: { gt: new Date() }, workspace: { status: "ACTIVE", archivedAt: null } } });
     if (!row || o(JSON.parse(row.redirectPath)).platform !== platform || !await tx.membership.findFirst({ where: { workspaceId: row.workspaceId, userId, status: "ACTIVE", role: { in: ["OWNER", "ADMIN"] }, user: { disabledAt: null } } })) return null;
     return (await tx.oAuthState.deleteMany({ where: { id: row.id, workspaceId: row.workspaceId, userId } })).count ? row : null;
   });

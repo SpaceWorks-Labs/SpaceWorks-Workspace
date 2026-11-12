@@ -30,7 +30,7 @@ export async function secretsAction(
   operation: string,
   input: Record<string, unknown>,
 ) {
-  const actor = await getWorkspaceForAction(slug, "MEMBER");
+  const actor = await getWorkspaceForAction(slug, "MEMBER", { module: "secrets" });
   if (!actor)
     return {
       ok: false as const,

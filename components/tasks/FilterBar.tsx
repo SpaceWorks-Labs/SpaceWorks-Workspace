@@ -1,15 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type Ref } from "react";
 import { ChevronsUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/choice";
 import { Avatar } from "@/components/ui/display";
 import { Dropdown, SearchInput } from "@/components/ui/field";
-import { activeFilterCount, DUE_FILTERS, EMPTY_FILTERS, GROUP_OPTIONS, PRIORITIES, PRIORITY_LABELS, SORT_OPTIONS, type DueFilter, type GroupKey, type SortKey, type TaskQuery } from "@/lib/tasks/filters";
+import type { Density } from "@/lib/tasks/density";
+import { activeFilterCount, DUE_FILTERS, EMPTY_FILTERS, PRIORITIES, PRIORITY_LABELS, type DueFilter, type TaskQuery } from "@/lib/tasks/filters";
 import type { LabelRef, PersonRef } from "@/lib/tasks/types";
 import type { TaskTypeRef } from "@/lib/tasks/taskTypes";
 import { MultiSelect } from "./MultiSelect";
+import { TaskViews } from "./TaskViews";
+import { ViewControls } from "./ViewControls";
 import { useRememberedTaskQuery } from "./useRememberedTaskQuery";
 
 /** A Button element (not a component) so the popover trigger can attach its ref and ARIA. */
@@ -23,7 +26,31 @@ function filterTrigger(label: string, count: number) {
 }
 
 /** Search, filters and (in list view) sorting and grouping. State lives in the URL (lib/tasks/filters) and is remembered per project when the URL has none. */
-export function FilterBar({ query, onChange, members, labels, taskTypes = [] }: { query: TaskQuery; onChange: (query: TaskQuery) => void; members: PersonRef[]; labels: LabelRef[]; taskTypes?: TaskTypeRef[] }) {
+export function FilterBar({
+  query,
+  onChange,
+  members,
+  labels,
+  taskTypes = [],
+  slug,
+  projectKey,
+  canShareViews,
+  density,
+  onDensityChange,
+  searchRef,
+}: {
+  query: TaskQuery;
+  onChange: (query: TaskQuery) => void;
+  members: PersonRef[];
+  labels: LabelRef[];
+  taskTypes?: TaskTypeRef[];
+  slug: string;
+  projectKey: string;
+  canShareViews: boolean;
+  density: Density;
+  onDensityChange: (density: Density) => void;
+  searchRef?: Ref<HTMLInputElement>;
+}) {
   const { filters } = query;
   useRememberedTaskQuery(query, onChange);
   const [text, setText] = useState(filters.q);
@@ -44,8 +71,9 @@ export function FilterBar({ query, onChange, members, labels, taskTypes = [] }: 
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="min-w-0 flex-1">
-          <SearchInput value={text} onChange={(event) => setText(event.target.value)} onClear={() => setText("")} placeholder="Search tasks by title or number" aria-label="Search tasks" />
+          <SearchInput ref={searchRef} value={text} onChange={(event) => setText(event.target.value)} onClear={() => setText("")} placeholder="Search tasks by title or number (press /)" aria-label="Search tasks" aria-keyshortcuts="/" />
         </div>
+        <TaskViews slug={slug} projectKey={projectKey} query={query} onApply={onChange} canShare={canShareViews} />
         <SegmentedControl
           ariaLabel="View"
           value={query.view}
@@ -67,6 +95,14 @@ export function FilterBar({ query, onChange, members, labels, taskTypes = [] }: 
           ]}
           selected={filters.assignees}
           onChange={(assignees) => set({ assignees })}
+          searchPlaceholder="Find a member"
+        />
+        <MultiSelect
+          title="Creator"
+          trigger={filterTrigger("Creator", filters.creators.length)}
+          items={[{ id: "me", label: "Me" }, ...members.map((member) => ({ id: member.id, label: member.name ?? "Member", leading: <Avatar name={member.name} src={member.image} size="xs" /> }))]}
+          selected={filters.creators}
+          onChange={(creators) => set({ creators })}
           searchPlaceholder="Find a member"
         />
         <MultiSelect
@@ -108,28 +144,7 @@ export function FilterBar({ query, onChange, members, labels, taskTypes = [] }: 
             Clear filters
           </Button>
         ) : null}
-        {query.view === "list" ? (
-          <div className="flex flex-wrap items-center gap-2 sm:ml-auto sm:border-l sm:border-line sm:pl-3">
-            <div className="w-[200px]">
-              <Dropdown aria-label="Group by" value={query.group} onChange={(event) => onChange({ ...query, group: event.target.value as GroupKey })}>
-                {GROUP_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {`Group: ${option.label}`}
-                  </option>
-                ))}
-              </Dropdown>
-            </div>
-            <div className="w-[200px]">
-              <Dropdown aria-label="Sort by" value={query.sort} onChange={(event) => onChange({ ...query, sort: event.target.value as SortKey })}>
-                {SORT_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {`Sort: ${option.label}`}
-                  </option>
-                ))}
-              </Dropdown>
-            </div>
-          </div>
-        ) : null}
+        <ViewControls query={query} onChange={onChange} density={density} onDensityChange={onDensityChange} />
       </div>
     </div>
   );

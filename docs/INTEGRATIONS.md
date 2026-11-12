@@ -6,7 +6,7 @@ Admins manage workspace integrations. Members link their own external accounts a
 
 ## Notification destinations and rules
 
-Settings → Notifications offers email lists, workspace channels, in-app role groups, Slack, Discord, Mattermost, Telegram, WhatsApp and signed webhooks. Bot destinations require a verified connection from Settings → Messaging. Incoming webhook destinations use their own encrypted URL. Email uses the instance outbox and SMTP settings.
+Settings → Notifications offers email lists, workspace channels, in-app role groups, Slack, Discord, Mattermost, Telegram, WhatsApp and signed webhooks. Bot destinations require a verified connection from Settings → Messaging. Incoming webhook destinations use their own encrypted URL. Email uses the instance outbox; notification, invoice and campaign mail uses the workspace's own SMTP when set under Settings → Email sending, otherwise the instance SMTP. Account mail (invites, reset, verification) always uses the instance SMTP.
 
 Add a destination, use **Send test**, then check **Recent deliveries**. Delivery rows show status, attempts and safe errors; terminal failures can be retried. Temporary failures back off through the existing outbox machinery (30 seconds up to six hours, six attempts), respecting provider Retry-After. Permanent failures mark destination health Error and alert admins.
 

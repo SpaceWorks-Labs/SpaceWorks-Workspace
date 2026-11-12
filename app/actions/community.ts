@@ -5,6 +5,7 @@ import { z } from "zod";
 import { actionError, NOT_ALLOWED, RATE_LIMITED, validationError, type ActionResult } from "@/lib/actionResult";
 import { isActionRateLimited } from "@/lib/actionRateLimit";
 import { getWorkspaceForAction } from "@/lib/permissions";
+import type { ModuleKey } from "@/lib/modules";
 import { deleteAnnouncement, saveAnnouncement, setAnnouncementPinned } from "@/lib/community/announcements";
 import { createFeed, revokeFeed } from "@/lib/community/feeds";
 import { idInputSchema, pinInputSchema } from "@/lib/community/validation";
@@ -18,10 +19,10 @@ import { idInputSchema, pinInputSchema } from "@/lib/community/validation";
 
 const slugSchema = z.string().min(1).max(64);
 
-async function context(slug: unknown) {
+async function context(slug: unknown, module: ModuleKey = "community") {
   const parsed = slugSchema.safeParse(slug);
   if (!parsed.success) return null;
-  const ctx = await getWorkspaceForAction(parsed.data, "GUEST");
+  const ctx = await getWorkspaceForAction(parsed.data, "GUEST", { module });
   if (!ctx) return null;
   if (await isActionRateLimited("action", ctx.user.id)) return "limited" as const;
   return ctx;
@@ -71,7 +72,7 @@ export async function deleteAnnouncementAction(slug: string, input: unknown): Pr
 /* ───────────── Calendar feeds ───────────── */
 
 export async function createFeedAction(slug: string, input: unknown): Promise<ActionResult<{ url: string; webcalUrl: string }>> {
-  const ctx = await context(slug);
+  const ctx = await context(slug, "core");
   if (!ctx) return actionError(NOT_ALLOWED);
   if (ctx === "limited") return actionError(RATE_LIMITED);
   const result = await createFeed(ctx, input);
@@ -80,7 +81,7 @@ export async function createFeedAction(slug: string, input: unknown): Promise<Ac
 }
 
 export async function revokeFeedAction(slug: string, input: unknown): Promise<ActionResult> {
-  const ctx = await context(slug);
+  const ctx = await context(slug, "core");
   if (!ctx) return actionError(NOT_ALLOWED);
   if (ctx === "limited") return actionError(RATE_LIMITED);
   const result = await revokeFeed(ctx, input);

@@ -19,7 +19,7 @@ import {
 } from "@/lib/mfa";
 import { getCurrentUser } from "@/lib/permissions";
 import { actionError, RATE_LIMITED, validationError, type ActionResult } from "@/lib/actionResult";
-import { nameSchema, newPasswordSchema, timeZoneSchema } from "@/lib/validation";
+import { nameSchema, newPasswordSchema, timeZoneSchema, usernameSchema } from "@/lib/validation";
 
 const SIGN_IN_AGAIN = "Sign in again to continue.";
 
@@ -40,6 +40,35 @@ export async function updateProfile(input: unknown): Promise<ActionResult> {
   await prisma.user.update({ where: { id: user.id }, data: parsed.data });
   revalidatePath("/", "layout");
   return { ok: true };
+}
+
+const TAKEN = "That username is taken. Choose another.";
+
+/** Set, change or (with an empty value) clear the sign-in username. */
+export async function setUsername(input: unknown): Promise<ActionResult<{ username: string | null }>> {
+  const user = await getCurrentUser();
+  if (!user) return actionError(SIGN_IN_AGAIN);
+  if (await isActionRateLimited("action", user.id)) return actionError(RATE_LIMITED);
+  const raw = z.object({ username: z.string().max(64) }).safeParse(input);
+  if (!raw.success) return actionError("Enter a username.");
+  const checked = raw.data.username.trim() === "" ? null : usernameSchema.safeParse(raw.data.username);
+  if (checked && !checked.success) return validationError(checked.error);
+  const username = checked?.data ?? null;
+  try {
+    const claimed = await prisma.$transaction(async (tx) => {
+      if (username && (await tx.user.findFirst({ where: { username, NOT: { id: user.id } }, select: { id: true } }))) return false;
+      await tx.user.update({ where: { id: user.id }, data: { username } });
+      await recordAuditEvent({ client: tx, action: "account.username_changed", actorId: user.id, targetType: "User", targetId: user.id, metadata: { cleared: username === null } });
+      return true;
+    });
+    if (!claimed) return actionError(TAKEN, { username: [TAKEN] });
+  } catch (error) {
+    // A concurrent claim can win between the check and the write.
+    if ((error as { code?: string } | null)?.code === "P2002") return actionError(TAKEN, { username: [TAKEN] });
+    throw error;
+  }
+  revalidatePath("/account");
+  return { ok: true, data: { username } };
 }
 
 const passwordSchema = z.object({ currentPassword: z.string().max(128), newPassword: newPasswordSchema });

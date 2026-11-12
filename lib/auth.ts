@@ -1,42 +1,28 @@
 import "server-only";
 
-import NextAuth, { CredentialsSignin } from "next-auth";
-import Google from "next-auth/providers/google";
+import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { authAdapter } from "@/lib/authAdapter";
+import { credentialsProvider } from "@/lib/authCredentials";
+import { oauthSignIn, type SessionWithProof } from "@/lib/authOAuth";
+import { buildOAuthProviders } from "@/lib/authProviders";
+import { getAuthSettings } from "@/lib/authSettings";
 import { isActionRateLimited } from "@/lib/actionRateLimit";
+import { recordAuditEvent } from "@/lib/audit";
 import { prisma } from "@/lib/db";
-import { hasVerifiedGoogleEmail } from "@/lib/googleAuth";
 import { consumeMfaCode, consumeRecoveryCode, decryptMfaSecret } from "@/lib/mfa";
+import { isOAuthProvider, verifiedProfileEmail } from "@/lib/oauthLinking";
 import { enabledOidcProviders, existingOidcMember } from "@/lib/shell/oidc";
-import { getGoogleSsoSettings } from "@/lib/instanceSettings";
 
 export const SESSION_COOKIE = "sww.session-token.v2";
-
-const credentialsSchema = z.object({
-  email: z.string().trim().toLowerCase().email().max(254),
-  password: z.string().min(1).max(128),
-  totp: z.string().trim().max(32).optional(),
-});
-
-/**
- * Returned only after the password is valid, so the sign-in screen can show
- * the second factor as its own step without revealing which emails use MFA.
- */
-class MfaRequiredError extends CredentialsSignin {
-  code = "mfa_required";
-}
-
-// Fixed, non-secret bcrypt hash: equal work for unknown and Google-only accounts.
-const DUMMY_HASH = "$2b$12$R9h/cIPz0gi.URNNX3kh2OPST9/PgBkqquzi.Ss7KIUgO2t0jWMUW";
 
 type TokenExtras = { authenticatedAt?: number; sessionVersion?: number; mfaPending?: boolean };
 export type SsoMfaChallenge = { userId: string; sessionVersion: number; authenticatedAt: number };
 
 export const { handlers, auth, signIn, signOut } = NextAuth(async () => {
-  const [google, oidc] = await Promise.all([getGoogleSsoSettings().catch(() => null), enabledOidcProviders().catch(() => [])]);
+  const [settings, oidc] = await Promise.all([getAuthSettings().catch(() => null), enabledOidcProviders().catch(() => [])]);
+  const oauth = settings ? await buildOAuthProviders(settings).catch(() => []) : [];
   return {
     adapter: authAdapter,
     session: { strategy: "jwt" },
@@ -68,46 +54,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth(async () => {
           return { id: user.id, name: user.name, email: user.email, image: user.image, sessionVersion: user.sessionVersion };
         },
       }),
-      ...(google
-        ? [
-            Google({
-              clientId: google.clientId,
-              clientSecret: google.clientSecret,
-              // Invited members who set a password may also use the same verified Google email.
-              allowDangerousEmailAccountLinking: true,
-            }),
-          ]
-        : []),
-      Credentials({
-        id: "credentials",
-        name: "Email and password",
-        credentials: {
-          email: { label: "Email", type: "email" },
-          password: { label: "Password", type: "password" },
-        },
-        async authorize(raw) {
-          const parsed = credentialsSchema.safeParse(raw);
-          if (!parsed.success) return null;
-          const { email, password } = parsed.data;
-          if (await isActionRateLimited("auth", email)) return null;
-
-          const user = await prisma.user.findUnique({
-            where: { email },
-            select: { id: true, name: true, email: true, image: true, passwordHash: true, sessionVersion: true, mfaSecretEncrypted: true, mfaEnabledAt: true, disabledAt: true },
-          });
-          const ok = await bcrypt.compare(password, user?.passwordHash ?? DUMMY_HASH);
-          if (!user?.passwordHash || !ok || user.disabledAt) return null;
-
-          if (user.mfaEnabledAt && user.mfaSecretEncrypted) {
-            const code = parsed.data.totp ?? "";
-            if (!code) throw new MfaRequiredError();
-            const validTotp = await consumeMfaCode(decryptMfaSecret(user.mfaSecretEncrypted), user.email, code);
-            if (!validTotp && !(await consumeRecoveryCode(user.id, code))) return null;
-          }
-
-          return { id: user.id, name: user.name, email: user.email, image: user.image, sessionVersion: user.sessionVersion };
-        },
-      }),
+      ...oauth,
+      credentialsProvider(),
     ],
     callbacks: {
       async signIn({ user, account, profile }) {
@@ -120,15 +68,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth(async () => {
           user.email = existing.email;
           return true;
         }
-        if (account?.provider !== "google") return true;
-        if (!hasVerifiedGoogleEmail(profile)) return false;
-        const email = user.email?.trim().toLowerCase();
-        if (!email) return false;
-        user.email = email;
-        // Invite-only: Google can sign in an existing member, never create an account.
-        const existing = await prisma.user.findUnique({ where: { email }, select: { id: true, disabledAt: true } });
-        if (!existing) return "/login?error=not_invited";
-        if (existing.disabledAt) return "/login?error=disabled";
+        if (account && isOAuthProvider(account.provider)) {
+          return oauthSignIn({ user, account, profile }, () => auth() as Promise<SessionWithProof | null>);
+        }
         return true;
       },
       async jwt({ token, user, account }) {
@@ -145,6 +87,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth(async () => {
           token.sub = user.id;
           extras.mfaPending = Boolean(current.mfaEnabledAt && account?.type !== "credentials");
           extras.authenticatedAt = Date.now();
+          if (account && account.type !== "credentials") {
+            // Connecting a provider while signed in must not restart MFA or extend the re-auth window.
+            const prior = (await auth()) as SessionWithProof | null;
+            if (prior && prior.user?.id === user.id && prior.authenticatedAt) {
+              extras.mfaPending = false;
+              extras.authenticatedAt = prior.authenticatedAt;
+            }
+          }
           extras.sessionVersion = current.sessionVersion;
         } else if (extras.sessionVersion !== current.sessionVersion) {
           return null;
@@ -166,10 +116,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth(async () => {
       },
     },
     events: {
-      async signIn({ user, account }) {
-        if (account?.provider === "google" && user.id) {
-          await prisma.user.update({ where: { id: user.id }, data: { emailVerified: new Date() } });
-        }
+      async signIn({ user, account, profile }) {
+        if (!user.id || !account || !isOAuthProvider(account.provider)) return;
+        // Only the address the provider verified, and only when it is this account's own email.
+        const email = verifiedProfileEmail(profile);
+        if (email) await prisma.user.updateMany({ where: { id: user.id, email, emailVerified: null }, data: { emailVerified: new Date() } });
+      },
+      async createUser({ user }) {
+        if (user.id) await recordAuditEvent({ action: "auth.self_signup", actorId: user.id, targetType: "User", targetId: user.id });
+      },
+      async linkAccount({ user, account }) {
+        if (user.id) await recordAuditEvent({ action: "auth.provider_linked", actorId: user.id, targetType: "User", targetId: user.id, metadata: { provider: account.provider } });
       },
     },
   };
